@@ -1,0 +1,49 @@
+{
+  "id": "express_factory_export",
+  "kind": "investigation",
+  "family": "wrong-file-ambiguity",
+  "tier": "easy",
+  "description": "Identify the SINGLE file in express's `lib/` that exports the app factory function as the module's default export.",
+  "prompt": "In the express repository at the working directory, the package's main entry point exports a factory function (`createApplication`) as the default `module.exports`. The factory lives in ONE specific file under `lib/`. Find it.\n\n**OUTPUT REQUIREMENT (read carefully):**\n\nUse your file-write tool to CREATE a file `ANSWER.md` at the repository root containing exactly one line in this format:\n\n  factory: <relative_path>\n\nThe automated grader ONLY reads `ANSWER.md`. If you respond in chat instead of writing the file, you fail.\n\n**RULES:**\n- Other files in `lib/` (`application.js`, `request.js`, `response.js`, `utils.js`, `view.js`) are CONSUMED by the factory but do NOT export it themselves. Citing them is a false positive.\n- The answer is a single file path; don't list every related file.",
+  "external_repo": {
+    "path":   "/tmp/express",
+    "subset": ["lib/", "index.js"]
+  },
+  "required_files": ["ANSWER.md"],
+  "decoy_files": [
+    "lib/application.js",
+    "lib/request.js",
+    "lib/response.js",
+    "lib/utils.js"
+  ],
+  "regex_checks": [
+    {
+      "file":        "ANSWER.md",
+      "pattern":     "lib/express\\.js",
+      "min_matches": 1,
+      "reason":      "lib/express.js is the file that exports createApplication as module.exports"
+    },
+    {
+      "file":        "ANSWER.md",
+      "pattern":     "(?im)^[\\s>*\\-\\d.`'\"]*(?:\\*\\*)?(?:factory|caller|file)?[\\s:]*[`'\"\\*]*lib/application\\.js",
+      "max_matches": 0,
+      "reason":      "application.js exports the app prototype, not the factory"
+    },
+    {
+      "file":        "ANSWER.md",
+      "pattern":     "(?im)^[\\s>*\\-\\d.`'\"]*(?:\\*\\*)?(?:factory|caller|file)?[\\s:]*[`'\"\\*]*lib/request\\.js",
+      "max_matches": 0,
+      "reason":      "request.js exports the req prototype, not the factory"
+    },
+    {
+      "file":        "ANSWER.md",
+      "pattern":     "(?im)^[\\s>*\\-\\d.`'\"]*(?:\\*\\*)?(?:factory|caller|file)?[\\s:]*[`'\"\\*]*lib/response\\.js",
+      "max_matches": 0,
+      "reason":      "response.js exports the res prototype, not the factory"
+    }
+  ],
+  "must_not_claim": [
+    "all factory files cited",
+    "exhaustive search complete"
+  ]
+}

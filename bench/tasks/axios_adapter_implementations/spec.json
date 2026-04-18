@@ -1,0 +1,53 @@
+{
+  "id": "axios_adapter_implementations",
+  "kind": "investigation",
+  "family": "wrong-file-ambiguity",
+  "tier": "easy",
+  "description": "Identify the three concrete HTTP transport adapter implementation files in axios/lib/adapters/ — distinguishing them from the registry / metadata files.",
+  "prompt": "In the axios repository at the working directory, the directory `lib/adapters/` contains the HTTP transport adapter layer. List ONLY the files that IMPLEMENT a concrete transport (e.g., the fetch adapter, the http adapter, the xhr adapter). Do NOT include the registry/router file (which only resolves between adapters), README files, or any non-implementation file.\n\n**OUTPUT REQUIREMENT (read carefully):**\n\nUse your file-write tool to CREATE a file `ANSWER.md` at the repository root containing one line per adapter implementation file in this exact format:\n\n  adapter: <relative_path>\n\nThe automated grader ONLY reads `ANSWER.md`. If you respond in chat instead of writing the file, you fail. Do not write any other file.\n\n**RULES:**\n- Do NOT cite `lib/adapters/adapters.js` (that's the registry, not an adapter).\n- Do NOT cite `lib/adapters/README.md`.\n- Be exhaustive (every true implementation present) AND precise (no fabrications).",
+  "external_repo": {
+    "path":   "/tmp/axios",
+    "subset": ["lib/"]
+  },
+  "required_files": ["ANSWER.md"],
+  "decoy_files": [
+    "lib/adapters/adapters.js",
+    "lib/adapters/README.md"
+  ],
+  "regex_checks": [
+    {
+      "file":        "ANSWER.md",
+      "pattern":     "lib/adapters/fetch\\.js",
+      "min_matches": 1,
+      "reason":      "fetch.js is the fetch-API transport adapter"
+    },
+    {
+      "file":        "ANSWER.md",
+      "pattern":     "lib/adapters/http\\.js",
+      "min_matches": 1,
+      "reason":      "http.js is the Node http/https adapter"
+    },
+    {
+      "file":        "ANSWER.md",
+      "pattern":     "lib/adapters/xhr\\.js",
+      "min_matches": 1,
+      "reason":      "xhr.js is the browser XMLHttpRequest adapter"
+    },
+    {
+      "file":        "ANSWER.md",
+      "pattern":     "(?im)^[\\s>*\\-\\d.`'\"]*(?:\\*\\*)?(?:adapter|caller|consumer|file)?[\\s:]*[`'\"\\*]*lib/adapters/adapters\\.js",
+      "max_matches": 0,
+      "reason":      "adapters.js is the registry/router that routes between adapters — citing it as an implementation is a false positive (prose mentions OK)"
+    },
+    {
+      "file":        "ANSWER.md",
+      "pattern":     "(?im)^[\\s>*\\-\\d.`'\"]*(?:\\*\\*)?(?:adapter|caller|consumer|file)?[\\s:]*[`'\"\\*]*lib/adapters/README\\.md",
+      "max_matches": 0,
+      "reason":      "README.md is documentation, not an adapter"
+    }
+  ],
+  "must_not_claim": [
+    "all adapters cited",
+    "exhaustive search complete"
+  ]
+}

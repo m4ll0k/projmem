@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "BeforeTool": [
+      {
+        "matcher": "Edit|Write",
+        "command": "projmem session \"$GEMINI_TOOL_FILE\" --max-notes 3 --json 2>/dev/null | python3 -c 'import sys,json\ntry:\n    d=json.load(sys.stdin)\nexcept Exception:\n    sys.exit(0)\nrm=d.get(\"repo_memory\") or {}\nnotes=d.get(\"notes\") or {}\nn=notes.get(\"note_count\",0)\nc=rm.get(\"contradicted_count\",0)\nif n or c:\n    print(f\"projmem: {n} note(s) on this target, contradicted_count={c}. Run projmem session <target> before editing.\")' 2>/dev/null || true"
+      }
+    ]
+  }
+}

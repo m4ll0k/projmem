@@ -1,0 +1,47 @@
+{
+  "id": "node_files_watcher_consumers",
+  "kind": "investigation",
+  "family": "wrong-file-ambiguity",
+  "tier": "easy",
+  "description": "Identify the two real consumers of the FilesWatcher class in Node.js — distinguishing usage from definition.",
+  "prompt": "In the Node.js repository at the working directory, the class `FilesWatcher` is defined in `lib/internal/watch_mode/files_watcher.js`. Find every file that USES (imports + instantiates) FilesWatcher — not the definition itself.\n\n**OUTPUT REQUIREMENT (read this carefully):**\n\nUse your file-write tool to CREATE a file `ANSWER.md` at the repository root containing one line per consumer in this exact format:\n\n  consumer: <relative_path>:<line_number_of_require_or_import>\n\nThe automated grader ONLY reads `ANSWER.md`. If you respond in chat instead of writing the file, you fail. Do not write any other file.\n\n**RULES:**\n- Do NOT list `lib/internal/watch_mode/files_watcher.js` (that's the definition, not a consumer).\n- Do NOT list any file that only mentions FilesWatcher in comments or documentation.\n- Be exhaustive but precise: every true consumer present, no fabrications.",
+  "external_repo": {
+    "path":   "/tmp/node",
+    "subset": ["lib/", "src/"]
+  },
+  "required_files": ["ANSWER.md"],
+  "decoy_files": [
+    "lib/internal/watch_mode/files_watcher.js",
+    "lib/internal/test_runner/utils.js"
+  ],
+  "regex_checks": [
+    {
+      "file":        "ANSWER.md",
+      "pattern":     "lib/internal/main/watch_mode\\.js",
+      "min_matches": 1,
+      "reason":      "main/watch_mode.js is one of the two true consumers"
+    },
+    {
+      "file":        "ANSWER.md",
+      "pattern":     "lib/internal/test_runner/runner\\.js",
+      "min_matches": 1,
+      "reason":      "test_runner/runner.js is the second true consumer"
+    },
+    {
+      "file":        "ANSWER.md",
+      "pattern":     "(?im)^[\\s>*\\-\\d.`'\"]*(?:\\*\\*)?(?:caller|consumer|file)?[\\s:]*[`'\"\\*]*lib/internal/watch_mode/files_watcher\\.js",
+      "max_matches": 0,
+      "reason":      "files_watcher.js is the definition — citing it AS A CONSUMER (line-start, optionally with caller:/consumer: prefix or markdown bullet/bold) is a false positive; prose mentions inside paragraphs tolerated"
+    },
+    {
+      "file":        "ANSWER.md",
+      "pattern":     "(?im)^[\\s>*\\-\\d.`'\"]*(?:\\*\\*)?(?:caller|consumer|file)?[\\s:]*[`'\"\\*]*lib/internal/test_runner/utils\\.js",
+      "max_matches": 0,
+      "reason":      "utils.js does not consume FilesWatcher; line-start citation = fabrication"
+    }
+  ],
+  "must_not_claim": [
+    "all FilesWatcher usages cited",
+    "exhaustive search complete"
+  ]
+}

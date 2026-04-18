@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+*.egg
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.github
+.projmem
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Build output
+build/
+dist/
+*.whl
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# projmem's own runtime state
+.projmem/
+*.projmem-pack.json
+
+# Benchmark scratch (heavy; never ship)
+/tmp/memtrace_bench/
+bench/multisession/results/
+bench/results/
+
+bench/x
+examples/
+
+# projmem's own output
+projmem-out/
+
+# Notebook checkpoints
+.ipynb_checkpoints/
+
+# Repo-local backups
+*.bak

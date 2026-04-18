@@ -1,0 +1,52 @@
+---
+description: projmem — drift-aware code memory
+alwaysApply: true
+---
+
+# projmem — external code memory
+
+This repo has persistent memory at `.projmem/`. Survives session
+boundaries. Verifies beliefs against current code. Catches refuted
+claims before they ship.
+
+## Three calls that matter most
+
+```bash
+projmem task resume      # session start: what was I doing?
+projmem fact-check "…"   # pre-ship: are my claims still true?
+projmem conclude "…"     # capture: save a one-line conclusion
+```
+
+## Before any edit
+
+Run `projmem session <file_or_symbol>`. If `repo_memory.contradicted_count > 0`,
+STOP — a saved FACT was REFUTED. Investigate before editing.
+
+## Blocker signals (halt work)
+
+| Signal | Meaning |
+|---|---|
+| `contradicted_count > 0` | Saved FACT has been REFUTED |
+| `has_refuted` from `fact-check` | Draft has wrong claims |
+| `freshness_warning` | File changed on disk since index |
+| `drifted_on_disk > 0` in `changes` | Edits newer than the index |
+
+## Capture conclusions inline
+
+```bash
+projmem conclude "The @defined-at(foo, src/a.ts:10) helper is @exported-from(foo, src/a.ts)."
+```
+
+`@predicate(subject, object)` becomes a structured claim. No JSON file
+needed. First cited path → target.
+
+## Need more
+
+```bash
+projmem usage             # one-screen reference
+projmem guide workflow    # full session loop
+projmem report            # one-page digest at projmem-out/REPORT.md
+projmem graph <target>    # claim-and-drift-aware visual at projmem-out/graph.svg
+```
+
+All read commands accept `--json`. Parse it.

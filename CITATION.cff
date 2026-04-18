@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+message: "If you use projmem in academic work, please cite it as below."
+title: "projmem: drift-aware code memory for AI agents"
+abstract: >-
+  projmem is a structured-memory tool for AI-assisted code work. It
+  stores agent conclusions about code as verifiable claims, re-checks
+  each claim against the current codebase, and reports exactly which
+  beliefs became false after a code change — rather than opaque
+  "confidence decayed" signals.
+authors:
+  - name: "projmem contributors"
+license: PolyForm-Noncommercial-1.0.0
+version: "0.1.0"
+date-released: "2026-04-18"
+keywords:
+  - "static analysis"
+  - "code understanding"
+  - "llm-agents"
+  - "drift detection"
+  - "tree-sitter"
+  - "ai agent memory"

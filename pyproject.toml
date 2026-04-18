@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "projmem"
+version = "0.1.0"
+description = "projmem — drift-aware code memory for AI agents"
+license = { text = "PolyForm-Noncommercial-1.0.0" }
+requires-python = ">=3.9"
+dependencies = []
+
+[project.optional-dependencies]
+yaml = ["pyyaml>=6"]
+test = ["pytest>=7"]
+dev = ["pytest>=7"]
+# Multi-language AST indexing via tree-sitter. Without this, only Python is AST-indexed
+# (stdlib `ast`); JS/TS fall back to regex; other languages index as "other" + regex.
+treesitter = ["tree-sitter>=0.25", "tree-sitter-language-pack>=1.5"]
+# MCP server (`projmem mcp-server`) — optional; install with `pip install projmem[mcp]`
+# to expose projmem as an MCP server for Claude Desktop / Claude Code / Cursor /
+# Continue and any other MCP-aware client.
+mcp = ["mcp>=1.0"]
+
+[project.scripts]
+projmem = "projmem.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["projmem*"]
+
+# Ship the agent-instruction templates inside the package so `projmem init`
+# can find them after pip install.
+[tool.setuptools.package-data]
+"projmem" = ["templates/*", "templates/.*"]

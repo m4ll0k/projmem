@@ -1,0 +1,33 @@
+# projmem — external code memory
+
+Persistent memory at .projmem/. Survives session boundaries, verifies
+beliefs against current code, catches wrong claims before shipping.
+
+## Three calls matter most
+
+- `projmem task resume` — session start; what was I doing?
+- `projmem fact-check "<draft>"` — pre-ship; are my claims true?
+- `projmem conclude "<body with @predicate(subject, object)>"` —
+  save a conclusion. Inline claims extract automatically.
+
+## Session flow
+
+1. Start: `projmem task resume` then `projmem notes` if empty.
+2. During: `projmem task start|step|blocked|close` for continuity.
+3. Before shipping a non-trivial answer: `projmem fact-check`.
+   Exit 2 on REFUTED → revise.
+4. End: `projmem complete` (exit 1 on HIGH findings).
+
+## Blockers (halt work)
+
+- `contradicted_count > 0` in any repo_memory block
+- `has_refuted` from fact-check
+- `freshness_warning` on touched files
+- `drifted_on_disk > 0` in `projmem changes`
+- Open `blocked` task
+
+## Need more detail
+
+- `projmem guide workflow | commands | capture | signals`
+- `projmem usage` — one-screen reference
+- `projmem --json <cmd>` — machine-readable output for every read

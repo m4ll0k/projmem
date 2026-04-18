@@ -1,0 +1,47 @@
+{
+  "id": "rename_with_dynamic_dispatch",
+  "kind": "cross-file-refactor",
+  "family": "cross-file-refactor",
+  "tier": "medium",
+  "description": "Rename handler compute_price → quote_price; one caller registers it by string in a dispatch dict.",
+  "prompt": "The function compute_price() in app/handlers/quote.py needs to be renamed to quote_price(). Every caller must still work. Note: app/registry/dispatch.py uses the STRING 'compute_price' to look up the handler via a dictionary; that string must be updated too. Update tests/test_dispatch.py to reflect the new name. Do NOT rename unrelated functions in app/handlers/other.py.",
+  "required_files": [
+    "app/handlers/quote.py",
+    "app/registry/dispatch.py",
+    "tests/test_dispatch.py"
+  ],
+  "decoy_files": [
+    "app/handlers/other.py"
+  ],
+  "regex_checks": [
+    {
+      "file": "app/handlers/quote.py",
+      "pattern": "def quote_price",
+      "min_matches": 1,
+      "reason": "new function name must exist"
+    },
+    {
+      "file": "app/handlers/quote.py",
+      "pattern": "def compute_price",
+      "max_matches": 0,
+      "reason": "old name must be gone"
+    },
+    {
+      "file": "app/registry/dispatch.py",
+      "pattern": "quote_price",
+      "min_matches": 1,
+      "reason": "string-keyed dispatch must reference the new name"
+    },
+    {
+      "file": "app/registry/dispatch.py",
+      "pattern": "compute_price",
+      "max_matches": 0,
+      "reason": "old string key must be gone"
+    }
+  ],
+  "test_command": "python3 -m pytest tests/ -q",
+  "must_not_claim": [
+    "all callers updated via grep",
+    "no string lookups exist"
+  ]
+}

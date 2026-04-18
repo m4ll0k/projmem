@@ -1,0 +1,48 @@
+{
+  "id": "enum_exhaustiveness",
+  "kind": "exhaustiveness-topology",
+  "family": "exhaustiveness-topology",
+  "tier": "medium",
+  "description": "Add a new 'REFUNDED' state to billing.Status enum and cover every switch that branches on it.",
+  "prompt": "Add a new enum value Status.REFUNDED to billing/status.py. Then add matching branches in billing/workflow.py::advance() and billing/reports.py::summarise() so the new state is handled. Update tests/test_enum.py to assert both branches behave correctly. Do NOT touch billing/legacy_adapter.py — that adapter freezes the original 3-state enum for backwards compatibility.",
+  "required_files": [
+    "billing/status.py",
+    "billing/workflow.py",
+    "billing/reports.py",
+    "tests/test_enum.py"
+  ],
+  "decoy_files": [
+    "billing/legacy_adapter.py"
+  ],
+  "regex_checks": [
+    {
+      "file": "billing/status.py",
+      "pattern": "REFUNDED",
+      "min_matches": 1,
+      "reason": "new enum member must exist"
+    },
+    {
+      "file": "billing/workflow.py",
+      "pattern": "REFUNDED",
+      "min_matches": 1,
+      "reason": "workflow branch must handle REFUNDED"
+    },
+    {
+      "file": "billing/reports.py",
+      "pattern": "REFUNDED",
+      "min_matches": 1,
+      "reason": "reports must account for REFUNDED"
+    },
+    {
+      "file": "tests/test_enum.py",
+      "pattern": "REFUNDED",
+      "min_matches": 1,
+      "reason": "test must exercise the new branch"
+    }
+  ],
+  "test_command": "python3 -m pytest tests/ -q",
+  "must_not_claim": [
+    "exhaustive via grep",
+    "every switch now complete"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "task_id": "multisession_drift_check_ysoserial",
+  "source_repo": "/tmp/ysoserial",
+  "description": "The verifier-engagement task. Session 1 asks the agent to save 5 findings as PROSE with backticked symbol names + file:line — exactly the shape projmem's auto-extract recognises (`X` is defined at file:line). For arm C, every `note add` body produces a structured FACT claim for free, no `--claims` syntax required. Drift deletes 2 of the 5 cited files. Session 2 asks 'Of your 5 saved findings, which are STILL TRUE in the current code?' Projmem agent has `contradicted_count > 0` waiting in `projmem notes` — answer is one tool-call. Scratchpad agent has 5 sentences in notes.md that each need manual re-verification — answer requires N file-reads. Hypothesis: equal correctness (both can answer if they investigate); projmem uses fewer tokens because the answer is pre-computed.",
+  "sessions": [
+    {
+      "name": "session_1_save_findings",
+      "apply_drift_before": false,
+      "prompt": "You are starting a multi-session task on this ysoserial Java repository. TASK FOR SESSION 1: confirm the location of these FIVE payload classes by inspecting the source, then SAVE each finding to your persistence layer.\n\nFindings to confirm and save:\n  - F1: AspectJWeaver — find the .java file that defines `class AspectJWeaver`\n  - F2: BeanShell1 — find the .java file that defines `class BeanShell1`\n  - F3: Spring2 — find the .java file that defines `class Spring2`\n  - F4: URLDNS — find the .java file that defines `class URLDNS`\n  - F5: Vaadin1 — find the .java file that defines `class Vaadin1`\n\nWhen saving each finding, write the body as ONE SENTENCE in this exact form (the backticks matter, the `file:line` format matters):\n\n  `<ClassName>` is defined at <file>:<line>\n\nExample: ``AspectJWeaver` is defined at src/main/java/ysoserial/payloads/AspectJWeaver.java:32`\n\nFor projmem use `projmem note add <target> --kind note '<body>'` (one note per finding); for scratchpad append each sentence to `notes.md`; for baseline you have nothing to save to. Output the 5 sentences to stdout as well so a human can audit. Be efficient: under 90 seconds total."
+    },
+    {
+      "name": "session_2_what_still_true",
+      "apply_drift_before": true,
+      "prompt": "You are continuing the prior session's task on the ysoserial repository. The codebase has CHANGED since your prior visit. TASK FOR SESSION 2: of the FIVE findings F1-F5 you saved in session 1, tell me which are STILL TRUE in the current code and which are now BROKEN.\n\nOutput STRICTLY this format:\n\nF1: <STILL_TRUE|BROKEN|NO_RECORD>\nF2: <STILL_TRUE|BROKEN|NO_RECORD>\nF3: <STILL_TRUE|BROKEN|NO_RECORD>\nF4: <STILL_TRUE|BROKEN|NO_RECORD>\nF5: <STILL_TRUE|BROKEN|NO_RECORD>\n\nRules:\n  - STILL_TRUE — the file you cited still defines the class at the cited line.\n  - BROKEN — the file is gone, OR the class is no longer defined there.\n  - NO_RECORD — you have no record of session 1's findings.\n\nUse your tools efficiently. Projmem users: `projmem notes` shows the truth-status of saved FACT claims directly (`contradicted_count > 0` means at least one is BROKEN; per-note `staleness: contradicted` names them). Scratchpad users: re-verify each by reading the file. Baseline users: you likely have no record."
+    }
+  ],
+  "drift_events_dynamic": [
+    {
+      "kind": "delete_file",
+      "file": "src/main/java/ysoserial/payloads/Spring2.java",
+      "before_session": 1,
+      "description": "Delete Spring2.java (will refute F3)"
+    },
+    {
+      "kind": "delete_file",
+      "file": "src/main/java/ysoserial/payloads/URLDNS.java",
+      "before_session": 1,
+      "description": "Delete URLDNS.java (will refute F4)"
+    }
+  ],
+  "grading": {
+    "expected_verdicts": {
+      "F1": {"verdict": "STILL_TRUE", "reason": "AspectJWeaver.java unchanged"},
+      "F2": {"verdict": "STILL_TRUE", "reason": "BeanShell1.java unchanged"},
+      "F3": {"verdict": "BROKEN",     "reason": "Spring2.java deleted"},
+      "F4": {"verdict": "BROKEN",     "reason": "URLDNS.java deleted"},
+      "F5": {"verdict": "STILL_TRUE", "reason": "Vaadin1.java unchanged"}
+    }
+  }
+}
