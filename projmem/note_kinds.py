@@ -37,7 +37,17 @@ KINDS_V2_GUIDANCE: Tuple[str, ...] = (
     "critical",
 )
 
-KNOWN_KINDS: Tuple[str, ...] = KINDS_V1 + KINDS_V2_GUIDANCE
+# Reserved for v2.1 skills — path-scoped cognitive instructions
+# (docs/v2-design.md Pillar 3.5). The kind is in the enum so v2.1
+# can land verbs without a schema migration; the storage scaffold
+# is in projmem/migrations/m004_skill_scaffold.py.
+KINDS_V21_SKILL: Tuple[str, ...] = (
+    "skill",
+)
+
+KNOWN_KINDS: Tuple[str, ...] = (
+    KINDS_V1 + KINDS_V2_GUIDANCE + KINDS_V21_SKILL
+)
 
 DEFAULT_KIND: str = "note"
 
@@ -50,3 +60,8 @@ def is_guidance_kind(kind: str) -> bool:
 def is_critical_kind(kind: str) -> bool:
     """True only for the strongest kind; gated by the cosigner check."""
     return kind == "critical"
+
+
+def is_skill_kind(kind: str) -> bool:
+    """True for v2.1 skills (path-scoped cognitive instructions)."""
+    return kind in KINDS_V21_SKILL
