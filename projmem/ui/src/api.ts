@@ -3,7 +3,7 @@
 // when served from the daemon's static handler, and explicitly localhost
 // when running `npm run dev` (Vite's proxy bridges).
 
-import type { DaemonEvent, DaemonState } from "./types";
+import type { DaemonEvent, DaemonState, GraphPayload, LifelineDetail } from "./types";
 
 const isDev = import.meta.env.DEV;
 const HTTP_BASE = isDev ? "http://127.0.0.1:7777" : "";
@@ -28,12 +28,15 @@ async function postJSON<T>(path: string, body?: unknown): Promise<T> {
 }
 
 export const api = {
-  state:   () => getJSON<DaemonState>("/state"),
-  healthz: () => getJSON<{ ok: boolean }>("/healthz"),
-  pause:   () => postJSON("/control/pause"),
-  resume:  () => postJSON("/control/resume"),
-  approve: (lease: string) => postJSON(`/control/approve/${lease}`),
-  deny:    (lease: string) => postJSON(`/control/deny/${lease}`),
+  state:    () => getJSON<DaemonState>("/state"),
+  healthz:  () => getJSON<{ ok: boolean }>("/healthz"),
+  graph:    (includeGhosts: boolean) =>
+    getJSON<GraphPayload>(`/graph?include_ghosts=${includeGhosts ? 1 : 0}`),
+  lifeline: (id: string) => getJSON<LifelineDetail>(`/lifeline/${id}`),
+  pause:    () => postJSON("/control/pause"),
+  resume:   () => postJSON("/control/resume"),
+  approve:  (lease: string) => postJSON(`/control/approve/${lease}`),
+  deny:     (lease: string) => postJSON(`/control/deny/${lease}`),
 };
 
 // Opens a WebSocket that re-connects with linear backoff. Callers

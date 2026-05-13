@@ -147,6 +147,166 @@ def build_app(state: DaemonState, *, serve_ui: bool = True):
                 "subscribers": len(state.subscribers),
                 "events_buffered": len(state.events)}
 
+    @app.get("/graph")
+    async def get_graph(include_ghosts: bool = False, limit: int = 5000):
+        """Nodes + edges for the Step 7 graph view.
+
+        Nodes = active lifelines (one per current file path). Each
+        carries staleness (driven by attached notes), critical flag,
+        reverse-dep count (for node size), and currently-leased flag.
+        With ``include_ghosts=true`` the response also includes
+        tombstoned lifelines as dashed/faded ghosts, plus dashed
+        replaced-by edges pointing at successor lifelines.
+        """
+        store = state.store()
+        try:
+            # Active lifelines + their staleness rollup (worst-case across
+            # notes pinned to the path). The verifier writes staleness
+            # per-annotation; we project it onto the file.
+            active_rows = store.conn.execute(
+                "SELECT fl.id, fl.current_path, fl.created_at "
+                "FROM file_lifeline fl WHERE fl.tombstoned_at IS NULL "
+                "ORDER BY fl.created_at DESC LIMIT ?", (limit,),
+            ).fetchall()
+            paths = [r["current_path"] for r in active_rows]
+            # Worst staleness per target.
+            staleness_by_path: Dict[str, str] = {}
+            critical_by_path: Dict[str, bool] = {}
+            if paths:
+                placeholders = ",".join("?" * len(paths))
+                rows = store.conn.execute(
+                    f"SELECT target, kind, staleness FROM annotations "
+                    f"WHERE target IN ({placeholders})",
+                    tuple(paths),
+                ).fetchall()
+                rank = {"contradicted": 4, "strongly_stale": 3,
+                        "weakly_stale": 2, "fresh": 1, "unknown": 0}
+                for r in rows:
+                    cur = staleness_by_path.get(r["target"], "unknown")
+                    if rank.get(r["staleness"] or "", 0) > rank.get(cur, 0):
+                        staleness_by_path[r["target"]] = (
+                            r["staleness"] or "unknown")
+                    if r["kind"] == "critical":
+                        critical_by_path[r["target"]] = True
+            # Currently-leased paths drive the pulse halo.
+            leased_paths = set()
+            for r in store.conn.execute(
+                "SELECT fl.current_path FROM edit_lease el "
+                "JOIN file_lifeline fl ON fl.id = el.lifeline_id "
+                "WHERE el.state IN ('open','pending_approval')"
+            ):
+                leased_paths.add(r["current_path"])
+            # Reverse-dep counts for node sizing.
+            rev_counts: Dict[str, int] = {}
+            for r in store.conn.execute(
+                "SELECT dst, COUNT(*) AS n FROM edges "
+                "WHERE type='imports' GROUP BY dst"
+            ):
+                rev_counts[r["dst"]] = r["n"]
+
+            nodes = []
+            for r in active_rows:
+                p = r["current_path"]
+                nodes.append({
+                    "id":          r["id"],
+                    "path":        p,
+                    "staleness":   staleness_by_path.get(p, "fresh"),
+                    "critical":    critical_by_path.get(p, False),
+                    "rev_deps":    rev_counts.get(p, 0),
+                    "leased":      p in leased_paths,
+                    "ghost":       False,
+                })
+            edges = []
+            path_to_id = {r["current_path"]: r["id"] for r in active_rows}
+            if paths:
+                edge_rows = store.conn.execute(
+                    f"SELECT src, dst, type FROM edges "
+                    f"WHERE type='imports' "
+                    f"AND src IN ({placeholders}) "
+                    f"AND dst IN ({placeholders})",
+                    tuple(paths) + tuple(paths),
+                ).fetchall()
+                for er in edge_rows:
+                    s_id = path_to_id.get(er["src"])
+                    d_id = path_to_id.get(er["dst"])
+                    if s_id and d_id:
+                        edges.append({"source": s_id, "target": d_id,
+                                       "kind": "imports"})
+
+            if include_ghosts:
+                ghost_rows = store.conn.execute(
+                    "SELECT id, current_path, tombstoned_reason, "
+                    "tombstoned_at, replaced_by FROM file_lifeline "
+                    "WHERE tombstoned_at IS NOT NULL "
+                    "ORDER BY tombstoned_at DESC LIMIT 200"
+                ).fetchall()
+                for gr in ghost_rows:
+                    nodes.append({
+                        "id":                gr["id"],
+                        "path":              gr["current_path"],
+                        "staleness":         "tombstoned",
+                        "critical":          False,
+                        "rev_deps":          0,
+                        "leased":            False,
+                        "ghost":             True,
+                        "tombstoned_at":     gr["tombstoned_at"],
+                        "tombstoned_reason": gr["tombstoned_reason"],
+                    })
+                    if gr["replaced_by"]:
+                        try:
+                            successors = json.loads(gr["replaced_by"])
+                        except (TypeError, ValueError):
+                            successors = []
+                        for succ_path in successors:
+                            s_id = path_to_id.get(succ_path)
+                            if s_id:
+                                edges.append({
+                                    "source": gr["id"], "target": s_id,
+                                    "kind":   "replaced_by",
+                                })
+
+            return {"nodes": nodes, "edges": edges,
+                    "include_ghosts": include_ghosts,
+                    "node_count": len(nodes), "edge_count": len(edges)}
+        finally:
+            store.close()
+
+    @app.get("/lifeline/{lifeline_id}")
+    async def get_lifeline(lifeline_id: str):
+        """Per-node detail for the inspector tabs.
+
+        Returns the lifeline row, every file_event sorted oldest-first
+        (the History tab), every annotation pinned at the current path
+        (the Notes tab), and any critical notes (Critical tab — empty
+        list when nothing's pinned).
+        """
+        store = state.store()
+        try:
+            lifeline_row = store.conn.execute(
+                "SELECT * FROM file_lifeline WHERE id=?", (lifeline_id,),
+            ).fetchone()
+            if lifeline_row is None:
+                from fastapi import HTTPException as _HE
+                raise _HE(404, "no such lifeline")
+            events = [dict(r) for r in store.conn.execute(
+                "SELECT * FROM file_event WHERE lifeline_id=? "
+                "ORDER BY at ASC", (lifeline_id,)
+            )]
+            notes = [dict(r) for r in store.conn.execute(
+                "SELECT * FROM annotations WHERE target=? "
+                "ORDER BY created_at DESC",
+                (lifeline_row["current_path"],),
+            )]
+            critical = [n for n in notes if n.get("kind") == "critical"]
+            return {
+                "lifeline": dict(lifeline_row),
+                "events":   events,
+                "notes":    notes,
+                "critical": critical,
+            }
+        finally:
+            store.close()
+
     @app.get("/state")
     async def get_state():
         store = state.store()

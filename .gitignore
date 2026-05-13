@@ -25,6 +25,11 @@ env/
 build/
 dist/
 *.whl
+# Exception: the UI bundle MUST be committed so pip-installed users
+# get a working `projmem ui` without a Node toolchain. Source +
+# package.json under projmem/ui/ are tracked; node_modules/ isn't.
+!projmem/ui/dist/
+!projmem/ui/dist/**
 
 # OS / editor
 .DS_Store

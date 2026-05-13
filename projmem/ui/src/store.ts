@@ -16,40 +16,48 @@ import type { DaemonEvent, OpenLease } from "./types";
 const MAX_EVENTS = 500;
 
 interface UIState {
-  paused:        boolean;
-  wsStatus:      "open" | "closed" | "error" | "connecting";
-  events:        DaemonEvent[];
-  openLeases:    OpenLease[];
-  selectedEvent: DaemonEvent | null;
-  projectRoot:   string;
+  paused:           boolean;
+  wsStatus:         "open" | "closed" | "error" | "connecting";
+  events:           DaemonEvent[];
+  openLeases:       OpenLease[];
+  selectedEvent:    DaemonEvent | null;
+  selectedLifeline: string | null;
+  showGhosts:       boolean;
+  projectRoot:      string;
 
-  setPaused:        (b: boolean) => void;
-  setStatus:        (s: UIState["wsStatus"]) => void;
-  pushEvent:        (ev: DaemonEvent) => void;
-  resetEvents:      (evs: DaemonEvent[]) => void;
-  setOpenLeases:    (l: OpenLease[]) => void;
-  setSelectedEvent: (ev: DaemonEvent | null) => void;
-  setProjectRoot:   (r: string) => void;
+  setPaused:           (b: boolean) => void;
+  setStatus:           (s: UIState["wsStatus"]) => void;
+  pushEvent:           (ev: DaemonEvent) => void;
+  resetEvents:         (evs: DaemonEvent[]) => void;
+  setOpenLeases:       (l: OpenLease[]) => void;
+  setSelectedEvent:    (ev: DaemonEvent | null) => void;
+  setSelectedLifeline: (id: string | null) => void;
+  setShowGhosts:       (b: boolean) => void;
+  setProjectRoot:      (r: string) => void;
 }
 
 export const useStore = create<UIState>((set) => ({
-  paused:        false,
-  wsStatus:      "connecting",
-  events:        [],
-  openLeases:    [],
-  selectedEvent: null,
-  projectRoot:   "",
+  paused:           false,
+  wsStatus:         "connecting",
+  events:           [],
+  openLeases:       [],
+  selectedEvent:    null,
+  selectedLifeline: null,
+  showGhosts:       false,
+  projectRoot:      "",
 
-  setPaused:        (b) => set({ paused: b }),
-  setStatus:        (s) => set({ wsStatus: s }),
-  pushEvent:        (ev) => set((st) => {
+  setPaused:           (b) => set({ paused: b }),
+  setStatus:           (s) => set({ wsStatus: s }),
+  pushEvent:           (ev) => set((st) => {
     const next = [...st.events, ev];
     return { events: next.length > MAX_EVENTS
       ? next.slice(next.length - MAX_EVENTS)
       : next };
   }),
-  resetEvents:      (evs) => set({ events: evs }),
-  setOpenLeases:    (l) => set({ openLeases: l }),
-  setSelectedEvent: (ev) => set({ selectedEvent: ev }),
-  setProjectRoot:   (r) => set({ projectRoot: r }),
+  resetEvents:         (evs) => set({ events: evs }),
+  setOpenLeases:       (l) => set({ openLeases: l }),
+  setSelectedEvent:    (ev) => set({ selectedEvent: ev }),
+  setSelectedLifeline: (id) => set({ selectedLifeline: id }),
+  setShowGhosts:       (b) => set({ showGhosts: b }),
+  setProjectRoot:      (r) => set({ projectRoot: r }),
 }));

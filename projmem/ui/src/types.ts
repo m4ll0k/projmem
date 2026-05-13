@@ -40,3 +40,77 @@ export interface DaemonState {
   open_leases:    OpenLease[];
   recent_events:  DaemonEvent[];
 }
+
+// ── /graph (Step 7) ───────────────────────────────────────────────────────
+
+export type Staleness =
+  | "fresh"
+  | "weakly_stale"
+  | "strongly_stale"
+  | "contradicted"
+  | "tombstoned"
+  | "unknown";
+
+export interface GraphNode {
+  id:                string;          // lifeline_id (UUID)
+  path:              string | null;   // current_path; null possible for ghosts
+  staleness:         Staleness;
+  critical:          boolean;
+  rev_deps:          number;
+  leased:            boolean;
+  ghost:             boolean;
+  tombstoned_at?:    number | null;
+  tombstoned_reason?: string | null;
+}
+
+export interface GraphEdge {
+  source: string;
+  target: string;
+  kind:   "imports" | "replaced_by" | string;
+}
+
+export interface GraphPayload {
+  nodes:          GraphNode[];
+  edges:          GraphEdge[];
+  include_ghosts: boolean;
+  node_count:     number;
+  edge_count:     number;
+}
+
+// ── /lifeline/{id} (Step 7 inspector) ─────────────────────────────────────
+
+export interface FileEvent {
+  id:                number;
+  lifeline_id:       string;
+  kind:              string;
+  at:                number;
+  reason?:           string | null;
+  diff_summary?:     string | null;
+  symbols_affected?: string | null;
+}
+
+export interface Annotation {
+  id:           number;
+  target:       string;
+  kind:         string;
+  body:         string;
+  severity?:    string | null;
+  staleness?:   string | null;
+  category?:    string | null;
+  approved_by?: string | null;
+  created_at?:  number | null;
+}
+
+export interface LifelineDetail {
+  lifeline:  {
+    id:                string;
+    current_path:      string | null;
+    created_at:        number;
+    created_reason:    string;
+    tombstoned_at?:    number | null;
+    tombstoned_reason?: string | null;
+  };
+  events:    FileEvent[];
+  notes:     Annotation[];
+  critical:  Annotation[];
+}

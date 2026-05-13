@@ -201,6 +201,85 @@ class TestPauseAndApprove:
 # WebSocket broadcast
 # ---------------------------------------------------------------------------
 
+class TestGraphEndpoint:
+    def test_graph_returns_nodes_and_edges(self, client):
+        c, state = client
+        store = state.store()
+        store.upsert_file("src/b.py", "py", "h", time.time(), 1, "ast")
+        store.conn.execute(
+            "INSERT INTO edges(src, dst, type) "
+            "VALUES('src/b.py', 'src/a.py', 'imports')",
+        )
+        store.conn.commit()
+        store.close()
+        r = c.get("/graph")
+        assert r.status_code == 200
+        g = r.json()
+        paths = {n["path"] for n in g["nodes"]}
+        assert {"src/a.py", "src/b.py"} <= paths
+        assert any(e["kind"] == "imports" for e in g["edges"])
+        assert g["include_ghosts"] is False
+
+    def test_graph_with_include_ghosts_shows_tombstones(self, client):
+        from projmem import mutation_verbs as _mv
+        c, state = client
+        store = state.store()
+        _mv.delete_path(
+            store, "src/a.py",
+            reason="consolidated into shared/util.py",
+            replaced_by=["src/a.py"],  # self-replacement is fine for test
+        )
+        store.close()
+        # Without ghosts, src/a.py is gone from the graph.
+        no_ghosts = c.get("/graph?include_ghosts=0").json()
+        active_paths = {n["path"] for n in no_ghosts["nodes"] if not n["ghost"]}
+        assert "src/a.py" not in active_paths
+
+        # With ghosts, the tombstoned lifeline reappears as a ghost.
+        with_ghosts = c.get("/graph?include_ghosts=1").json()
+        ghost_paths = {n["path"] for n in with_ghosts["nodes"] if n["ghost"]}
+        assert "src/a.py" in ghost_paths
+        # Tombstoned reason rides on the node.
+        ghost = next(n for n in with_ghosts["nodes"]
+                     if n["ghost"] and n["path"] == "src/a.py")
+        assert "consolidated" in (ghost.get("tombstoned_reason") or "")
+
+
+class TestLifelineEndpoint:
+    def test_lifeline_returns_full_detail(self, client):
+        from projmem import mutation_verbs as _mv
+        c, state = client
+        store = state.store()
+        # Add a guidance note on src/a.py + open a lease so events accumulate.
+        store.add_annotation(
+            target="src/a.py", kind="guidance",
+            body="prefer functional style here", severity="warn",
+        )
+        _mv.open_editing_lease(
+            store, "src/a.py",
+            reason="exercising the lifeline detail endpoint",
+        )
+        lifeline_id = store.conn.execute(
+            "SELECT lifeline_id FROM files WHERE path=?", ("src/a.py",),
+        ).fetchone()["lifeline_id"]
+        store.close()
+
+        r = c.get(f"/lifeline/{lifeline_id}")
+        assert r.status_code == 200
+        detail = r.json()
+        assert detail["lifeline"]["id"] == lifeline_id
+        assert detail["lifeline"]["current_path"] == "src/a.py"
+        assert any(n["kind"] == "guidance" for n in detail["notes"])
+        # At least the 'created' (from upsert), 'leased' events present.
+        kinds = {e["kind"] for e in detail["events"]}
+        assert "leased" in kinds
+
+    def test_lifeline_404_on_unknown(self, client):
+        c, _ = client
+        r = c.get("/lifeline/00000000-0000-0000-0000-000000000000")
+        assert r.status_code == 404
+
+
 class TestWebSocket:
     def test_events_endpoint_broadcasts_to_subscriber(self, client):
         c, state = client

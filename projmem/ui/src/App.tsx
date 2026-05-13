@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { TopBar } from "./components/TopBar";
 import { ActivityFeed } from "./components/ActivityFeed";
 import { Inspector } from "./components/Inspector";
+import { GraphView } from "./components/Graph";
 import { api, connectEvents } from "./api";
 import { useStore } from "./store";
 
@@ -50,8 +51,8 @@ export function App() {
           </div>
           <ActivityFeed />
         </section>
-        <section className="flex items-center justify-center bg-white text-xs text-muted">
-          graph view — coming in Step 7
+        <section className="bg-white min-h-0 min-w-0 relative">
+          <GraphView />
         </section>
         <Inspector />
       </main>
