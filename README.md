@@ -4,8 +4,7 @@
 
 ### Drift-aware code memory for AI agents — when the code changes, your saved beliefs are flagged refuted *before* you ship.
 
-> grep tells you what's in the code.
-> projmem tells you whether what you (or your agent) **believed** about the code is still true — and refuses tool calls that would violate it.
+Persistent, machine-verified memory for AI coding agents. Saved facts flip to `refuted` the moment the cited code drifts; tool calls against user-guarded paths are refused at the boundary, not the prompt.
 
 [![license: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20NC-blue.svg)](./LICENSE)
 [![tests: 752 passing](https://img.shields.io/badge/tests-752%20passing-brightgreen.svg)](./tests)
