@@ -21,6 +21,9 @@ treesitter = ["tree-sitter>=0.25", "tree-sitter-language-pack>=1.5"]
 # to expose projmem as an MCP server for Claude Desktop / Claude Code / Cursor /
 # Continue and any other MCP-aware client.
 mcp = ["mcp>=1.0"]
+# Local daemon (`projmem daemon`) — optional; install with `pip install projmem[daemon]`
+# to enable the v2 UI + pause-mode + hook event stream.
+daemon = ["fastapi>=0.110", "uvicorn[standard]>=0.27", "websockets>=12"]
 
 [project.scripts]
 projmem = "projmem.cli:main"

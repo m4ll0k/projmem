@@ -7063,6 +7063,20 @@ def build_parser() -> argparse.ArgumentParser:
                    help="REQUIRED. Without this flag, `forget` refuses.")
     s.set_defaults(func=cmd_forget)
 
+    # ── v2 Step 5: local daemon (HTTP + WebSocket on 127.0.0.1) ────────────
+    s = sub.add_parser("daemon",
+                       help="Run the local projmem daemon (FastAPI on "
+                            "127.0.0.1:<port>). The v2 UI talks to this. "
+                            "Refuses to bind to non-loopback addresses. "
+                            "Optional install: `pip install projmem[daemon]`.")
+    s.add_argument("--port", type=int, default=7777,
+                   help="TCP port to bind on 127.0.0.1. Default: 7777.")
+    s.add_argument("--host", default="127.0.0.1",
+                   help="Host to bind on. Loopback addresses only — "
+                        "anything else is refused at startup. Default: "
+                        "127.0.0.1.")
+    s.set_defaults(func=cmd_daemon)
+
     # ── v2 Step 3: critical-note authoring + review ────────────────────────
     s = sub.add_parser("critical",
                        help="Critical notes — strongest guidance kind. "
@@ -7251,6 +7265,30 @@ def cmd_forget(args):
         return 2
     _emit(result, args.json)
     return 0
+
+
+def cmd_daemon(args):
+    """Run the local projmem daemon. Blocks forever (or until SIGINT).
+
+    Fails fast with a structured envelope when:
+      * --host resolves to anything other than the loopback interface
+        (the daemon is local-only by design — no auth, no TLS),
+      * the daemon optional deps aren't installed.
+    """
+    cfg = config_mod.load(args.path)
+    from projmem import daemon as _d
+    try:
+        return _d.run(cfg.root, host=args.host, port=args.port)
+    except _d.BindRefusedError as e:
+        _emit_error({"error": e.code, "message": str(e),
+                       "hint": "Use 127.0.0.1 (default). LAN exposure is "
+                                "never appropriate for this surface."},
+                      getattr(args, "json", False))
+        return 2
+    except _d.DaemonError as e:
+        _emit_error({"error": e.code, "message": str(e)},
+                      getattr(args, "json", False))
+        return 2
 
 
 def cmd_critical(args):
