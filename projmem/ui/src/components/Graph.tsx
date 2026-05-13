@@ -34,34 +34,63 @@ function readPalette(): Record<string, string> {
   };
 }
 
-// ── Visual encoding helpers (palette-aware) ───────────────────────────────
+// ── Section coloring ─────────────────────────────────────────────────────
+// A node's FILL is determined by its TOP-LEVEL directory section
+// (the first path segment: `projmem`, `tests`, `bench`, `docs`, …).
+// Stable across renders — the section→color mapping is a hash, so the
+// same directory always lands on the same hue. This gives the eye a
+// fixed map of "where in the codebase am I looking?" that holds even
+// when nodes shuffle. State (critical / leased / stale) rides on the
+// STROKE so it doesn't fight the section signal.
 
-function staleColor(s: string, P: Record<string, string>): string {
+const SECTION_PALETTE = [
+  "#3b82f6", "#10b981", "#f59e0b", "#8b5cf6",
+  "#ec4899", "#06b6d4", "#84cc16", "#f97316",
+  "#a855f7", "#14b8a6", "#6366f1", "#22c55e",
+  "#0ea5e9", "#d946ef", "#65a30d", "#dc2626",
+];
+
+function topLevel(path: string | null): string {
+  if (!path) return "(root)";
+  const i = path.indexOf("/");
+  return i >= 0 ? path.slice(0, i) : "(root)";
+}
+
+function sectionColor(section: string): string {
+  return SECTION_PALETTE[hash32(section) % SECTION_PALETTE.length];
+}
+
+function staleStrokeColor(s: string, P: Record<string, string>): string | null {
   switch (s) {
-    case "fresh":          return P.good;
-    case "weakly_stale":   return P.muted;
-    case "strongly_stale": return P.warn;
     case "contradicted":   return P.bad;
-    case "tombstoned":     return P.ghost;
-    default:               return P.muted;
+    case "strongly_stale": return P.warn;
+    default:               return null;
   }
 }
 
 function nodeFill(n: GraphNode, P: Record<string, string>): string {
   if (n.symbol) return "rgba(251, 191, 36, 0.18)";
-  return staleColor(n.staleness, P);
+  if (n.ghost)  return P.ghost;
+  return sectionColor(topLevel(n.path));
 }
 
 function nodeStroke(n: GraphNode, P: Record<string, string>): string {
-  if (n.critical)  return P.bad;
-  if (n.leased)    return P.accent;
-  if (n.symbol)    return P.warn;
+  // Stroke priority: critical (red, hardest signal) > leased (accent) >
+  // contradicted/strongly-stale (state). Otherwise a soft outline so
+  // the section fill carries the visual weight.
+  if (n.critical) return P.bad;
+  if (n.leased)   return P.accent;
+  if (n.symbol)   return P.warn;
+  const stale = staleStrokeColor(n.staleness, P);
+  if (stale)      return stale;
   return P.line;
 }
 
 function nodeStrokeWidth(n: GraphNode): number {
   if (n.critical) return 2;
   if (n.leased)   return 2;
+  if (n.staleness === "contradicted" ||
+      n.staleness === "strongly_stale") return 1.5;
   return 1;
 }
 
@@ -75,6 +104,10 @@ function edgeColor(e: GraphEdge, P: Record<string, string>): string {
   if (e.kind === "replaced_by") return P.muted;
   if (e.kind === "contains")    return P.warn;
   return P.line;
+}
+
+function nodeShortPath(n: GraphNode): string {
+  return (n.path || "").split("/").pop() || "—";
 }
 
 function edgeDash(e: GraphEdge): string {
@@ -504,20 +537,47 @@ export function GraphView() {
         </div>
       )}
 
-      <div className="absolute bottom-2 left-2 rounded-md bg-elev/95 border border-line px-2 py-1.5 text-[10px] shadow-soft space-y-0.5 max-w-[260px] text-ink">
-        <div className="font-semibold tracking-tight mb-1">Legend & controls</div>
-        <div className="grid grid-cols-2 gap-x-2">
-          <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full bg-good"/>fresh</div>
-          <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full bg-warn"/>stale</div>
-          <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full bg-bad"/>contradicted</div>
-          <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full bg-bg border-2 border-bad"/>critical</div>
-          <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full bg-bg border-2 border-accent"/>leased</div>
-          <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full border" style={{background:"rgba(251,191,36,0.18)", borderColor: palette.warn}}/>symbol</div>
+      <div className="absolute bottom-2 left-2 rounded-md bg-elev/95 border border-line px-2 py-1.5 text-[10px] shadow-soft max-w-[280px] text-ink">
+        <div className="font-semibold tracking-tight mb-1">Sections</div>
+        {/* Section legend — pulls top-level dirs from the current nodes,
+            picks the same colors the graph uses. Sorted by node count
+            so the biggest sections lead. */}
+        {(() => {
+          const counts: Record<string, number> = {};
+          for (const n of nodes) {
+            if (n.symbol || n.ghost) continue;
+            const s = topLevel(n.path);
+            counts[s] = (counts[s] || 0) + 1;
+          }
+          const sorted = Object.entries(counts)
+            .sort((a, b) => b[1] - a[1]).slice(0, 8);
+          if (sorted.length === 0) {
+            return <div className="text-muted">(no sections yet)</div>;
+          }
+          return (
+            <div className="grid grid-cols-2 gap-x-2 gap-y-0.5">
+              {sorted.map(([s, n]) => (
+                <div key={s} className="flex items-center gap-1">
+                  <span className="inline-block w-3 h-3 rounded-full flex-shrink-0"
+                        style={{ background: sectionColor(s) }} />
+                  <span className="font-mono truncate" title={s}>{s}</span>
+                  <span className="text-muted tabular-nums">{n}</span>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+        <div className="pt-1 mt-1 border-t border-line">
+          <div className="font-semibold tracking-tight mb-0.5">State</div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full bg-bg border-2 border-accent"/>leased</span>
+            <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full bg-bg border-2 border-bad"/>critical</span>
+            <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full bg-bg border-2 border-warn"/>stale</span>
+          </div>
         </div>
         <div className="pt-1 mt-1 border-t border-line text-muted">
-          drag · zoom · click — labels at hover or zoom ≥ 1.4×<br />
-          drag = pin · double-click node = unpin<br />
-          while editing: others dim to 8% (focus mode)
+          drag = pin · dblclick = unpin · zoom + pan supported<br />
+          while editing: focus mode dims unrelated nodes to 8%
         </div>
       </div>
     </div>
