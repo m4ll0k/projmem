@@ -2675,9 +2675,15 @@ def cmd_audit_trail(args):
 
 
 _KNOWN_NOTE_KINDS = {
+    # v1 kinds
     "note", "refute", "verified-safe", "documented-footgun",
     "todo", "link", "risk",
+    # v2 kinds — injected at edit time by `projmem editing`
+    "guidance", "constraint", "preference", "critical",
 }
+
+_GUIDANCE_KINDS = {"guidance", "constraint", "preference", "critical"}
+_VALID_SEVERITIES = {"info", "warn", "critical"}
 
 
 def cmd_note(args):
@@ -2988,6 +2994,29 @@ def cmd_note(args):
                         "notes use `@project`."),
                 }, args.json)
                 sys.exit(2)
+        # v2 severity validation for guidance-family kinds.
+        severity = getattr(args, "severity", None)
+        if severity is not None:
+            if args.kind not in _GUIDANCE_KINDS:
+                _emit_error(
+                    {"error":   "severity-not-applicable",
+                     "message": (f"--severity is only valid for "
+                                  f"guidance-family kinds "
+                                  f"({sorted(_GUIDANCE_KINDS)}); got "
+                                  f"kind={args.kind!r}"),
+                     "hint":    ("Drop --severity or pass --kind "
+                                  "guidance / constraint / preference / "
+                                  "critical.")},
+                    args.json, store=store)
+            if severity not in _VALID_SEVERITIES:
+                _emit_error(
+                    {"error":   "invalid-severity",
+                     "message": (f"--severity must be one of "
+                                  f"{sorted(_VALID_SEVERITIES)}; "
+                                  f"got {severity!r}")},
+                    args.json, store=store)
+        elif args.kind in _GUIDANCE_KINDS:
+            severity = "info"
         ann_id = store.add_annotation(
             target=args.target, kind=args.kind, body=args.body,
             author=args.author, expires_at=expires_at,
@@ -2996,7 +3025,8 @@ def cmd_note(args):
             assumptions=getattr(args, "assumptions", None),
             scope=getattr(args, "scope", None),
             truth_class=getattr(args, "truth_class", None),
-            fingerprint=fp)
+            fingerprint=fp,
+            severity=severity)
         from . import claims as _claims
         claim_count = sum(1 for e in (evidence_list or [])
                           if _claims.is_claim(e))
@@ -4445,10 +4475,24 @@ def cmd_hook(args):
       install   — drop the managed block into post-commit + post-checkout
       uninstall — remove the managed block (other hook content kept)
       status    — report what's installed without changing anything
+
+    With --claude-code, the install action writes Claude Code hook
+    scripts under .claude/hooks/ instead of touching git hooks. The
+    scripts call `projmem editing` / `done` on every Edit/Write/Read
+    tool call, with full shell-injection safety.
     """
     cfg = config_mod.load(args.path)
-    from . import hooks as _hooks
     action = getattr(args, "hook_action", "status")
+    if getattr(args, "claude_code", False):
+        result = _install_claude_code_hooks(
+            cfg.root, action=action, dry_run=getattr(args, "dry_run", False),
+        )
+        result["repo_root"] = cfg.root
+        if result.get("error"):
+            _emit_error(result, args.json)
+        _emit(result, args.json)
+        return 0
+    from . import hooks as _hooks
     if action == "install":
         result = _hooks.install(cfg.root, force=getattr(args, "force", False))
     elif action == "uninstall":
@@ -4460,6 +4504,71 @@ def cmd_hook(args):
     if result.get("error"):
         _emit_error(result, args.json)
     _emit(result, args.json)
+
+
+def _install_claude_code_hooks(
+    root: str, *, action: str, dry_run: bool,
+) -> Dict[str, Any]:
+    """Drop projmem PreToolUse + PostToolUse scripts under .claude/hooks/.
+
+    Returns a structured envelope. With dry_run=True nothing is written;
+    the response describes what would be written. With action='status'
+    the response reports whether the scripts are already present and
+    whether they match the current templates.
+    """
+    from projmem import hook_templates as _ht
+    hooks_dir = os.path.join(root, ".claude", "hooks")
+    pre_path  = os.path.join(hooks_dir, "pre-tool-use.py")
+    post_path = os.path.join(hooks_dir, "post-tool-use.py")
+
+    def _read(p):
+        try:
+            with open(p, "r", encoding="utf-8") as f:
+                return f.read()
+        except OSError:
+            return None
+
+    if action == "status":
+        return {
+            "claude_code": True,
+            "pre_present":  os.path.isfile(pre_path),
+            "post_present": os.path.isfile(post_path),
+            "pre_matches_template":  _read(pre_path)  == _ht.PRE_TOOL_USE_SCRIPT,
+            "post_matches_template": _read(post_path) == _ht.POST_TOOL_USE_SCRIPT,
+            "pre_path":  pre_path,
+            "post_path": post_path,
+        }
+    if action == "uninstall":
+        removed = []
+        for p in (pre_path, post_path):
+            if os.path.isfile(p):
+                if not dry_run:
+                    os.unlink(p)
+                removed.append(p)
+        return {"claude_code": True, "action": "uninstall",
+                "removed": removed, "dry_run": dry_run}
+
+    # action == "install"
+    if dry_run:
+        return {"claude_code": True, "action": "install", "dry_run": True,
+                "would_write": [pre_path, post_path],
+                "settings_instructions": _ht.SETTINGS_INSTRUCTIONS}
+    os.makedirs(hooks_dir, exist_ok=True)
+    written = []
+    for path, content in ((pre_path,  _ht.PRE_TOOL_USE_SCRIPT),
+                          (post_path, _ht.POST_TOOL_USE_SCRIPT)):
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(content)
+        # Executable for the owner; readable for everyone. No sticky
+        # bit, no group-write — minimal footprint.
+        os.chmod(path, 0o755)
+        written.append(path)
+    return {
+        "claude_code":           True,
+        "action":                "install",
+        "written":               written,
+        "settings_instructions": _ht.SETTINGS_INSTRUCTIONS,
+    }
 
 
 def _parse_formats(spec) -> List[str]:
@@ -6138,6 +6247,11 @@ def build_parser() -> argparse.ArgumentParser:
                          "would never re-validate). Use for claims about "
                          "future files or external context you "
                          "deliberately want pinned.")
+    sa.add_argument("--severity", default=None,
+                    choices=["info", "warn", "critical"],
+                    help="v2 guidance-family kinds (guidance / constraint / "
+                         "preference / critical) carry a severity. Default "
+                         "for those kinds: info. Ignored for v1 kinds.")
     sa.set_defaults(func=cmd_note)
 
     sl = nsub.add_parser("list", help="List annotations.")
@@ -6661,17 +6775,25 @@ def build_parser() -> argparse.ArgumentParser:
     s.set_defaults(func=cmd_watch)
 
     s = sub.add_parser("hook",
-                       help="Install / uninstall git hooks that run "
-                            "projmem on every commit and checkout. "
-                            "Surfaces REFUTED notes the moment they're "
-                            "introduced.")
+                       help="Install / uninstall git or Claude Code hooks. "
+                            "Default mode is git (commit/checkout). Add "
+                            "--claude-code to install the PreToolUse + "
+                            "PostToolUse scripts that announce every "
+                            "Edit/Write/Read.")
     s.add_argument("hook_action", nargs="?", default="status",
                    choices=["install", "uninstall", "status"],
                    help="Default: status.")
     s.add_argument("--force", action="store_true",
-                   help="With install: overwrite the existing hook file "
-                        "entirely (wipes other tools' hook content). "
-                        "Default: append/update only our managed block.")
+                   help="With install (git mode): overwrite existing hook "
+                        "file entirely. Default: append/update managed block.")
+    s.add_argument("--claude-code", action="store_true", dest="claude_code",
+                   help="Operate on Claude Code hooks (.claude/hooks/*.py) "
+                        "instead of git hooks. PreToolUse calls "
+                        "`projmem editing`; PostToolUse calls `projmem done` "
+                        "(or creates an implicit lease if the agent "
+                        "bypassed PreToolUse).")
+    s.add_argument("--dry-run", action="store_true", dest="dry_run",
+                   help="Report what would be written without touching disk.")
     s.set_defaults(func=cmd_hook)
 
     s = sub.add_parser("graph",
@@ -6941,6 +7063,26 @@ def build_parser() -> argparse.ArgumentParser:
                    help="REQUIRED. Without this flag, `forget` refuses.")
     s.set_defaults(func=cmd_forget)
 
+    # ── v2 Step 2: read-only context + hook installer ──────────────────────
+    s = sub.add_parser("context",
+                       help="Read-only version of `editing`'s guidance "
+                            "bundle. Returns notes for the file + parent "
+                            "directories + 1-hop dependencies. Stale "
+                            "(contradicted / strongly_stale) notes are "
+                            "dropped by default; pass --include-stale to "
+                            "see them anyway.")
+    s.add_argument("target", help="File path to compute context for.")
+    s.add_argument("--include-stale", action="store_true",
+                   help="Include contradicted / strongly_stale notes "
+                        "instead of dropping them. Useful for triage.")
+    s.add_argument("--format", default="json",
+                   choices=["json", "agent-prelude", "human"],
+                   help="`json` (default): full structured output. "
+                        "`agent-prelude`: a tool-result-ready text block "
+                        "for the Claude Code PreToolUse hook. `human`: "
+                        "compact tabular text for terminals.")
+    s.set_defaults(func=cmd_context)
+
     return p
 
 
@@ -7062,6 +7204,41 @@ def cmd_forget(args):
         _emit_mutation_error(args, store, e)
         return 2
     _emit(result, args.json)
+    return 0
+
+
+def cmd_context(args):
+    from projmem import mutation_verbs as _mv
+    cfg, store = _open_store(args.path, allow_unindexed=True)
+    result = _mv.context_for_path(
+        store, args.target,
+        include_stale=getattr(args, "include_stale", False),
+    )
+    fmt = getattr(args, "format", "json")
+    if fmt == "json":
+        _emit(result, args.json)
+        return 0
+    # Both text formats render to a plain block. The agent-prelude
+    # variant prefixes with a header the PreToolUse hook can hand
+    # straight to Claude Code; `human` is the same content stripped
+    # of the header for terminal browsing.
+    lines: List[str] = []
+    if fmt == "agent-prelude":
+        lines.append(f"=== projmem context for {result['path']} ===")
+    guidance = result.get("guidance", [])
+    if not guidance:
+        lines.append("(no guidance for this path)")
+    for note in guidance:
+        marker = " (1-hop dep)" if note.get("via") == "1-hop dep" else ""
+        sev = note.get("severity") or note.get("kind") or "note"
+        lines.append(f"  [{sev}] {note.get('target')}{marker}: "
+                     f"{(note.get('body') or '').strip()}")
+    excluded = result.get("stale_excluded") or []
+    if excluded:
+        lines.append("")
+        lines.append(f"({len(excluded)} stale note(s) hidden — "
+                      "pass --include-stale to see them)")
+    sys.stdout.write("\n".join(lines) + "\n")
     return 0
 
 

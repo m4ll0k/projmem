@@ -225,6 +225,112 @@ def _onehop_dep_annotations(
     ]
 
 
+def context_for_path(
+    store, path: str, *, include_stale: bool = False,
+) -> Dict[str, Any]:
+    """Read-only version of ``editing``'s guidance bundle.
+
+    Returns the same shape that ``editing`` inlines, minus the lease.
+    Useful when an agent (or the UI's node inspector) wants the
+    context for a path without committing to an edit. The CLI surface
+    is ``projmem context <path>``.
+
+    ``include_stale=False`` (default) drops every annotation with
+    ``staleness in ('contradicted', 'strongly_stale')`` so the agent
+    isn't fed refuted beliefs. The dropped notes are reported in
+    ``stale_excluded`` so the human can still find them.
+    """
+    conn = store.conn
+    merged = (
+        _annotations_for_path(conn, path)
+        + _parent_dir_annotations(conn, path)
+        + _onehop_dep_annotations(conn, path)
+    )
+    stale_excluded: List[Dict[str, Any]] = []
+    kept: List[Dict[str, Any]] = []
+    for note in merged:
+        if (not include_stale
+                and note.get("staleness") in ("contradicted",
+                                                 "strongly_stale")):
+            stale_excluded.append(note)
+        else:
+            kept.append(note)
+    return {
+        "path":           path,
+        "guidance":       kept,
+        "stale_excluded": stale_excluded,
+        "history":        _history_for_lifeline_by_path(conn, path),
+    }
+
+
+def _history_for_lifeline_by_path(
+    conn: sqlite3.Connection, path: str, limit: int = 10,
+) -> Optional[Dict[str, Any]]:
+    """History block for whichever lifeline is currently at ``path`` (or None)."""
+    row = _find_active_lifeline(conn, path)
+    if row is None:
+        return None
+    return _history_for_lifeline(conn, row["id"], limit=limit)
+
+
+# ---------------------------------------------------------------------------
+# Hook-helper: look up an open lease for a path (used by PostToolUse)
+# ---------------------------------------------------------------------------
+
+def find_open_lease_for_path(store, path: str) -> Optional[Dict[str, Any]]:
+    """Return the most-recent OPEN lease for ``path``, or None.
+
+    The hook scripts use this on PostToolUse: if Claude went through
+    PreToolUse, there's an open lease to close; otherwise the hook
+    creates an implicit lease retroactively.
+    """
+    row = store.conn.execute(
+        "SELECT el.* FROM edit_lease el "
+        "JOIN file_lifeline fl ON fl.id = el.lifeline_id "
+        "WHERE fl.current_path = ? AND el.state IN ('open','pending_approval') "
+        "ORDER BY el.opened_at DESC LIMIT 1",
+        (path,),
+    ).fetchone()
+    return dict(row) if row else None
+
+
+def open_implicit_lease(
+    store, path: str, *, reason: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Open a lease retroactively for a path Claude edited without announcing.
+
+    Used by the PostToolUse hook to keep the audit trail intact when
+    the agent bypassed ``editing``. ``agent_id`` is set to ``"implicit"``
+    so the UI can render this lease with a distinct style and the
+    implicit-lease metric ticks. The reason gate is RELAXED — the
+    whole point of an implicit lease is that the agent didn't supply
+    a reason; we record what we can.
+    """
+    conn = store.conn
+    intent = reason or "implicit lease — PostToolUse without prior `editing`"
+    lifeline_id = _ensure_lifeline_for_path(
+        conn, path, reason=intent, agent_id="implicit",
+    )
+    lease_id = str(uuid.uuid4())
+    now = time.time()
+    conn.execute(
+        "INSERT INTO edit_lease(id, lifeline_id, opened_at, expires_at, "
+        "agent_id, intent, state) VALUES(?, ?, ?, ?, 'implicit', ?, 'open')",
+        (lease_id, lifeline_id, now, now + LEASE_TTL_SECONDS, intent),
+    )
+    _emit_file_event(
+        conn, lifeline_id, kind="leased",
+        reason="implicit (agent bypassed editing)",
+    )
+    conn.commit()
+    return {
+        "lease_id":    lease_id,
+        "lifeline_id": lifeline_id,
+        "opened_at":   now,
+        "implicit":    True,
+    }
+
+
 def _history_for_lifeline(
     conn: sqlite3.Connection, lifeline_id: str, limit: int = 10,
 ) -> Dict[str, Any]:

@@ -67,13 +67,17 @@ def test_v1_schema_lacks_v2_artifacts(tmp_path):
 def test_apply_pending_adds_v2_tables_and_columns(tmp_path):
     conn = _open_v1_db(tmp_path)
     applied = migrations.apply_pending(conn)
-    assert applied == [1]
+    # m001 adds the lifeline schema. Any later migrations also apply;
+    # we assert the m001 outcomes specifically and let the registry's
+    # max define the version stamp.
+    assert 1 in applied
     assert _table_exists(conn, "file_lifeline")
     assert _table_exists(conn, "file_event")
     assert _table_exists(conn, "edit_lease")
     assert _column_exists(conn, "files", "lifeline_id")
     assert _column_exists(conn, "annotations", "lifeline_id")
-    assert migrations.current_version(conn) == 1
+    latest = max(v for v, _ in migrations.list_migrations())
+    assert migrations.current_version(conn) == latest
 
 
 def test_apply_pending_backfills_existing_files(tmp_path):
@@ -116,7 +120,8 @@ def test_apply_pending_is_idempotent(tmp_path):
     migrations.apply_pending(conn)
     second = migrations.apply_pending(conn)
     assert second == []
-    assert migrations.current_version(conn) == 1
+    latest = max(v for v, _ in migrations.list_migrations())
+    assert migrations.current_version(conn) == latest
 
 
 # ---------- down -------------------------------------------------------------
@@ -125,7 +130,10 @@ def test_rollback_removes_v2_tables_and_columns(tmp_path):
     conn = _open_v1_db(tmp_path)
     migrations.apply_pending(conn)
     rolled = migrations.rollback_to(conn, 0)
-    assert rolled == [1]
+    # Rollback walks the registry highest-first; m001 (= version 1) is
+    # in there along with every later migration. We assert the m001
+    # outcomes are reverted.
+    assert 1 in rolled
     assert not _table_exists(conn, "file_lifeline")
     assert not _table_exists(conn, "file_event")
     assert not _table_exists(conn, "edit_lease")
@@ -139,8 +147,9 @@ def test_rollback_then_reapply_round_trips(tmp_path):
     migrations.apply_pending(conn)
     migrations.rollback_to(conn, 0)
     second = migrations.apply_pending(conn)
-    assert second == [1]
-    assert migrations.current_version(conn) == 1
+    assert 1 in second
+    latest = max(v for v, _ in migrations.list_migrations())
+    assert migrations.current_version(conn) == latest
 
 
 # ---------- backfill timestamp ----------------------------------------------
@@ -215,7 +224,8 @@ def test_store_open_auto_applies_migrations(tmp_path):
     store = Store(db_path)
     try:
         # Fresh store should land at the latest version.
-        assert migrations.current_version(store.conn) == 1
+        latest = max(v for v, _ in migrations.list_migrations())
+        assert migrations.current_version(store.conn) == latest
         assert _table_exists(store.conn, "file_lifeline")
     finally:
         store.close()
@@ -228,7 +238,8 @@ def test_store_reopen_does_not_reapply_migrations(tmp_path):
     try:
         # We rely on version stamp being set; a fresh apply would also work,
         # but the contract is "skip when already current."
-        assert migrations.current_version(s2.conn) == 1
+        latest = max(v for v, _ in migrations.list_migrations())
+        assert migrations.current_version(s2.conn) == latest
         # And the lifeline tables should still be present (not re-created
         # destructively or doubled).
         assert _table_exists(s2.conn, "file_lifeline")

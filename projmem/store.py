@@ -741,7 +741,8 @@ class Store:
                        scope: Optional[str] = None,
                        truth_class: Optional[str] = None,
                        fingerprint: Optional[Any] = None,
-                       staleness: Optional[str] = None) -> int:
+                       staleness: Optional[str] = None,
+                       severity: Optional[str] = None) -> int:
         import json as _json
         # Sanitize the BODY only — strips control chars, normalizes line
         # endings, caps length. Idempotent. We deliberately do NOT
@@ -757,8 +758,8 @@ class Store:
         cur = self.conn.execute(
             "INSERT INTO annotations(target, kind, body, author, "
             "created_at, expires_at, confidence, confidence_base, evidence, assumptions, "
-            "scope, truth_class, fingerprint, last_verified_at, staleness) "
-            "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "scope, truth_class, fingerprint, last_verified_at, staleness, severity) "
+            "VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (target, kind, body, author, time.time(), expires_at,
              confidence if confidence is not None else 0.5,
              confidence if confidence is not None else 0.5,
@@ -766,7 +767,8 @@ class Store:
              truth_class or "INFERENCE",
              fp,
              time.time() if fingerprint is not None else None,
-             staleness or ("fresh" if fingerprint is not None else "unknown")))
+             staleness or ("fresh" if fingerprint is not None else "unknown"),
+             severity))
         self.conn.commit()
         return cur.lastrowid
 
