@@ -16,6 +16,8 @@ pytestmark = pytest.mark.skipif(
 
 @pytest.fixture
 def corpus_root(tmp_path):
+    if not os.path.isdir(CORPUS):
+        pytest.skip("examples/corpus/ not present (dev-only fixture; gitignored)")
     dst = tmp_path / "corpus"
     shutil.copytree(CORPUS, dst)
     p = dst / ".projmem" / "index.db"

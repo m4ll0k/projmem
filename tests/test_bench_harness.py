@@ -27,11 +27,33 @@ NAIVE_DRIVER = BENCH / "drivers" / "naive_grep_driver.py"
 
 
 def _task_ids():
+    """Yield pytest.param entries for every spec.
+
+    Tasks whose `external_repo.path` is missing on disk are emitted with a
+    skip mark rather than collected silently — this keeps the test catalog
+    visible while skipping cleanly in fresh checkouts where the external
+    repos haven't been fetched.
+    """
     tasks_dir = BENCH / "tasks"
     if not tasks_dir.is_dir():
         return []
-    return sorted(p.name for p in tasks_dir.iterdir()
-                  if p.is_dir() and (p / "spec.json").is_file())
+    out = []
+    for p in sorted(tasks_dir.iterdir()):
+        spec_path = p / "spec.json"
+        if not (p.is_dir() and spec_path.is_file()):
+            continue
+        marks = []
+        try:
+            spec = json.loads(spec_path.read_text())
+        except (OSError, json.JSONDecodeError):
+            spec = {}
+        ext = spec.get("external_repo") if isinstance(spec, dict) else None
+        ext_path = ext.get("path") if isinstance(ext, dict) else None
+        if ext_path and not Path(ext_path).is_dir():
+            marks.append(pytest.mark.skip(
+                reason=f"external_repo.path {ext_path!r} not present"))
+        out.append(pytest.param(p.name, marks=marks))
+    return out
 
 
 def _run_bench(task_id: str, driver: Path, work: Path) -> dict:

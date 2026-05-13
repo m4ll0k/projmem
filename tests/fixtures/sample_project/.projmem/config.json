@@ -1,0 +1,7 @@
+{
+  "contracts": {
+    "pairs": [
+      {"if_touch": "src/core.py", "inspect": ["tests/test_core.py"]}
+    ]
+  }
+}
