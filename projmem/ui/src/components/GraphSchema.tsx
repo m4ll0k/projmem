@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { hierarchy, tree, HierarchyPointNode } from "d3-hierarchy";
 import { select } from "d3-selection";
 import { zoom, ZoomBehavior, zoomIdentity } from "d3-zoom";
-import { linkVertical } from "d3-shape";
+import { linkHorizontal } from "d3-shape";
 
 import { api } from "../api";
 import { useStore } from "../store";
@@ -31,6 +31,10 @@ function topLevel(path: string | null): string {
 }
 function sectionColor(s: string): string {
   return SECTION_PALETTE[hash32(s) % SECTION_PALETTE.length];
+}
+
+function nodeRadius(kind: string): number {
+  return kind === "root" ? 5 : kind === "dir" ? 4 : 3.5;
 }
 
 // ── Hierarchy datum ───────────────────────────────────────────────────────
@@ -153,57 +157,59 @@ export function GraphSchema() {
     return { ...full, children: leaves };
   }, [rawNodes, nodeLevel]);
 
-  // Layout. We tune `size` based on node count so big repos get room
-  // to breathe without stretching small ones into noodles.
+  // Layout — horizontal arborist (root on the left, depth grows to
+  // the right, siblings stack vertically). Gives directory labels
+  // unlimited horizontal room instead of fighting same-depth siblings
+  // for vertical space. nodeSize() picks a FIXED gap between siblings
+  // (16 px) + a FIXED depth spacing (220 px) so a 50-node subtree
+  // looks the same density as a 5-node one — bigger repos just grow,
+  // they don't compress.
   useEffect(() => {
     if (!svgRef.current || !innerGRef.current) return;
-    const totalNodes = (function count(d: TreeDatum): number {
-      return 1 + (d.children?.reduce((s, c) => s + count(c), 0) ?? 0);
-    })(root);
-    const maxDepth = (function depth(d: TreeDatum, dep = 0): number {
-      if (!d.children?.length) return dep;
-      return Math.max(...d.children.map((c) => depth(c, dep + 1)));
-    })(root);
-
-    const width  = Math.max(800, totalNodes * 14);
-    const height = Math.max(400, maxDepth * 90);
 
     const h = hierarchy<TreeDatum>(root);
-    const layout = tree<TreeDatum>().size([width, height])
-      .separation((a, b) => a.parent === b.parent ? 1 : 1.3);
+    const layout = tree<TreeDatum>()
+      .nodeSize([18, 220])
+      .separation((a, b) => a.parent === b.parent ? 1 : 1.4);
     const positioned = layout(h);
 
-    // Set the SVG viewBox to the actual content extent + padding so
-    // the rendered tree fits the container regardless of node count.
-    // Previously the SVG had no viewBox at all → d3's pixel-space
-    // coords spilled off the top-left and the initial pan made it
-    // worse. The new viewBox + xMidYMin preserveAspectRatio fits the
-    // root at top-center, tree extending down.
+    // Horizontal orientation: swap x and y when rendering — d3.tree
+    // emits (x, y) where x is the cross-axis and y is depth. For a
+    // top-down tree that means x=horizontal, y=vertical. For our
+    // sideways tree we want depth=horizontal, siblings=vertical, so
+    // we put `node.y` into the SVG x slot and `node.x` into the y
+    // slot. The link generator uses linkHorizontal which expects
+    // {source: {x, y}, target: {x, y}} pre-swapped.
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
     positioned.each((n) => {
-      if (n.x < minX) minX = n.x;
-      if (n.x > maxX) maxX = n.x;
-      if (n.y < minY) minY = n.y;
-      if (n.y > maxY) maxY = n.y;
+      const sx = n.y; const sy = n.x;
+      if (sx < minX) minX = sx;
+      if (sx > maxX) maxX = sx;
+      if (sy < minY) minY = sy;
+      if (sy > maxY) maxY = sy;
     });
-    const pad = 60;
-    const vbX = minX - pad;
-    const vbY = minY - pad;
-    const vbW = (maxX - minX) + pad * 2;
-    const vbH = (maxY - minY) + pad * 2;
+    const padL = 40;        // leave room for the root label on the left
+    const padR = 220;       // leaves get full label room on the right
+    const padY = 40;
+    const vbX = minX - padL;
+    const vbY = minY - padY;
+    const vbW = (maxX - minX) + padL + padR;
+    const vbH = (maxY - minY) + padY * 2;
     svgRef.current.setAttribute(
       "viewBox", `${vbX} ${vbY} ${vbW} ${vbH}`,
     );
-    svgRef.current.setAttribute("preserveAspectRatio", "xMidYMin meet");
+    svgRef.current.setAttribute("preserveAspectRatio", "xMinYMid meet");
 
     const inner = select(innerGRef.current);
     inner.selectAll("*").remove();
 
-    const link = linkVertical<any, HierarchyPointNode<TreeDatum>>()
+    // Horizontal link generator: expects source/target with (x, y)
+    // already in swapped layout coords. We feed it (y, x) pairs so
+    // the curve is depth-horizontal.
+    const link = linkHorizontal<any, { x: number; y: number }>()
       .x((d) => d.x)
       .y((d) => d.y);
 
-    // Edges first (so nodes paint on top).
     inner.append("g").attr("class", "edges")
       .attr("fill", "none")
       .attr("stroke-opacity", 0.4)
@@ -219,9 +225,13 @@ export function GraphSchema() {
         return sectionColor(dirName);
       })
       .attr("stroke-width", 1)
-      .attr("d", (d: any) => link({ source: d.source, target: d.target }) || "");
+      .attr("d", (d: any) => link({
+        source: { x: d.source.y, y: d.source.x },
+        target: { x: d.target.y, y: d.target.x },
+      }) || "");
 
-    // Node groups.
+    // Node groups. Transform uses swapped axes (y → x, x → y) so the
+    // tree reads left-to-right.
     const nodeG = inner.append("g").attr("class", "nodes");
     const nodeSel = nodeG.selectAll<SVGGElement, HierarchyPointNode<TreeDatum>>("g.node")
       .data(positioned.descendants())
@@ -229,7 +239,7 @@ export function GraphSchema() {
       .attr("class", "node")
       .attr("data-path", (d) => d.data.path || "")
       .attr("data-kind", (d) => d.data.kind)
-      .attr("transform", (d) => `translate(${d.x}, ${d.y})`)
+      .attr("transform", (d) => `translate(${d.y}, ${d.x})`)
       .style("cursor", "pointer")
       .on("mouseenter", (_e, d) => setHoveredPath(d.data.path || ""))
       .on("mouseleave", () => setHoveredPath(null))
@@ -247,8 +257,7 @@ export function GraphSchema() {
       });
 
     nodeSel.append("circle")
-      .attr("r", (d) => d.data.kind === "root" ? 5
-                       : d.data.kind === "dir" ? 4 : 3.5)
+      .attr("r", (d) => nodeRadius(d.data.kind))
       .attr("fill", (d) => {
         if (d.data.kind === "root") return "#71717a";
         return sectionColor(topLevel(d.data.path));
@@ -265,23 +274,29 @@ export function GraphSchema() {
         return (n?.critical || n?.leased) ? 2 : 1;
       });
 
-    // Truncate aggressively; the full path is in the <title> tooltip
-    // and the inspector header. Long names were the main "wall of
-    // text" complaint on big projects.
-    const truncName = (s: string, max: number): string =>
+    // Labels are now anchored to the RIGHT of every node. Horizontal
+    // layout gives them unlimited room — we no longer need to truncate
+    // aggressively to avoid sibling collisions. Full name is shown
+    // up to 40 chars, then truncated with the full path still in
+    // <title> for hover.
+    const truncName = (s: string, max: number = 40): string =>
       s.length <= max ? s : s.slice(0, max - 1) + "…";
 
     nodeSel.append("text")
       .attr("class", "node-label")
-      .attr("dy", (d) => d.children ? -10 : 4)
-      .attr("x", (d) => d.children ? 0 : 8)
-      .attr("text-anchor", (d) => d.children ? "middle" : "start")
-      .attr("font-size", (d) => d.data.kind === "dir" ? 10 : 9.5)
+      .attr("dy", 4)
+      .attr("x", (d) => nodeRadius(d.data.kind) + 6)
+      .attr("text-anchor", "start")
+      .attr("font-size", (d) => d.data.kind === "dir" ? 11 : 10)
       .attr("font-weight", (d) => d.data.kind === "dir" ? "600" : "400")
       .attr("font-family", "ui-monospace, SFMono-Regular, monospace")
       .attr("fill", "currentColor")
       .attr("pointer-events", "none")
-      .text((d) => truncName(d.data.name, d.data.kind === "dir" ? 16 : 22));
+      .text((d) => {
+        if (d.data.kind === "root") return "/";
+        const baseLen = d.data.kind === "dir" ? 32 : 40;
+        return truncName(d.data.name, baseLen);
+      });
 
     nodeSel.append("title").text((d) => d.data.path || "/");
 
@@ -374,12 +389,20 @@ export function GraphSchema() {
         circle.setAttribute("stroke-width", "1");
       }
 
-      // Label visibility: hide unless zoomed in, hovered, focal, or lit.
+      // Label visibility:
+      //   directory labels are STRUCTURAL — always show (they're the
+      //   tree's navigational signal)
+      //   file labels are leaves — only show on hover / focal / lit /
+      //   at 1.2× zoom, since they outnumber directories ~5:1 on a
+      //   real repo and rendering all of them stalls big projects.
       const label = g.querySelector<SVGTextElement>("text.node-label");
       if (label) {
-        const showAll = zoomLevel >= 1.5;
-        const show = showAll || isFocal || isLit || isHovered;
-        label.style.display = show ? "" : "none";
+        if (kind === "dir" || kind === "root") {
+          label.style.display = "";
+        } else {
+          const show = zoomLevel >= 1.2 || isFocal || isLit || isHovered;
+          label.style.display = show ? "" : "none";
+        }
       }
     });
 
