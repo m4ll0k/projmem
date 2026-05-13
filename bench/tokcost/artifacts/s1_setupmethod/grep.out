@@ -1,0 +1,46 @@
+src/flask/sansio/blueprints.py:12:from .scaffold import setupmethod
+src/flask/sansio/blueprints.py:223:    @setupmethod
+src/flask/sansio/blueprints.py:232:    @setupmethod
+src/flask/sansio/blueprints.py:255:    @setupmethod
+src/flask/sansio/blueprints.py:412:    @setupmethod
+src/flask/sansio/blueprints.py:449:    @setupmethod
+src/flask/sansio/blueprints.py:475:    @setupmethod
+src/flask/sansio/blueprints.py:503:    @setupmethod
+src/flask/sansio/blueprints.py:531:    @setupmethod
+src/flask/sansio/blueprints.py:561:    @setupmethod
+src/flask/sansio/blueprints.py:589:    @setupmethod
+src/flask/sansio/blueprints.py:613:    @setupmethod
+src/flask/sansio/blueprints.py:623:    @setupmethod
+src/flask/sansio/blueprints.py:633:    @setupmethod
+src/flask/sansio/blueprints.py:643:    @setupmethod
+src/flask/sansio/blueprints.py:655:    @setupmethod
+src/flask/sansio/blueprints.py:672:    @setupmethod
+src/flask/sansio/blueprints.py:684:    @setupmethod
+src/flask/sansio/app.py:34:from .scaffold import setupmethod
+src/flask/sansio/app.py:566:    @setupmethod
+src/flask/sansio/app.py:601:    @setupmethod
+src/flask/sansio/app.py:666:    @setupmethod
+src/flask/sansio/app.py:695:    @setupmethod
+src/flask/sansio/app.py:716:    @setupmethod
+src/flask/sansio/app.py:752:    @setupmethod
+src/flask/sansio/app.py:775:    @setupmethod
+src/flask/sansio/app.py:806:    @setupmethod
+src/flask/sansio/app.py:823:    @setupmethod
+src/flask/sansio/app.py:854:    @setupmethod
+src/flask/sansio/scaffold.py:42:def setupmethod(f: F) -> F:
+src/flask/sansio/scaffold.py:295:    @setupmethod
+src/flask/sansio/scaffold.py:303:    @setupmethod
+src/flask/sansio/scaffold.py:311:    @setupmethod
+src/flask/sansio/scaffold.py:319:    @setupmethod
+src/flask/sansio/scaffold.py:327:    @setupmethod
+src/flask/sansio/scaffold.py:335:    @setupmethod
+src/flask/sansio/scaffold.py:367:    @setupmethod
+src/flask/sansio/scaffold.py:435:    @setupmethod
+src/flask/sansio/scaffold.py:459:    @setupmethod
+src/flask/sansio/scaffold.py:486:    @setupmethod
+src/flask/sansio/scaffold.py:507:    @setupmethod
+src/flask/sansio/scaffold.py:541:    @setupmethod
+src/flask/sansio/scaffold.py:558:    @setupmethod
+src/flask/sansio/scaffold.py:583:    @setupmethod
+src/flask/sansio/scaffold.py:597:    @setupmethod
+src/flask/sansio/scaffold.py:641:    @setupmethod

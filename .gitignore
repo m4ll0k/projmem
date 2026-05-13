@@ -10,8 +10,6 @@ __pycache__/
 .coverage
 .coverage.*
 htmlcov/
-.github
-.projmem
 .tox/
 .mypy_cache/
 .ruff_cache/
@@ -38,9 +36,23 @@ dist/
 *.swp
 *.swo
 
-# projmem's own runtime state
+# projmem's own runtime state — NEVER commit. .projmem/ holds the
+# SQLite index plus every note / lease / critical / exclude you've
+# authored. It's strictly local; recreate on any machine with
+# `projmem init && projmem index`.
 .projmem/
 *.projmem-pack.json
+
+# Per-operator Claude Code state. The PreToolUse + PostToolUse
+# scripts under .claude/hooks/ are operator-specific (paths to
+# `projmem`, the bundled README's "settings.json" hint, …). Leave
+# the decision to commit them to each repo's owner.
+.claude/
+
+# TypeScript / Vite incremental build caches
+*.tsbuildinfo
+projmem/ui/vite.config.d.ts
+projmem/ui/vite.config.js
 
 # Benchmark scratch (heavy; never ship)
 /tmp/memtrace_bench/

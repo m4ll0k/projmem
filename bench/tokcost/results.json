@@ -1,0 +1,166 @@
+{
+  "generated_at": "2026-04-18T17:18:34Z",
+  "mode": "offline",
+  "pricing_usd_per_mtok": {
+    "input": 15.0,
+    "cache_write": 18.75,
+    "cache_read": 1.5,
+    "output": 75.0
+  },
+  "samples": [
+    {
+      "scenario": "s1_setupmethod",
+      "tool": "grep",
+      "path": "/Users/m4ll0k/Desktop/cocoai/bench/tokcost/artifacts/s1_setupmethod/grep.out",
+      "bytes": 2323,
+      "profile": "terminal",
+      "tokens_46": 685,
+      "tokens_47": 883,
+      "ratio": 1.29,
+      "source": "offline"
+    },
+    {
+      "scenario": "s1_setupmethod",
+      "tool": "grep_l",
+      "path": "/Users/m4ll0k/Desktop/cocoai/bench/tokcost/artifacts/s1_setupmethod/grep_l.out",
+      "bytes": 84,
+      "profile": "terminal",
+      "tokens_46": 25,
+      "tokens_47": 32,
+      "ratio": 1.29,
+      "source": "offline"
+    },
+    {
+      "scenario": "s1_setupmethod",
+      "tool": "projmem_reverse",
+      "path": "/Users/m4ll0k/Desktop/cocoai/bench/tokcost/artifacts/s1_setupmethod/projmem_reverse.out",
+      "bytes": 508,
+      "profile": "json_dense",
+      "tokens_46": 147,
+      "tokens_47": 166,
+      "ratio": 1.13,
+      "source": "offline"
+    },
+    {
+      "scenario": "s1_setupmethod",
+      "tool": "projmem_symbol",
+      "path": "/Users/m4ll0k/Desktop/cocoai/bench/tokcost/artifacts/s1_setupmethod/projmem_symbol.out",
+      "bytes": 1739,
+      "profile": "json_dense",
+      "tokens_46": 504,
+      "tokens_47": 568,
+      "ratio": 1.13,
+      "source": "offline"
+    },
+    {
+      "scenario": "s1_setupmethod",
+      "tool": "rg",
+      "path": "/Users/m4ll0k/Desktop/cocoai/bench/tokcost/artifacts/s1_setupmethod/rg.out",
+      "bytes": 2323,
+      "profile": "terminal",
+      "tokens_46": 685,
+      "tokens_47": 883,
+      "ratio": 1.29,
+      "source": "offline"
+    },
+    {
+      "scenario": "s2_read_app",
+      "tool": "cat",
+      "path": "/Users/m4ll0k/Desktop/cocoai/bench/tokcost/artifacts/s2_read_app/cat.out",
+      "bytes": 65423,
+      "profile": "python",
+      "tokens_46": 17778,
+      "tokens_47": 22875,
+      "ratio": 1.29,
+      "source": "offline"
+    },
+    {
+      "scenario": "s2_read_app",
+      "tool": "head200",
+      "path": "/Users/m4ll0k/Desktop/cocoai/bench/tokcost/artifacts/s2_read_app/head200.out",
+      "bytes": 8256,
+      "profile": "python",
+      "tokens_46": 2243,
+      "tokens_47": 2887,
+      "ratio": 1.29,
+      "source": "offline"
+    },
+    {
+      "scenario": "s2_read_app",
+      "tool": "projmem_pack",
+      "path": "/Users/m4ll0k/Desktop/cocoai/bench/tokcost/artifacts/s2_read_app/projmem_pack.out",
+      "bytes": 140618,
+      "profile": "json_dense",
+      "tokens_46": 40759,
+      "tokens_47": 45954,
+      "ratio": 1.13,
+      "source": "offline"
+    },
+    {
+      "scenario": "s3_entrypoints",
+      "tool": "find",
+      "path": "/Users/m4ll0k/Desktop/cocoai/bench/tokcost/artifacts/s3_entrypoints/find.out",
+      "bytes": 49,
+      "profile": "shell",
+      "tokens_46": 19,
+      "tokens_47": 27,
+      "ratio": 1.39,
+      "source": "offline"
+    },
+    {
+      "scenario": "s3_entrypoints",
+      "tool": "grep_main",
+      "path": "/Users/m4ll0k/Desktop/cocoai/bench/tokcost/artifacts/s3_entrypoints/grep_main.out",
+      "bytes": 139,
+      "profile": "terminal",
+      "tokens_46": 41,
+      "tokens_47": 53,
+      "ratio": 1.29,
+      "source": "offline"
+    },
+    {
+      "scenario": "s3_entrypoints",
+      "tool": "ls",
+      "path": "/Users/m4ll0k/Desktop/cocoai/bench/tokcost/artifacts/s3_entrypoints/ls.out",
+      "bytes": 1360,
+      "profile": "shell",
+      "tokens_46": 533,
+      "tokens_47": 743,
+      "ratio": 1.39,
+      "source": "offline"
+    },
+    {
+      "scenario": "s3_entrypoints",
+      "tool": "projmem_entry",
+      "path": "/Users/m4ll0k/Desktop/cocoai/bench/tokcost/artifacts/s3_entrypoints/projmem_entry.out",
+      "bytes": 1396,
+      "profile": "json_dense",
+      "tokens_46": 405,
+      "tokens_47": 456,
+      "ratio": 1.13,
+      "source": "offline"
+    },
+    {
+      "scenario": "s4_files",
+      "tool": "find_all",
+      "path": "/Users/m4ll0k/Desktop/cocoai/bench/tokcost/artifacts/s4_files/find_all.out",
+      "bytes": 583,
+      "profile": "shell",
+      "tokens_46": 229,
+      "tokens_47": 319,
+      "ratio": 1.39,
+      "source": "offline"
+    },
+    {
+      "scenario": "s4_files",
+      "tool": "projmem_files",
+      "path": "/Users/m4ll0k/Desktop/cocoai/bench/tokcost/artifacts/s4_files/projmem_files.out",
+      "bytes": 34536,
+      "profile": "json_dense",
+      "tokens_46": 10010,
+      "tokens_47": 11286,
+      "ratio": 1.13,
+      "source": "offline"
+    }
+  ]
+}

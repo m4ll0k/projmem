@@ -1,0 +1,1589 @@
+{
+  "root": "/private/tmp/flask",
+  "files": [
+    {
+      "path": ".editorconfig",
+      "lang": "other",
+      "parser": "regex",
+      "size": 233,
+      "stale": false
+    },
+    {
+      "path": ".gitignore",
+      "lang": "other",
+      "parser": "regex",
+      "size": 74,
+      "stale": false
+    },
+    {
+      "path": ".pre-commit-config.yaml",
+      "lang": "yaml",
+      "parser": "regex",
+      "size": 827,
+      "stale": false
+    },
+    {
+      "path": ".readthedocs.yaml",
+      "lang": "yaml",
+      "parser": "regex",
+      "size": 242,
+      "stale": false
+    },
+    {
+      "path": "CHANGES.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 73377,
+      "stale": false
+    },
+    {
+      "path": "CLAUDE.md",
+      "lang": "other",
+      "parser": "regex",
+      "size": 2115,
+      "stale": false
+    },
+    {
+      "path": "LICENSE.txt",
+      "lang": "other",
+      "parser": "regex",
+      "size": 1475,
+      "stale": false
+    },
+    {
+      "path": "README.md",
+      "lang": "other",
+      "parser": "regex",
+      "size": 1639,
+      "stale": false
+    },
+    {
+      "path": "docs/Makefile",
+      "lang": "other",
+      "parser": "regex",
+      "size": 634,
+      "stale": false
+    },
+    {
+      "path": "docs/_static/flask-icon.svg",
+      "lang": "other",
+      "parser": "regex",
+      "size": 1999,
+      "stale": false
+    },
+    {
+      "path": "docs/_static/flask-logo.svg",
+      "lang": "other",
+      "parser": "regex",
+      "size": 3455,
+      "stale": false
+    },
+    {
+      "path": "docs/_static/flask-name.svg",
+      "lang": "other",
+      "parser": "regex",
+      "size": 5311,
+      "stale": false
+    },
+    {
+      "path": "docs/api.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 21212,
+      "stale": false
+    },
+    {
+      "path": "docs/appcontext.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 7691,
+      "stale": false
+    },
+    {
+      "path": "docs/async-await.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 4709,
+      "stale": false
+    },
+    {
+      "path": "docs/blueprints.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 12559,
+      "stale": false
+    },
+    {
+      "path": "docs/changes.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 45,
+      "stale": false
+    },
+    {
+      "path": "docs/cli.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 16701,
+      "stale": false
+    },
+    {
+      "path": "docs/conf.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 3386,
+      "stale": false
+    },
+    {
+      "path": "docs/config.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 29006,
+      "stale": false
+    },
+    {
+      "path": "docs/contributing.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 274,
+      "stale": false
+    },
+    {
+      "path": "docs/debugging.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 3462,
+      "stale": false
+    },
+    {
+      "path": "docs/deploying/apache-httpd.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 2364,
+      "stale": false
+    },
+    {
+      "path": "docs/deploying/asgi.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 673,
+      "stale": false
+    },
+    {
+      "path": "docs/deploying/eventlet.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 141,
+      "stale": false
+    },
+    {
+      "path": "docs/deploying/gevent.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 2248,
+      "stale": false
+    },
+    {
+      "path": "docs/deploying/gunicorn.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 3645,
+      "stale": false
+    },
+    {
+      "path": "docs/deploying/index.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 3173,
+      "stale": false
+    },
+    {
+      "path": "docs/deploying/mod_wsgi.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 2813,
+      "stale": false
+    },
+    {
+      "path": "docs/deploying/nginx.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 2316,
+      "stale": false
+    },
+    {
+      "path": "docs/deploying/proxy_fix.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 1365,
+      "stale": false
+    },
+    {
+      "path": "docs/deploying/uwsgi.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 4734,
+      "stale": false
+    },
+    {
+      "path": "docs/deploying/waitress.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 2337,
+      "stale": false
+    },
+    {
+      "path": "docs/design.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 11215,
+      "stale": false
+    },
+    {
+      "path": "docs/errorhandling.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 18373,
+      "stale": false
+    },
+    {
+      "path": "docs/extensiondev.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 12918,
+      "stale": false
+    },
+    {
+      "path": "docs/extensions.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 1372,
+      "stale": false
+    },
+    {
+      "path": "docs/gevent.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 4075,
+      "stale": false
+    },
+    {
+      "path": "docs/index.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 2065,
+      "stale": false
+    },
+    {
+      "path": "docs/installation.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 3768,
+      "stale": false
+    },
+    {
+      "path": "docs/license.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 98,
+      "stale": false
+    },
+    {
+      "path": "docs/lifecycle.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 8987,
+      "stale": false
+    },
+    {
+      "path": "docs/logging.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 5927,
+      "stale": false
+    },
+    {
+      "path": "docs/make.bat",
+      "lang": "other",
+      "parser": "regex",
+      "size": 760,
+      "stale": false
+    },
+    {
+      "path": "docs/patterns/appdispatch.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 6507,
+      "stale": false
+    },
+    {
+      "path": "docs/patterns/appfactories.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 4098,
+      "stale": false
+    },
+    {
+      "path": "docs/patterns/caching.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 653,
+      "stale": false
+    },
+    {
+      "path": "docs/patterns/celery.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 8670,
+      "stale": false
+    },
+    {
+      "path": "docs/patterns/deferredcallbacks.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 1848,
+      "stale": false
+    },
+    {
+      "path": "docs/patterns/favicon.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 2101,
+      "stale": false
+    },
+    {
+      "path": "docs/patterns/fileuploads.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 7297,
+      "stale": false
+    },
+    {
+      "path": "docs/patterns/flashing.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 4536,
+      "stale": false
+    },
+    {
+      "path": "docs/patterns/index.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 961,
+      "stale": false
+    },
+    {
+      "path": "docs/patterns/javascript.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 9038,
+      "stale": false
+    },
+    {
+      "path": "docs/patterns/jquery.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 96,
+      "stale": false
+    },
+    {
+      "path": "docs/patterns/lazyloading.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 3847,
+      "stale": false
+    },
+    {
+      "path": "docs/patterns/methodoverrides.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 1456,
+      "stale": false
+    },
+    {
+      "path": "docs/patterns/mongoengine.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 2857,
+      "stale": false
+    },
+    {
+      "path": "docs/patterns/packages.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 4105,
+      "stale": false
+    },
+    {
+      "path": "docs/patterns/requestchecksum.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 1861,
+      "stale": false
+    },
+    {
+      "path": "docs/patterns/singlepageapplications.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 731,
+      "stale": false
+    },
+    {
+      "path": "docs/patterns/sqlalchemy.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 7265,
+      "stale": false
+    },
+    {
+      "path": "docs/patterns/sqlite3.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 5028,
+      "stale": false
+    },
+    {
+      "path": "docs/patterns/streaming.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 3307,
+      "stale": false
+    },
+    {
+      "path": "docs/patterns/subclassing.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 676,
+      "stale": false
+    },
+    {
+      "path": "docs/patterns/templateinheritance.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 2197,
+      "stale": false
+    },
+    {
+      "path": "docs/patterns/urlprocessors.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 4306,
+      "stale": false
+    },
+    {
+      "path": "docs/patterns/viewdecorators.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 6318,
+      "stale": false
+    },
+    {
+      "path": "docs/patterns/wtforms.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 4708,
+      "stale": false
+    },
+    {
+      "path": "docs/quickstart.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 30055,
+      "stale": false
+    },
+    {
+      "path": "docs/reqcontext.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 93,
+      "stale": false
+    },
+    {
+      "path": "docs/server.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 3712,
+      "stale": false
+    },
+    {
+      "path": "docs/shell.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 2853,
+      "stale": false
+    },
+    {
+      "path": "docs/signals.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 6107,
+      "stale": false
+    },
+    {
+      "path": "docs/templating.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 8935,
+      "stale": false
+    },
+    {
+      "path": "docs/testing.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 10426,
+      "stale": false
+    },
+    {
+      "path": "docs/tutorial/blog.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 11388,
+      "stale": false
+    },
+    {
+      "path": "docs/tutorial/database.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 7028,
+      "stale": false
+    },
+    {
+      "path": "docs/tutorial/deploy.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 3699,
+      "stale": false
+    },
+    {
+      "path": "docs/tutorial/factory.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 5878,
+      "stale": false
+    },
+    {
+      "path": "docs/tutorial/index.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 2061,
+      "stale": false
+    },
+    {
+      "path": "docs/tutorial/install.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 2838,
+      "stale": false
+    },
+    {
+      "path": "docs/tutorial/layout.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 2942,
+      "stale": false
+    },
+    {
+      "path": "docs/tutorial/next.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 1631,
+      "stale": false
+    },
+    {
+      "path": "docs/tutorial/static.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 3170,
+      "stale": false
+    },
+    {
+      "path": "docs/tutorial/templates.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 6962,
+      "stale": false
+    },
+    {
+      "path": "docs/tutorial/tests.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 18268,
+      "stale": false
+    },
+    {
+      "path": "docs/tutorial/views.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 10924,
+      "stale": false
+    },
+    {
+      "path": "docs/views.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 10270,
+      "stale": false
+    },
+    {
+      "path": "docs/web-security.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 13085,
+      "stale": false
+    },
+    {
+      "path": "examples/celery/README.md",
+      "lang": "other",
+      "parser": "regex",
+      "size": 950,
+      "stale": false
+    },
+    {
+      "path": "examples/celery/make_celery.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 102,
+      "stale": false
+    },
+    {
+      "path": "examples/celery/pyproject.toml",
+      "lang": "toml",
+      "parser": "regex",
+      "size": 381,
+      "stale": false
+    },
+    {
+      "path": "examples/celery/requirements.txt",
+      "lang": "other",
+      "parser": "regex",
+      "size": 1073,
+      "stale": false
+    },
+    {
+      "path": "examples/celery/src/task_app/__init__.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 1019,
+      "stale": false
+    },
+    {
+      "path": "examples/celery/src/task_app/tasks.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 484,
+      "stale": false
+    },
+    {
+      "path": "examples/celery/src/task_app/templates/index.html",
+      "lang": "other",
+      "parser": "regex",
+      "size": 2909,
+      "stale": false
+    },
+    {
+      "path": "examples/celery/src/task_app/views.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 954,
+      "stale": false
+    },
+    {
+      "path": "examples/javascript/.gitignore",
+      "lang": "other",
+      "parser": "regex",
+      "size": 119,
+      "stale": false
+    },
+    {
+      "path": "examples/javascript/LICENSE.txt",
+      "lang": "other",
+      "parser": "regex",
+      "size": 1475,
+      "stale": false
+    },
+    {
+      "path": "examples/javascript/README.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 1086,
+      "stale": false
+    },
+    {
+      "path": "examples/javascript/js_example/__init__.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 97,
+      "stale": false
+    },
+    {
+      "path": "examples/javascript/js_example/templates/base.html",
+      "lang": "other",
+      "parser": "regex",
+      "size": 1178,
+      "stale": false
+    },
+    {
+      "path": "examples/javascript/js_example/templates/fetch.html",
+      "lang": "other",
+      "parser": "regex",
+      "size": 852,
+      "stale": false
+    },
+    {
+      "path": "examples/javascript/js_example/templates/jquery.html",
+      "lang": "other",
+      "parser": "regex",
+      "size": 666,
+      "stale": false
+    },
+    {
+      "path": "examples/javascript/js_example/templates/xhr.html",
+      "lang": "other",
+      "parser": "regex",
+      "size": 933,
+      "stale": false
+    },
+    {
+      "path": "examples/javascript/js_example/views.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 429,
+      "stale": false
+    },
+    {
+      "path": "examples/javascript/pyproject.toml",
+      "lang": "toml",
+      "parser": "regex",
+      "size": 736,
+      "stale": false
+    },
+    {
+      "path": "examples/javascript/tests/conftest.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 216,
+      "stale": false
+    },
+    {
+      "path": "examples/javascript/tests/test_js_example.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 727,
+      "stale": false
+    },
+    {
+      "path": "examples/tutorial/.gitignore",
+      "lang": "other",
+      "parser": "regex",
+      "size": 119,
+      "stale": false
+    },
+    {
+      "path": "examples/tutorial/LICENSE.txt",
+      "lang": "other",
+      "parser": "regex",
+      "size": 1475,
+      "stale": false
+    },
+    {
+      "path": "examples/tutorial/README.rst",
+      "lang": "other",
+      "parser": "regex",
+      "size": 1273,
+      "stale": false
+    },
+    {
+      "path": "examples/tutorial/flaskr/__init__.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 1406,
+      "stale": false
+    },
+    {
+      "path": "examples/tutorial/flaskr/auth.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 3296,
+      "stale": false
+    },
+    {
+      "path": "examples/tutorial/flaskr/blog.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 3305,
+      "stale": false
+    },
+    {
+      "path": "examples/tutorial/flaskr/db.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 1317,
+      "stale": false
+    },
+    {
+      "path": "examples/tutorial/flaskr/schema.sql",
+      "lang": "other",
+      "parser": "regex",
+      "size": 498,
+      "stale": false
+    },
+    {
+      "path": "examples/tutorial/flaskr/static/style.css",
+      "lang": "other",
+      "parser": "regex",
+      "size": 1696,
+      "stale": false
+    },
+    {
+      "path": "examples/tutorial/flaskr/templates/auth/login.html",
+      "lang": "other",
+      "parser": "regex",
+      "size": 424,
+      "stale": false
+    },
+    {
+      "path": "examples/tutorial/flaskr/templates/auth/register.html",
+      "lang": "other",
+      "parser": "regex",
+      "size": 428,
+      "stale": false
+    },
+    {
+      "path": "examples/tutorial/flaskr/templates/base.html",
+      "lang": "other",
+      "parser": "regex",
+      "size": 752,
+      "stale": false
+    },
+    {
+      "path": "examples/tutorial/flaskr/templates/blog/create.html",
+      "lang": "other",
+      "parser": "regex",
+      "size": 447,
+      "stale": false
+    },
+    {
+      "path": "examples/tutorial/flaskr/templates/blog/index.html",
+      "lang": "other",
+      "parser": "regex",
+      "size": 790,
+      "stale": false
+    },
+    {
+      "path": "examples/tutorial/flaskr/templates/blog/update.html",
+      "lang": "other",
+      "parser": "regex",
+      "size": 690,
+      "stale": false
+    },
+    {
+      "path": "examples/tutorial/pyproject.toml",
+      "lang": "toml",
+      "parser": "regex",
+      "size": 771,
+      "stale": false
+    },
+    {
+      "path": "examples/tutorial/tests/conftest.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 1454,
+      "stale": false
+    },
+    {
+      "path": "examples/tutorial/tests/data.sql",
+      "lang": "other",
+      "parser": "regex",
+      "size": 394,
+      "stale": false
+    },
+    {
+      "path": "examples/tutorial/tests/test_auth.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 2070,
+      "stale": false
+    },
+    {
+      "path": "examples/tutorial/tests/test_blog.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 2503,
+      "stale": false
+    },
+    {
+      "path": "examples/tutorial/tests/test_db.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 616,
+      "stale": false
+    },
+    {
+      "path": "examples/tutorial/tests/test_factory.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 298,
+      "stale": false
+    },
+    {
+      "path": "pyproject.toml",
+      "lang": "toml",
+      "parser": "regex",
+      "size": 6557,
+      "stale": false
+    },
+    {
+      "path": "src/flask/__init__.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 2072,
+      "stale": false
+    },
+    {
+      "path": "src/flask/__main__.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 30,
+      "stale": false
+    },
+    {
+      "path": "src/flask/app.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 65423,
+      "stale": false
+    },
+    {
+      "path": "src/flask/blueprints.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 4541,
+      "stale": false
+    },
+    {
+      "path": "src/flask/cli.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 36808,
+      "stale": false
+    },
+    {
+      "path": "src/flask/config.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 13219,
+      "stale": false
+    },
+    {
+      "path": "src/flask/ctx.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 18104,
+      "stale": false
+    },
+    {
+      "path": "src/flask/debughelpers.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 6070,
+      "stale": false
+    },
+    {
+      "path": "src/flask/globals.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 2414,
+      "stale": false
+    },
+    {
+      "path": "src/flask/helpers.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 24637,
+      "stale": false
+    },
+    {
+      "path": "src/flask/json/__init__.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 5583,
+      "stale": false
+    },
+    {
+      "path": "src/flask/json/provider.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 7644,
+      "stale": false
+    },
+    {
+      "path": "src/flask/json/tag.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 9281,
+      "stale": false
+    },
+    {
+      "path": "src/flask/logging.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 2377,
+      "stale": false
+    },
+    {
+      "path": "src/flask/py.typed",
+      "lang": "other",
+      "parser": "regex",
+      "size": 0,
+      "stale": false
+    },
+    {
+      "path": "src/flask/sansio/README.md",
+      "lang": "other",
+      "parser": "regex",
+      "size": 228,
+      "stale": false
+    },
+    {
+      "path": "src/flask/sansio/app.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 39382,
+      "stale": false
+    },
+    {
+      "path": "src/flask/sansio/blueprints.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 27017,
+      "stale": false
+    },
+    {
+      "path": "src/flask/sansio/scaffold.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 30364,
+      "stale": false
+    },
+    {
+      "path": "src/flask/sessions.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 14969,
+      "stale": false
+    },
+    {
+      "path": "src/flask/signals.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 750,
+      "stale": false
+    },
+    {
+      "path": "src/flask/templating.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 7336,
+      "stale": false
+    },
+    {
+      "path": "src/flask/testing.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 10114,
+      "stale": false
+    },
+    {
+      "path": "src/flask/typing.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 3114,
+      "stale": false
+    },
+    {
+      "path": "src/flask/views.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 6962,
+      "stale": false
+    },
+    {
+      "path": "src/flask/wrappers.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 9406,
+      "stale": false
+    },
+    {
+      "path": "tests/conftest.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 3293,
+      "stale": false
+    },
+    {
+      "path": "tests/static/config.json",
+      "lang": "json",
+      "parser": "regex",
+      "size": 54,
+      "stale": false
+    },
+    {
+      "path": "tests/static/config.toml",
+      "lang": "toml",
+      "parser": "regex",
+      "size": 35,
+      "stale": false
+    },
+    {
+      "path": "tests/static/index.html",
+      "lang": "other",
+      "parser": "regex",
+      "size": 22,
+      "stale": false
+    },
+    {
+      "path": "tests/templates/_macro.html",
+      "lang": "other",
+      "parser": "regex",
+      "size": 55,
+      "stale": false
+    },
+    {
+      "path": "tests/templates/context_template.html",
+      "lang": "other",
+      "parser": "regex",
+      "size": 36,
+      "stale": false
+    },
+    {
+      "path": "tests/templates/escaping_template.html",
+      "lang": "other",
+      "parser": "regex",
+      "size": 147,
+      "stale": false
+    },
+    {
+      "path": "tests/templates/mail.txt",
+      "lang": "other",
+      "parser": "regex",
+      "size": 14,
+      "stale": false
+    },
+    {
+      "path": "tests/templates/nested/nested.txt",
+      "lang": "other",
+      "parser": "regex",
+      "size": 11,
+      "stale": false
+    },
+    {
+      "path": "tests/templates/non_escaping_template.txt",
+      "lang": "other",
+      "parser": "regex",
+      "size": 169,
+      "stale": false
+    },
+    {
+      "path": "tests/templates/simple_template.html",
+      "lang": "other",
+      "parser": "regex",
+      "size": 23,
+      "stale": false
+    },
+    {
+      "path": "tests/templates/template_filter.html",
+      "lang": "other",
+      "parser": "regex",
+      "size": 26,
+      "stale": false
+    },
+    {
+      "path": "tests/templates/template_test.html",
+      "lang": "other",
+      "parser": "regex",
+      "size": 51,
+      "stale": false
+    },
+    {
+      "path": "tests/test_appctx.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 6827,
+      "stale": false
+    },
+    {
+      "path": "tests/test_apps/.env",
+      "lang": "other",
+      "parser": "regex",
+      "size": 33,
+      "stale": false
+    },
+    {
+      "path": "tests/test_apps/.flaskenv",
+      "lang": "other",
+      "parser": "regex",
+      "size": 28,
+      "stale": false
+    },
+    {
+      "path": "tests/test_apps/blueprintapp/__init__.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 256,
+      "stale": false
+    },
+    {
+      "path": "tests/test_apps/blueprintapp/apps/__init__.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 0,
+      "stale": false
+    },
+    {
+      "path": "tests/test_apps/blueprintapp/apps/admin/__init__.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 366,
+      "stale": false
+    },
+    {
+      "path": "tests/test_apps/blueprintapp/apps/admin/static/css/test.css",
+      "lang": "other",
+      "parser": "regex",
+      "size": 18,
+      "stale": false
+    },
+    {
+      "path": "tests/test_apps/blueprintapp/apps/admin/static/test.txt",
+      "lang": "other",
+      "parser": "regex",
+      "size": 11,
+      "stale": false
+    },
+    {
+      "path": "tests/test_apps/blueprintapp/apps/admin/templates/admin/index.html",
+      "lang": "other",
+      "parser": "regex",
+      "size": 21,
+      "stale": false
+    },
+    {
+      "path": "tests/test_apps/blueprintapp/apps/frontend/__init__.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 327,
+      "stale": false
+    },
+    {
+      "path": "tests/test_apps/blueprintapp/apps/frontend/templates/frontend/index.html",
+      "lang": "other",
+      "parser": "regex",
+      "size": 24,
+      "stale": false
+    },
+    {
+      "path": "tests/test_apps/cliapp/__init__.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 0,
+      "stale": false
+    },
+    {
+      "path": "tests/test_apps/cliapp/app.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 52,
+      "stale": false
+    },
+    {
+      "path": "tests/test_apps/cliapp/factory.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 169,
+      "stale": false
+    },
+    {
+      "path": "tests/test_apps/cliapp/importerrorapp.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 73,
+      "stale": false
+    },
+    {
+      "path": "tests/test_apps/cliapp/inner1/__init__.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 55,
+      "stale": false
+    },
+    {
+      "path": "tests/test_apps/cliapp/inner1/inner2/__init__.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 0,
+      "stale": false
+    },
+    {
+      "path": "tests/test_apps/cliapp/inner1/inner2/flask.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 47,
+      "stale": false
+    },
+    {
+      "path": "tests/test_apps/cliapp/message.txt",
+      "lang": "other",
+      "parser": "regex",
+      "size": 38,
+      "stale": false
+    },
+    {
+      "path": "tests/test_apps/cliapp/multiapp.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 67,
+      "stale": false
+    },
+    {
+      "path": "tests/test_apps/helloworld/hello.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 104,
+      "stale": false
+    },
+    {
+      "path": "tests/test_apps/helloworld/wsgi.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 36,
+      "stale": false
+    },
+    {
+      "path": "tests/test_apps/subdomaintestmodule/__init__.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 73,
+      "stale": false
+    },
+    {
+      "path": "tests/test_apps/subdomaintestmodule/static/hello.txt",
+      "lang": "other",
+      "parser": "regex",
+      "size": 16,
+      "stale": false
+    },
+    {
+      "path": "tests/test_async.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 3335,
+      "stale": false
+    },
+    {
+      "path": "tests/test_basic.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 54121,
+      "stale": false
+    },
+    {
+      "path": "tests/test_blueprints.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 31454,
+      "stale": false
+    },
+    {
+      "path": "tests/test_cli.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 20383,
+      "stale": false
+    },
+    {
+      "path": "tests/test_config.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 7748,
+      "stale": false
+    },
+    {
+      "path": "tests/test_converters.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 1093,
+      "stale": false
+    },
+    {
+      "path": "tests/test_helpers.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 11218,
+      "stale": false
+    },
+    {
+      "path": "tests/test_instance_config.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 3317,
+      "stale": false
+    },
+    {
+      "path": "tests/test_json.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 8741,
+      "stale": false
+    },
+    {
+      "path": "tests/test_json_tag.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 1998,
+      "stale": false
+    },
+    {
+      "path": "tests/test_logging.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 2529,
+      "stale": false
+    },
+    {
+      "path": "tests/test_regression.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 712,
+      "stale": false
+    },
+    {
+      "path": "tests/test_reqctx.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 7499,
+      "stale": false
+    },
+    {
+      "path": "tests/test_request.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 1902,
+      "stale": false
+    },
+    {
+      "path": "tests/test_session_interface.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 784,
+      "stale": false
+    },
+    {
+      "path": "tests/test_signals.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 4864,
+      "stale": false
+    },
+    {
+      "path": "tests/test_subclassing.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 480,
+      "stale": false
+    },
+    {
+      "path": "tests/test_templating.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 15403,
+      "stale": false
+    },
+    {
+      "path": "tests/test_testing.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 10219,
+      "stale": false
+    },
+    {
+      "path": "tests/test_user_error_handler.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 8436,
+      "stale": false
+    },
+    {
+      "path": "tests/test_views.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 7175,
+      "stale": false
+    },
+    {
+      "path": "tests/type_check/typing_app_decorators.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 589,
+      "stale": false
+    },
+    {
+      "path": "tests/type_check/typing_error_handler.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 647,
+      "stale": false
+    },
+    {
+      "path": "tests/type_check/typing_route.py",
+      "lang": "python",
+      "parser": "treesitter:python",
+      "size": 2532,
+      "stale": false
+    },
+    {
+      "path": "uv.lock",
+      "lang": "other",
+      "parser": "regex",
+      "size": 310103,
+      "stale": false
+    }
+  ],
+  "count": 221,
+  "matched": 221,
+  "total_indexed": 221,
+  "truncated": false,
+  "filters": {
+    "glob": null,
+    "lang": null,
+    "limit": null
+  },
+  "config_include_globs": [],
+  "config_exclude_globs": [],
+  "builtin_skip_dirs": [
+    ".cache",
+    ".git",
+    ".hg",
+    ".idea",
+    ".mypy_cache",
+    ".next",
+    ".nyc_output",
+    ".projmem",
+    ".pytest_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pycache__",
+    "build",
+    "coverage",
+    "dist",
+    "env",
+    "node_modules",
+    "out",
+    "projmem-out",
+    "target",
+    "venv"
+  ],
+  "note": "Effective scope. CLI --include/--exclude passed at index time are merged on top of `config_*` (this command only shows the config-level state). Default returns ALL indexed files; use --glob / --lang / --limit to narrow."
+}

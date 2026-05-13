@@ -1,0 +1,49 @@
+{
+  "name": "setupmethod",
+  "defs": [
+    {
+      "id": 37544,
+      "file": "src/flask/sansio/scaffold.py",
+      "name": "setupmethod",
+      "kind": "function",
+      "line": 42,
+      "col": 4,
+      "exported": 1,
+      "confidence": "high",
+      "end_line": 49,
+      "end_col": 53,
+      "symbol_id": "src/flask/sansio/scaffold.py#setupmethod.",
+      "parser": "treesitter:python"
+    }
+  ],
+  "refs": [],
+  "ref_count": 0,
+  "ref_count_is_lower_bound": false,
+  "refs_from_regex_parsers": 0,
+  "note": "Per-row `parser` names the backend that captured the row. If `ref_count_is_lower_bound` is true, the real count is >= ref_count \u2014 the regex parser dedups at (name, line) and cannot see refs that don't syntactically look like calls.",
+  "implicit_usage": {
+    "implicit_refs_detected": true,
+    "structured_ref_count": 1,
+    "text_match_count": 46,
+    "missing_estimate_upper_bound": 45,
+    "text_to_structured_ratio": 46.0,
+    "warning": "Structured symbol coverage incomplete. Possible macro, X-macro, code-generation, or string-based dispatch usage detected. Use text search (e.g. `rg -w <name>`) to verify completeness before relying on the structured refs.",
+    "text_scan": {
+      "text_count": 46,
+      "files_scanned": 221,
+      "files_skipped": 0,
+      "files_with_hits": 3,
+      "truncated": false
+    }
+  },
+  "repo_memory": {
+    "has_memory": true,
+    "total_notes": 26,
+    "contradicted_count": 10,
+    "recent_activity_7d": 26,
+    "discover": "projmem notes",
+    "indexed_root": "/private/tmp/flask",
+    "hint": "10 note(s) currently contradicted \u2014 prior FACT claims refuted. Treat as BLOCKERS: run `projmem notes` for detail before proceeding.",
+    "_header_collapsed": false
+  }
+}

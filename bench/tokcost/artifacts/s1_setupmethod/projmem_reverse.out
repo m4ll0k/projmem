@@ -1,0 +1,15 @@
+{
+  "target": "src/flask/sansio/scaffold.py#setupmethod.",
+  "reverse_dependencies": [],
+  "direct_dependencies": [],
+  "repo_memory": {
+    "has_memory": true,
+    "total_notes": 26,
+    "contradicted_count": 10,
+    "recent_activity_7d": 26,
+    "discover": "projmem notes",
+    "indexed_root": "/private/tmp/flask",
+    "hint": "10 note(s) currently contradicted \u2014 prior FACT claims refuted. Treat as BLOCKERS: run `projmem notes` for detail before proceeding.",
+    "_header_collapsed": false
+  }
+}

@@ -52,6 +52,31 @@ Worse: even when you write down `do not delete this file` or `this directory is 
 
 ---
 
+## For vibe-coders
+
+> If you're not deeply technical but you ship code through AI agents (Claude Code, Cursor, Codex CLI, Gemini, …), this is the part for you.
+
+You've felt all of these, probably more than once:
+
+- The agent **forgets** what you told it last week. You re-explain "the auth flow handles JWTs, the cookie is httpOnly, don't add localStorage" every session.
+- The agent **fabricates**. It writes code that calls a function that doesn't exist, references a flag you removed, or imports a module that was renamed.
+- The agent **deletes a file you said don't touch.** You wrote `do not delete this` in CLAUDE.md. The agent ran `rm -rf` anyway.
+- The agent **reads a vendored / generated / out-of-scope directory** and burns 30k tokens on irrelevant code.
+- A change you made yesterday becomes invisible to the agent today, because nothing connects the dots.
+
+`projmem` is the layer that fixes all five at once. It is **the agent's external memory plus its guardrails**, sitting between your AI and your codebase. It remembers what you decided, verifies that what it remembered is still true, and **refuses tool calls** that violate your rules.
+
+Concretely, here's the experience after running `projmem init claude` (or `codex` / `gemini` / `cursor` / whatever you use):
+
+1. You type `pj: add a /healthz endpoint` to your agent.
+2. The agent reads projmem first, sees your existing notes about the routing module, your guidance ("we always add health endpoints in `src/routes/admin.py`"), and any critical rules.
+3. It writes the code. As it goes, every Edit / Write / `rm` / `cat` is checked against projmem. If you've marked a file as "don't touch" — the tool call is **refused, not advised**.
+4. When you start a new session next week, it remembers everything: your notes, the critical rules, the directories you said are out of scope, the line-scoped advisories you pinned to specific functions.
+
+You don't have to memorize any commands. You install once, pick your agent, and from then on the protocol is two characters: **start your prompt with `pj:`**. The agent does the rest.
+
+---
+
 ## The loop, visualized
 
 ```mermaid
@@ -79,24 +104,32 @@ flowchart LR
 
 ## Install
 
+Requirements: **Python 3.9+** and **`pip`**. That's it. No Node, no Docker, no cloud account.
+
 ```bash
 git clone https://github.com/m4ll0k/projmem.git
 cd projmem
 pip install -e '.[treesitter,daemon]'
 ```
 
+Extras are additive — pick what you need:
+
 | Extra | What it adds | When you need it |
 |---|---|---|
-| `[treesitter]` | Multi-language AST indexing | Always — without it only Python is AST-grounded |
-| `[daemon]`     | FastAPI daemon + live UI | If you want `projmem ui` |
+| `[treesitter]` | Multi-language AST indexing (Python, JS/TS, Go, Rust, Java, C/C++, Ruby, Kotlin, Swift, PHP, Scala) | Always — without it, only Python is AST-grounded |
+| `[daemon]`     | FastAPI daemon + live UI (`projmem ui`) | If you want the browser-based UI |
 | `[mcp]`        | MCP server (`projmem mcp-server`) | Cursor / Claude Desktop / Continue |
+| `[yaml]`       | YAML config support | If you prefer `.projmem/config.yaml` |
+| `[test]`       | pytest + dev deps | Contributors |
 
-Verify:
+Verify the install:
 
 ```bash
-python3 -m pytest -q          # 752 tests should pass
 projmem --help
+python3 -m pytest -q          # 752 tests should pass
 ```
+
+If the test run is green and `projmem --help` prints a subcommand list, you're done. Move on to **Quick start** below.
 
 ---
 

@@ -1,0 +1,4994 @@
+{
+  "target": {
+    "kind": "file",
+    "path": "src/flask/app.py",
+    "lang": "python",
+    "parser": "treesitter:python",
+    "stale": false,
+    "normalized_from": null
+  },
+  "meta": {
+    "root": "/private/tmp/flask",
+    "radius": 1,
+    "generated_by": "projmem",
+    "store": "/private/tmp/flask/.projmem/index.db",
+    "indexed_root": "/private/tmp/flask"
+  },
+  "why": "Context for file 'src/flask/app.py'.",
+  "reasons": {
+    "src/flask/typing.py": [
+      "imported by target (high)"
+    ],
+    "src/flask/cli.py": [
+      "imported by target (high)",
+      "imports target (high)",
+      "shares contract env:FLASK_RUN_FROM_CLI (high)"
+    ],
+    "module:sys": [
+      "imported by target (medium)"
+    ],
+    "src/flask/signals.py": [
+      "imported by target (high)"
+    ],
+    "module:werkzeug.routing": [
+      "imported by target (medium)"
+    ],
+    "src/flask/__init__.py": [
+      "imported by target (high)",
+      "imports target (high)"
+    ],
+    "src/flask/globals.py": [
+      "imported by target (high)",
+      "imports target (high)"
+    ],
+    "src/flask/helpers.py": [
+      "imported by target (high)",
+      "shares contract schema_field:USE_X_SENDFILE (medium)"
+    ],
+    "module:werkzeug.datastructures": [
+      "imported by target (medium)"
+    ],
+    "module:_typeshed.wsgi": [
+      "imported by target (medium)"
+    ],
+    "module:warnings": [
+      "imported by target (medium)"
+    ],
+    "module:types": [
+      "imported by target (medium)"
+    ],
+    "module:werkzeug.exceptions": [
+      "imported by target (medium)"
+    ],
+    "src/flask/sessions.py": [
+      "imported by target (high)",
+      "imports target (high)",
+      "shares contract schema_field:SECRET_KEY_FALLBACKS (medium)"
+    ],
+    "src/flask/wrappers.py": [
+      "imported by target (high)"
+    ],
+    "src/flask/testing.py": [
+      "imported by target (high)",
+      "imports target (high)",
+      "shares contract schema_field:app (high)"
+    ],
+    "module:asgiref.sync": [
+      "imported by target (medium)"
+    ],
+    "module:functools": [
+      "imported by target (medium)"
+    ],
+    "module:datetime": [
+      "imported by target (medium)"
+    ],
+    "module:werkzeug.serving": [
+      "imported by target (medium)"
+    ],
+    "src/flask/sansio/app.py": [
+      "imported by target (high)",
+      "shares contract schema_field:_got_first_request (high)",
+      "shares contract schema_field:auto_reload (high)",
+      "shares contract schema_field:DEBUG (medium)"
+    ],
+    "module:os": [
+      "imported by target (medium)"
+    ],
+    "module:weakref": [
+      "imported by target (medium)"
+    ],
+    "module:itertools": [
+      "imported by target (medium)"
+    ],
+    "module:werkzeug.wrappers": [
+      "imported by target (medium)"
+    ],
+    "src/flask/ctx.py": [
+      "imports target (high)",
+      "shares contract schema_field:app (high)"
+    ],
+    "src/flask/blueprints.py": [
+      "shares contract schema_field:cli (high)"
+    ],
+    "tests/test_basic.py": [
+      "shares contract schema_field:app (high)",
+      "shares contract schema_field:DEBUG (medium)",
+      "shares contract schema_field:PROPAGATE_EXCEPTIONS (medium)",
+      "shares contract schema_field:SECRET_KEY_FALLBACKS (medium)"
+    ],
+    "src/flask/templating.py": [
+      "shares contract schema_field:app (high)"
+    ],
+    "src/flask/sansio/blueprints.py": [
+      "shares contract schema_field:app (high)"
+    ],
+    "tests/test_json.py": [
+      "shares contract schema_field:DEBUG (medium)"
+    ],
+    "tests/test_templating.py": [
+      "shares contract schema_field:DEBUG (medium)"
+    ],
+    "tests/test_apps/blueprintapp/__init__.py": [
+      "shares contract schema_field:DEBUG (medium)"
+    ],
+    "examples/tutorial/tests/conftest.py": [
+      "shares contract schema_field:TESTING (medium)"
+    ],
+    "examples/tutorial/tests/test_factory.py": [
+      "shares contract schema_field:TESTING (medium)"
+    ],
+    "tests/test_user_error_handler.py": [
+      "shares contract schema_field:PROPAGATE_EXCEPTIONS (medium)"
+    ],
+    "tests/test_appctx.py": [
+      "shares contract schema_field:PROPAGATE_EXCEPTIONS (medium)",
+      "heuristic test match (low)"
+    ],
+    "tests/test_config.py": [
+      "shares contract schema_field:SECRET_KEY (medium)",
+      "shares contract schema_field:PERMANENT_SESSION_LIFETIME (medium)"
+    ],
+    "tests/test_request.py": [
+      "shares contract schema_field:TRUSTED_HOSTS (medium)"
+    ],
+    "tests/test_apps/cliapp/importerrorapp.py": [
+      "heuristic test match (low)"
+    ],
+    "tests/test_apps/cliapp/multiapp.py": [
+      "heuristic test match (low)"
+    ],
+    "tests/test_apps/cliapp/app.py": [
+      "heuristic test match (low)"
+    ],
+    "tests/type_check/typing_app_decorators.py": [
+      "heuristic test match (low)"
+    ]
+  },
+  "unknowns": [
+    {
+      "kind": "stdlib-imports",
+      "items": [
+        {
+          "from": "src/flask/app.py",
+          "to": "module:sys",
+          "spec": "sys",
+          "confidence": "medium"
+        },
+        {
+          "from": "src/flask/app.py",
+          "to": "module:warnings",
+          "spec": "warnings",
+          "confidence": "medium"
+        },
+        {
+          "from": "src/flask/app.py",
+          "to": "module:types",
+          "spec": "types",
+          "confidence": "medium"
+        },
+        {
+          "from": "src/flask/app.py",
+          "to": "module:functools",
+          "spec": "functools",
+          "confidence": "medium"
+        },
+        {
+          "from": "src/flask/app.py",
+          "to": "module:datetime",
+          "spec": "datetime",
+          "confidence": "medium"
+        },
+        {
+          "from": "src/flask/app.py",
+          "to": "module:os",
+          "spec": "os",
+          "confidence": "medium"
+        },
+        {
+          "from": "src/flask/app.py",
+          "to": "module:weakref",
+          "spec": "weakref",
+          "confidence": "medium"
+        },
+        {
+          "from": "src/flask/app.py",
+          "to": "module:itertools",
+          "spec": "itertools",
+          "confidence": "medium"
+        },
+        {
+          "from": "src/flask/app.py",
+          "to": "module:inspect",
+          "spec": "inspect",
+          "confidence": "medium"
+        },
+        {
+          "from": "src/flask/app.py",
+          "to": "module:urllib.parse",
+          "spec": "urllib.parse",
+          "confidence": "medium"
+        }
+      ],
+      "count": 10,
+      "note": "Known stdlib / language builtins. Not a trust concern \u2014 listed for completeness only."
+    },
+    {
+      "kind": "external-imports",
+      "items": [
+        {
+          "from": "src/flask/app.py",
+          "to": "module:werkzeug.routing",
+          "spec": "werkzeug.routing",
+          "confidence": "medium"
+        },
+        {
+          "from": "src/flask/app.py",
+          "to": "module:werkzeug.datastructures",
+          "spec": "werkzeug.datastructures",
+          "confidence": "medium"
+        },
+        {
+          "from": "src/flask/app.py",
+          "to": "module:_typeshed.wsgi",
+          "spec": "_typeshed.wsgi",
+          "confidence": "medium"
+        },
+        {
+          "from": "src/flask/app.py",
+          "to": "module:werkzeug.exceptions",
+          "spec": "werkzeug.exceptions",
+          "confidence": "medium"
+        },
+        {
+          "from": "src/flask/app.py",
+          "to": "module:asgiref.sync",
+          "spec": "asgiref.sync",
+          "confidence": "medium"
+        },
+        {
+          "from": "src/flask/app.py",
+          "to": "module:werkzeug.serving",
+          "spec": "werkzeug.serving",
+          "confidence": "medium"
+        },
+        {
+          "from": "src/flask/app.py",
+          "to": "module:werkzeug.wrappers",
+          "spec": "werkzeug.wrappers",
+          "confidence": "medium"
+        },
+        {
+          "from": "src/flask/app.py",
+          "to": "module:werkzeug.wsgi",
+          "spec": "werkzeug.wsgi",
+          "confidence": "medium"
+        },
+        {
+          "from": "src/flask/app.py",
+          "to": "module:click",
+          "spec": "click",
+          "confidence": "medium"
+        }
+      ],
+      "count": 9,
+      "note": "Bare module specifiers resolved outside the repo (packages, vendored deps). Not a trust concern."
+    }
+  ],
+  "coverage": {
+    "structural_confidence": "high",
+    "contract_confidence": "medium",
+    "overall_confidence": "medium",
+    "by_level": {
+      "structural": {
+        "high": 16
+      },
+      "contract": {
+        "high": 9,
+        "medium": 41
+      }
+    },
+    "heuristic_edges": 41,
+    "total_edges": 66,
+    "parser_used": "treesitter:python",
+    "missing_ref_kinds": [
+      "property_access"
+    ],
+    "unresolved_count": 0,
+    "stdlib_import_count": 10,
+    "external_import_count": 9,
+    "note": "structural_confidence = navigation quality (imports/refs). contract_confidence = semantic-inference quality (token/schema co-occurrence). overall = lower bound of both. `missing_ref_kinds` names ref kinds the parser for this target does NOT capture \u2014 counts are a lower bound. `unresolved_count` counts repo-relative imports that did NOT resolve; stdlib/external imports are reported separately and do NOT lower structural trust."
+  },
+  "human_notes": [
+    {
+      "id": 25,
+      "kind": "note",
+      "target": "src/flask/app.py",
+      "body": "@defined-at(Flask, src/flask/app.py:109) is the entry.",
+      "author": "session-m4ll0k-1776414430",
+      "created_at": 1776414430.9755719,
+      "expires_at": null,
+      "confidence": "human-asserted",
+      "confidence_score": 0.85,
+      "staleness": "fresh",
+      "truth_class": "FACT",
+      "evidence": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:109",
+          "truth_class": "FACT",
+          "confidence": 0.85
+        }
+      ],
+      "assumptions": [],
+      "scope": null,
+      "drifted_fields": [],
+      "last_verified_at": 1776414431.47996,
+      "fingerprint": {
+        "file_hash": "41d186ec36d926f5296b8ada92dfd004eb2f0f72",
+        "symbol_hash": null,
+        "callers_hash": null,
+        "contracts_hash": "ece6a625e956100536d636b304c35af23d427436"
+      },
+      "revalidation_error": null,
+      "claim_verdicts": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:109",
+          "truth_class": "FACT",
+          "confidence": 0.85,
+          "status": "VERIFIED",
+          "current_evidence": [
+            {
+              "file": "src/flask/app.py",
+              "line": 109,
+              "kind": "class",
+              "symbol_id": "src/flask/app.py#Flask#"
+            }
+          ]
+        }
+      ],
+      "claim_overall_status": "fresh",
+      "verified_count": 1,
+      "refuted_count": 0,
+      "uncheckable_count": 0
+    },
+    {
+      "id": 23,
+      "kind": "note",
+      "target": "src/flask/app.py",
+      "body": "@defined-at(Flask, src/flask/app.py:109) is the entry.",
+      "author": "session-m4ll0k-1776413204",
+      "created_at": 1776413204.225492,
+      "expires_at": null,
+      "confidence": "human-asserted",
+      "confidence_score": 0.85,
+      "staleness": "fresh",
+      "truth_class": "FACT",
+      "evidence": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:109",
+          "truth_class": "FACT",
+          "confidence": 0.85
+        }
+      ],
+      "assumptions": [],
+      "scope": null,
+      "drifted_fields": [],
+      "last_verified_at": 1776414431.480861,
+      "fingerprint": {
+        "file_hash": "41d186ec36d926f5296b8ada92dfd004eb2f0f72",
+        "symbol_hash": null,
+        "callers_hash": null,
+        "contracts_hash": "ece6a625e956100536d636b304c35af23d427436"
+      },
+      "revalidation_error": null,
+      "claim_verdicts": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:109",
+          "truth_class": "FACT",
+          "confidence": 0.85,
+          "status": "VERIFIED",
+          "current_evidence": [
+            {
+              "file": "src/flask/app.py",
+              "line": 109,
+              "kind": "class",
+              "symbol_id": "src/flask/app.py#Flask#"
+            }
+          ]
+        }
+      ],
+      "claim_overall_status": "fresh",
+      "verified_count": 1,
+      "refuted_count": 0,
+      "uncheckable_count": 0
+    },
+    {
+      "id": 21,
+      "kind": "note",
+      "target": "src/flask/app.py",
+      "body": "@defined-at(Flask, src/flask/app.py:109) is the entry.",
+      "author": "session-m4ll0k-1776412752",
+      "created_at": 1776412752.843998,
+      "expires_at": null,
+      "confidence": "human-asserted",
+      "confidence_score": 0.85,
+      "staleness": "fresh",
+      "truth_class": "FACT",
+      "evidence": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:109",
+          "truth_class": "FACT",
+          "confidence": 0.85
+        }
+      ],
+      "assumptions": [],
+      "scope": null,
+      "drifted_fields": [],
+      "last_verified_at": 1776414431.48173,
+      "fingerprint": {
+        "file_hash": "41d186ec36d926f5296b8ada92dfd004eb2f0f72",
+        "symbol_hash": null,
+        "callers_hash": null,
+        "contracts_hash": "ece6a625e956100536d636b304c35af23d427436"
+      },
+      "revalidation_error": null,
+      "claim_verdicts": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:109",
+          "truth_class": "FACT",
+          "confidence": 0.85,
+          "status": "VERIFIED",
+          "current_evidence": [
+            {
+              "file": "src/flask/app.py",
+              "line": 109,
+              "kind": "class",
+              "symbol_id": "src/flask/app.py#Flask#"
+            }
+          ]
+        }
+      ],
+      "claim_overall_status": "fresh",
+      "verified_count": 1,
+      "refuted_count": 0,
+      "uncheckable_count": 0
+    },
+    {
+      "id": 19,
+      "kind": "note",
+      "target": "src/flask/app.py",
+      "body": "@defined-at(Flask, src/flask/app.py:109) is the entry.",
+      "author": "session-m4ll0k-1776412691",
+      "created_at": 1776412691.408482,
+      "expires_at": null,
+      "confidence": "human-asserted",
+      "confidence_score": 0.85,
+      "staleness": "fresh",
+      "truth_class": "FACT",
+      "evidence": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:109",
+          "truth_class": "FACT",
+          "confidence": 0.85
+        }
+      ],
+      "assumptions": [],
+      "scope": null,
+      "drifted_fields": [],
+      "last_verified_at": 1776414431.4826272,
+      "fingerprint": {
+        "file_hash": "41d186ec36d926f5296b8ada92dfd004eb2f0f72",
+        "symbol_hash": null,
+        "callers_hash": null,
+        "contracts_hash": "ece6a625e956100536d636b304c35af23d427436"
+      },
+      "revalidation_error": null,
+      "claim_verdicts": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:109",
+          "truth_class": "FACT",
+          "confidence": 0.85,
+          "status": "VERIFIED",
+          "current_evidence": [
+            {
+              "file": "src/flask/app.py",
+              "line": 109,
+              "kind": "class",
+              "symbol_id": "src/flask/app.py#Flask#"
+            }
+          ]
+        }
+      ],
+      "claim_overall_status": "fresh",
+      "verified_count": 1,
+      "refuted_count": 0,
+      "uncheckable_count": 0
+    },
+    {
+      "id": 17,
+      "kind": "note",
+      "target": "src/flask/app.py",
+      "body": "@defined-at(Flask, src/flask/app.py:109) is the entry.",
+      "author": "session-m4ll0k-1776410995",
+      "created_at": 1776410995.919193,
+      "expires_at": null,
+      "confidence": "human-asserted",
+      "confidence_score": 0.85,
+      "staleness": "fresh",
+      "truth_class": "FACT",
+      "evidence": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:109",
+          "truth_class": "FACT",
+          "confidence": 0.85
+        }
+      ],
+      "assumptions": [],
+      "scope": null,
+      "drifted_fields": [],
+      "last_verified_at": 1776414431.483469,
+      "fingerprint": {
+        "file_hash": "41d186ec36d926f5296b8ada92dfd004eb2f0f72",
+        "symbol_hash": null,
+        "callers_hash": null,
+        "contracts_hash": "ece6a625e956100536d636b304c35af23d427436"
+      },
+      "revalidation_error": null,
+      "claim_verdicts": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:109",
+          "truth_class": "FACT",
+          "confidence": 0.85,
+          "status": "VERIFIED",
+          "current_evidence": [
+            {
+              "file": "src/flask/app.py",
+              "line": 109,
+              "kind": "class",
+              "symbol_id": "src/flask/app.py#Flask#"
+            }
+          ]
+        }
+      ],
+      "claim_overall_status": "fresh",
+      "verified_count": 1,
+      "refuted_count": 0,
+      "uncheckable_count": 0
+    },
+    {
+      "id": 15,
+      "kind": "note",
+      "target": "src/flask/app.py",
+      "body": "@defined-at(Flask, src/flask/app.py:109) is the entry.",
+      "author": "session-m4ll0k-1776410951",
+      "created_at": 1776410951.1549718,
+      "expires_at": null,
+      "confidence": "human-asserted",
+      "confidence_score": 0.85,
+      "staleness": "fresh",
+      "truth_class": "FACT",
+      "evidence": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:109",
+          "truth_class": "FACT",
+          "confidence": 0.85
+        }
+      ],
+      "assumptions": [],
+      "scope": null,
+      "drifted_fields": [],
+      "last_verified_at": 1776414431.4843159,
+      "fingerprint": {
+        "file_hash": "41d186ec36d926f5296b8ada92dfd004eb2f0f72",
+        "symbol_hash": null,
+        "callers_hash": null,
+        "contracts_hash": "ece6a625e956100536d636b304c35af23d427436"
+      },
+      "revalidation_error": null,
+      "claim_verdicts": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:109",
+          "truth_class": "FACT",
+          "confidence": 0.85,
+          "status": "VERIFIED",
+          "current_evidence": [
+            {
+              "file": "src/flask/app.py",
+              "line": 109,
+              "kind": "class",
+              "symbol_id": "src/flask/app.py#Flask#"
+            }
+          ]
+        }
+      ],
+      "claim_overall_status": "fresh",
+      "verified_count": 1,
+      "refuted_count": 0,
+      "uncheckable_count": 0
+    },
+    {
+      "id": 12,
+      "kind": "note",
+      "target": "src/flask/app.py",
+      "body": "@defined-at(Flask, src/flask/app.py:109) is the entry.",
+      "author": "session-m4ll0k-1776410648",
+      "created_at": 1776410648.149494,
+      "expires_at": null,
+      "confidence": "human-asserted",
+      "confidence_score": 0.85,
+      "staleness": "fresh",
+      "truth_class": "FACT",
+      "evidence": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:109",
+          "truth_class": "FACT",
+          "confidence": 0.85
+        }
+      ],
+      "assumptions": [],
+      "scope": null,
+      "drifted_fields": [],
+      "last_verified_at": 1776414431.485178,
+      "fingerprint": {
+        "file_hash": "41d186ec36d926f5296b8ada92dfd004eb2f0f72",
+        "symbol_hash": null,
+        "callers_hash": null,
+        "contracts_hash": "ece6a625e956100536d636b304c35af23d427436"
+      },
+      "revalidation_error": null,
+      "claim_verdicts": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:109",
+          "truth_class": "FACT",
+          "confidence": 0.85,
+          "status": "VERIFIED",
+          "current_evidence": [
+            {
+              "file": "src/flask/app.py",
+              "line": 109,
+              "kind": "class",
+              "symbol_id": "src/flask/app.py#Flask#"
+            }
+          ]
+        }
+      ],
+      "claim_overall_status": "fresh",
+      "verified_count": 1,
+      "refuted_count": 0,
+      "uncheckable_count": 0
+    },
+    {
+      "id": 10,
+      "kind": "note",
+      "target": "src/flask/app.py",
+      "body": "@defined-at(Flask, src/flask/app.py:109) is the entry.",
+      "author": "session-m4ll0k-1776410577",
+      "created_at": 1776410577.848452,
+      "expires_at": null,
+      "confidence": "human-asserted",
+      "confidence_score": 0.85,
+      "staleness": "fresh",
+      "truth_class": "FACT",
+      "evidence": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:109",
+          "truth_class": "FACT",
+          "confidence": 0.85
+        }
+      ],
+      "assumptions": [],
+      "scope": null,
+      "drifted_fields": [],
+      "last_verified_at": 1776414431.486033,
+      "fingerprint": {
+        "file_hash": "41d186ec36d926f5296b8ada92dfd004eb2f0f72",
+        "symbol_hash": null,
+        "callers_hash": null,
+        "contracts_hash": "ece6a625e956100536d636b304c35af23d427436"
+      },
+      "revalidation_error": null,
+      "claim_verdicts": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:109",
+          "truth_class": "FACT",
+          "confidence": 0.85,
+          "status": "VERIFIED",
+          "current_evidence": [
+            {
+              "file": "src/flask/app.py",
+              "line": 109,
+              "kind": "class",
+              "symbol_id": "src/flask/app.py#Flask#"
+            }
+          ]
+        }
+      ],
+      "claim_overall_status": "fresh",
+      "verified_count": 1,
+      "refuted_count": 0,
+      "uncheckable_count": 0
+    },
+    {
+      "id": 8,
+      "kind": "note",
+      "target": "src/flask/app.py",
+      "body": "@defined-at(Flask, src/flask/app.py:109) is the entry.",
+      "author": "session-m4ll0k-1776410519",
+      "created_at": 1776410519.637761,
+      "expires_at": null,
+      "confidence": "human-asserted",
+      "confidence_score": 0.85,
+      "staleness": "fresh",
+      "truth_class": "FACT",
+      "evidence": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:109",
+          "truth_class": "FACT",
+          "confidence": 0.85
+        }
+      ],
+      "assumptions": [],
+      "scope": null,
+      "drifted_fields": [],
+      "last_verified_at": 1776414431.486909,
+      "fingerprint": {
+        "file_hash": "41d186ec36d926f5296b8ada92dfd004eb2f0f72",
+        "symbol_hash": null,
+        "callers_hash": null,
+        "contracts_hash": "ece6a625e956100536d636b304c35af23d427436"
+      },
+      "revalidation_error": null,
+      "claim_verdicts": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:109",
+          "truth_class": "FACT",
+          "confidence": 0.85,
+          "status": "VERIFIED",
+          "current_evidence": [
+            {
+              "file": "src/flask/app.py",
+              "line": 109,
+              "kind": "class",
+              "symbol_id": "src/flask/app.py#Flask#"
+            }
+          ]
+        }
+      ],
+      "claim_overall_status": "fresh",
+      "verified_count": 1,
+      "refuted_count": 0,
+      "uncheckable_count": 0
+    },
+    {
+      "id": 6,
+      "kind": "note",
+      "target": "src/flask/app.py",
+      "body": "@defined-at(Flask, src/flask/app.py:109) is the entry.",
+      "author": "session-m4ll0k-1776410489",
+      "created_at": 1776410489.1828558,
+      "expires_at": null,
+      "confidence": "human-asserted",
+      "confidence_score": 0.85,
+      "staleness": "fresh",
+      "truth_class": "FACT",
+      "evidence": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:109",
+          "truth_class": "FACT",
+          "confidence": 0.85
+        }
+      ],
+      "assumptions": [],
+      "scope": null,
+      "drifted_fields": [],
+      "last_verified_at": 1776414431.487777,
+      "fingerprint": {
+        "file_hash": "41d186ec36d926f5296b8ada92dfd004eb2f0f72",
+        "symbol_hash": null,
+        "callers_hash": null,
+        "contracts_hash": "ece6a625e956100536d636b304c35af23d427436"
+      },
+      "revalidation_error": null,
+      "claim_verdicts": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:109",
+          "truth_class": "FACT",
+          "confidence": 0.85,
+          "status": "VERIFIED",
+          "current_evidence": [
+            {
+              "file": "src/flask/app.py",
+              "line": 109,
+              "kind": "class",
+              "symbol_id": "src/flask/app.py#Flask#"
+            }
+          ]
+        }
+      ],
+      "claim_overall_status": "fresh",
+      "verified_count": 1,
+      "refuted_count": 0,
+      "uncheckable_count": 0
+    },
+    {
+      "id": 2,
+      "kind": "note",
+      "target": "src/flask/app.py",
+      "body": "The @defined-at(Flask, src/flask/app.py:109) class is the main entry point of Flask.",
+      "author": "session-m4ll0k-1776407793",
+      "created_at": 1776407793.7235782,
+      "expires_at": null,
+      "confidence": "human-asserted",
+      "confidence_score": 0.85,
+      "staleness": "fresh",
+      "truth_class": "FACT",
+      "evidence": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:109",
+          "truth_class": "FACT",
+          "confidence": 0.85
+        }
+      ],
+      "assumptions": [],
+      "scope": null,
+      "drifted_fields": [],
+      "last_verified_at": 1776414431.488209,
+      "fingerprint": {
+        "file_hash": "41d186ec36d926f5296b8ada92dfd004eb2f0f72",
+        "symbol_hash": null,
+        "callers_hash": null,
+        "contracts_hash": "ece6a625e956100536d636b304c35af23d427436"
+      },
+      "revalidation_error": null,
+      "claim_verdicts": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:109",
+          "truth_class": "FACT",
+          "confidence": 0.85,
+          "status": "VERIFIED",
+          "current_evidence": [
+            {
+              "file": "src/flask/app.py",
+              "line": 109,
+              "kind": "class",
+              "symbol_id": "src/flask/app.py#Flask#"
+            }
+          ]
+        }
+      ],
+      "claim_overall_status": "fresh",
+      "verified_count": 1,
+      "refuted_count": 0,
+      "uncheckable_count": 0
+    },
+    {
+      "id": 1,
+      "kind": "note",
+      "target": "src/flask/app.py",
+      "body": "The @defined-at(Flask, src/flask/app.py:109) class is the main entry point.",
+      "author": "session-m4ll0k-1776407793",
+      "created_at": 1776407793.652246,
+      "expires_at": null,
+      "confidence": "human-asserted",
+      "confidence_score": 0.85,
+      "staleness": "fresh",
+      "truth_class": "FACT",
+      "evidence": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:109",
+          "truth_class": "FACT",
+          "confidence": 0.85
+        }
+      ],
+      "assumptions": [],
+      "scope": null,
+      "drifted_fields": [],
+      "last_verified_at": 1776414431.4886348,
+      "fingerprint": {
+        "file_hash": "41d186ec36d926f5296b8ada92dfd004eb2f0f72",
+        "symbol_hash": null,
+        "callers_hash": null,
+        "contracts_hash": "ece6a625e956100536d636b304c35af23d427436"
+      },
+      "revalidation_error": null,
+      "claim_verdicts": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:109",
+          "truth_class": "FACT",
+          "confidence": 0.85,
+          "status": "VERIFIED",
+          "current_evidence": [
+            {
+              "file": "src/flask/app.py",
+              "line": 109,
+              "kind": "class",
+              "symbol_id": "src/flask/app.py#Flask#"
+            }
+          ]
+        }
+      ],
+      "claim_overall_status": "fresh",
+      "verified_count": 1,
+      "refuted_count": 0,
+      "uncheckable_count": 0
+    },
+    {
+      "id": 26,
+      "kind": "note",
+      "target": "src/flask/app.py",
+      "body": "@defined-at(Flask, src/flask/app.py:9999) is wrong.",
+      "author": "session-m4ll0k-1776414431",
+      "created_at": 1776414431.039776,
+      "expires_at": null,
+      "confidence": "human-asserted",
+      "confidence_score": 0.425,
+      "staleness": "weakly_stale",
+      "truth_class": "FACT",
+      "evidence": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:9999",
+          "truth_class": "FACT",
+          "confidence": 0.85
+        }
+      ],
+      "assumptions": [],
+      "scope": null,
+      "drifted_fields": [],
+      "last_verified_at": 1776414431.479369,
+      "fingerprint": {
+        "file_hash": "41d186ec36d926f5296b8ada92dfd004eb2f0f72",
+        "symbol_hash": null,
+        "callers_hash": null,
+        "contracts_hash": "ece6a625e956100536d636b304c35af23d427436"
+      },
+      "revalidation_error": null,
+      "claim_verdicts": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:9999",
+          "truth_class": "FACT",
+          "confidence": 0.85,
+          "status": "MOVED",
+          "reason": "symbol 'Flask' is still in src/flask/app.py but now at line 109 (claim said 9999). Non-semantic drift.",
+          "current_evidence": [
+            {
+              "file": "src/flask/app.py",
+              "line": 109,
+              "kind": "class",
+              "symbol_id": "src/flask/app.py#Flask#",
+              "moved_from": 9999,
+              "moved_to": 109
+            }
+          ]
+        }
+      ],
+      "claim_overall_status": "weakly_stale",
+      "verified_count": 0,
+      "refuted_count": 0,
+      "uncheckable_count": 0
+    },
+    {
+      "id": 24,
+      "kind": "note",
+      "target": "src/flask/app.py",
+      "body": "@defined-at(Flask, src/flask/app.py:9999) is wrong.",
+      "author": "session-m4ll0k-1776413204",
+      "created_at": 1776413204.2877069,
+      "expires_at": null,
+      "confidence": "human-asserted",
+      "confidence_score": 0.425,
+      "staleness": "weakly_stale",
+      "truth_class": "FACT",
+      "evidence": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:9999",
+          "truth_class": "FACT",
+          "confidence": 0.85
+        }
+      ],
+      "assumptions": [],
+      "scope": null,
+      "drifted_fields": [],
+      "last_verified_at": 1776414431.4803998,
+      "fingerprint": {
+        "file_hash": "41d186ec36d926f5296b8ada92dfd004eb2f0f72",
+        "symbol_hash": null,
+        "callers_hash": null,
+        "contracts_hash": "ece6a625e956100536d636b304c35af23d427436"
+      },
+      "revalidation_error": null,
+      "claim_verdicts": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:9999",
+          "truth_class": "FACT",
+          "confidence": 0.85,
+          "status": "MOVED",
+          "reason": "symbol 'Flask' is still in src/flask/app.py but now at line 109 (claim said 9999). Non-semantic drift.",
+          "current_evidence": [
+            {
+              "file": "src/flask/app.py",
+              "line": 109,
+              "kind": "class",
+              "symbol_id": "src/flask/app.py#Flask#",
+              "moved_from": 9999,
+              "moved_to": 109
+            }
+          ]
+        }
+      ],
+      "claim_overall_status": "weakly_stale",
+      "verified_count": 0,
+      "refuted_count": 0,
+      "uncheckable_count": 0
+    },
+    {
+      "id": 22,
+      "kind": "note",
+      "target": "src/flask/app.py",
+      "body": "@defined-at(Flask, src/flask/app.py:9999) is wrong.",
+      "author": "session-m4ll0k-1776412752",
+      "created_at": 1776412752.913441,
+      "expires_at": null,
+      "confidence": "human-asserted",
+      "confidence_score": 0.425,
+      "staleness": "weakly_stale",
+      "truth_class": "FACT",
+      "evidence": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:9999",
+          "truth_class": "FACT",
+          "confidence": 0.85
+        }
+      ],
+      "assumptions": [],
+      "scope": null,
+      "drifted_fields": [],
+      "last_verified_at": 1776414431.481293,
+      "fingerprint": {
+        "file_hash": "41d186ec36d926f5296b8ada92dfd004eb2f0f72",
+        "symbol_hash": null,
+        "callers_hash": null,
+        "contracts_hash": "ece6a625e956100536d636b304c35af23d427436"
+      },
+      "revalidation_error": null,
+      "claim_verdicts": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:9999",
+          "truth_class": "FACT",
+          "confidence": 0.85,
+          "status": "MOVED",
+          "reason": "symbol 'Flask' is still in src/flask/app.py but now at line 109 (claim said 9999). Non-semantic drift.",
+          "current_evidence": [
+            {
+              "file": "src/flask/app.py",
+              "line": 109,
+              "kind": "class",
+              "symbol_id": "src/flask/app.py#Flask#",
+              "moved_from": 9999,
+              "moved_to": 109
+            }
+          ]
+        }
+      ],
+      "claim_overall_status": "weakly_stale",
+      "verified_count": 0,
+      "refuted_count": 0,
+      "uncheckable_count": 0
+    },
+    {
+      "id": 20,
+      "kind": "note",
+      "target": "src/flask/app.py",
+      "body": "@defined-at(Flask, src/flask/app.py:9999) is wrong.",
+      "author": "session-m4ll0k-1776412691",
+      "created_at": 1776412691.476741,
+      "expires_at": null,
+      "confidence": "human-asserted",
+      "confidence_score": 0.425,
+      "staleness": "weakly_stale",
+      "truth_class": "FACT",
+      "evidence": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:9999",
+          "truth_class": "FACT",
+          "confidence": 0.85
+        }
+      ],
+      "assumptions": [],
+      "scope": null,
+      "drifted_fields": [],
+      "last_verified_at": 1776414431.482176,
+      "fingerprint": {
+        "file_hash": "41d186ec36d926f5296b8ada92dfd004eb2f0f72",
+        "symbol_hash": null,
+        "callers_hash": null,
+        "contracts_hash": "ece6a625e956100536d636b304c35af23d427436"
+      },
+      "revalidation_error": null,
+      "claim_verdicts": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:9999",
+          "truth_class": "FACT",
+          "confidence": 0.85,
+          "status": "MOVED",
+          "reason": "symbol 'Flask' is still in src/flask/app.py but now at line 109 (claim said 9999). Non-semantic drift.",
+          "current_evidence": [
+            {
+              "file": "src/flask/app.py",
+              "line": 109,
+              "kind": "class",
+              "symbol_id": "src/flask/app.py#Flask#",
+              "moved_from": 9999,
+              "moved_to": 109
+            }
+          ]
+        }
+      ],
+      "claim_overall_status": "weakly_stale",
+      "verified_count": 0,
+      "refuted_count": 0,
+      "uncheckable_count": 0
+    },
+    {
+      "id": 18,
+      "kind": "note",
+      "target": "src/flask/app.py",
+      "body": "@defined-at(Flask, src/flask/app.py:9999) is wrong.",
+      "author": "session-m4ll0k-1776410995",
+      "created_at": 1776410995.994076,
+      "expires_at": null,
+      "confidence": "human-asserted",
+      "confidence_score": 0.425,
+      "staleness": "weakly_stale",
+      "truth_class": "FACT",
+      "evidence": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:9999",
+          "truth_class": "FACT",
+          "confidence": 0.85
+        }
+      ],
+      "assumptions": [],
+      "scope": null,
+      "drifted_fields": [],
+      "last_verified_at": 1776414431.483047,
+      "fingerprint": {
+        "file_hash": "41d186ec36d926f5296b8ada92dfd004eb2f0f72",
+        "symbol_hash": null,
+        "callers_hash": null,
+        "contracts_hash": "ece6a625e956100536d636b304c35af23d427436"
+      },
+      "revalidation_error": null,
+      "claim_verdicts": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:9999",
+          "truth_class": "FACT",
+          "confidence": 0.85,
+          "status": "MOVED",
+          "reason": "symbol 'Flask' is still in src/flask/app.py but now at line 109 (claim said 9999). Non-semantic drift.",
+          "current_evidence": [
+            {
+              "file": "src/flask/app.py",
+              "line": 109,
+              "kind": "class",
+              "symbol_id": "src/flask/app.py#Flask#",
+              "moved_from": 9999,
+              "moved_to": 109
+            }
+          ]
+        }
+      ],
+      "claim_overall_status": "weakly_stale",
+      "verified_count": 0,
+      "refuted_count": 0,
+      "uncheckable_count": 0
+    },
+    {
+      "id": 16,
+      "kind": "note",
+      "target": "src/flask/app.py",
+      "body": "@defined-at(Flask, src/flask/app.py:9999) is wrong.",
+      "author": "session-m4ll0k-1776410951",
+      "created_at": 1776410951.228142,
+      "expires_at": null,
+      "confidence": "human-asserted",
+      "confidence_score": 0.425,
+      "staleness": "weakly_stale",
+      "truth_class": "FACT",
+      "evidence": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:9999",
+          "truth_class": "FACT",
+          "confidence": 0.85
+        }
+      ],
+      "assumptions": [],
+      "scope": null,
+      "drifted_fields": [],
+      "last_verified_at": 1776414431.4838889,
+      "fingerprint": {
+        "file_hash": "41d186ec36d926f5296b8ada92dfd004eb2f0f72",
+        "symbol_hash": null,
+        "callers_hash": null,
+        "contracts_hash": "ece6a625e956100536d636b304c35af23d427436"
+      },
+      "revalidation_error": null,
+      "claim_verdicts": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:9999",
+          "truth_class": "FACT",
+          "confidence": 0.85,
+          "status": "MOVED",
+          "reason": "symbol 'Flask' is still in src/flask/app.py but now at line 109 (claim said 9999). Non-semantic drift.",
+          "current_evidence": [
+            {
+              "file": "src/flask/app.py",
+              "line": 109,
+              "kind": "class",
+              "symbol_id": "src/flask/app.py#Flask#",
+              "moved_from": 9999,
+              "moved_to": 109
+            }
+          ]
+        }
+      ],
+      "claim_overall_status": "weakly_stale",
+      "verified_count": 0,
+      "refuted_count": 0,
+      "uncheckable_count": 0
+    },
+    {
+      "id": 13,
+      "kind": "note",
+      "target": "src/flask/app.py",
+      "body": "@defined-at(Flask, src/flask/app.py:9999) is wrong.",
+      "author": "session-m4ll0k-1776410648",
+      "created_at": 1776410648.21986,
+      "expires_at": null,
+      "confidence": "human-asserted",
+      "confidence_score": 0.425,
+      "staleness": "weakly_stale",
+      "truth_class": "FACT",
+      "evidence": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:9999",
+          "truth_class": "FACT",
+          "confidence": 0.85
+        }
+      ],
+      "assumptions": [],
+      "scope": null,
+      "drifted_fields": [],
+      "last_verified_at": 1776414431.484749,
+      "fingerprint": {
+        "file_hash": "41d186ec36d926f5296b8ada92dfd004eb2f0f72",
+        "symbol_hash": null,
+        "callers_hash": null,
+        "contracts_hash": "ece6a625e956100536d636b304c35af23d427436"
+      },
+      "revalidation_error": null,
+      "claim_verdicts": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:9999",
+          "truth_class": "FACT",
+          "confidence": 0.85,
+          "status": "MOVED",
+          "reason": "symbol 'Flask' is still in src/flask/app.py but now at line 109 (claim said 9999). Non-semantic drift.",
+          "current_evidence": [
+            {
+              "file": "src/flask/app.py",
+              "line": 109,
+              "kind": "class",
+              "symbol_id": "src/flask/app.py#Flask#",
+              "moved_from": 9999,
+              "moved_to": 109
+            }
+          ]
+        }
+      ],
+      "claim_overall_status": "weakly_stale",
+      "verified_count": 0,
+      "refuted_count": 0,
+      "uncheckable_count": 0
+    },
+    {
+      "id": 11,
+      "kind": "note",
+      "target": "src/flask/app.py",
+      "body": "@defined-at(Flask, src/flask/app.py:9999) is wrong.",
+      "author": "session-m4ll0k-1776410577",
+      "created_at": 1776410577.92538,
+      "expires_at": null,
+      "confidence": "human-asserted",
+      "confidence_score": 0.425,
+      "staleness": "weakly_stale",
+      "truth_class": "FACT",
+      "evidence": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:9999",
+          "truth_class": "FACT",
+          "confidence": 0.85
+        }
+      ],
+      "assumptions": [],
+      "scope": null,
+      "drifted_fields": [],
+      "last_verified_at": 1776414431.4856079,
+      "fingerprint": {
+        "file_hash": "41d186ec36d926f5296b8ada92dfd004eb2f0f72",
+        "symbol_hash": null,
+        "callers_hash": null,
+        "contracts_hash": "ece6a625e956100536d636b304c35af23d427436"
+      },
+      "revalidation_error": null,
+      "claim_verdicts": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:9999",
+          "truth_class": "FACT",
+          "confidence": 0.85,
+          "status": "MOVED",
+          "reason": "symbol 'Flask' is still in src/flask/app.py but now at line 109 (claim said 9999). Non-semantic drift.",
+          "current_evidence": [
+            {
+              "file": "src/flask/app.py",
+              "line": 109,
+              "kind": "class",
+              "symbol_id": "src/flask/app.py#Flask#",
+              "moved_from": 9999,
+              "moved_to": 109
+            }
+          ]
+        }
+      ],
+      "claim_overall_status": "weakly_stale",
+      "verified_count": 0,
+      "refuted_count": 0,
+      "uncheckable_count": 0
+    },
+    {
+      "id": 9,
+      "kind": "note",
+      "target": "src/flask/app.py",
+      "body": "@defined-at(Flask, src/flask/app.py:9999) is wrong.",
+      "author": "session-m4ll0k-1776410519",
+      "created_at": 1776410519.713114,
+      "expires_at": null,
+      "confidence": "human-asserted",
+      "confidence_score": 0.425,
+      "staleness": "weakly_stale",
+      "truth_class": "FACT",
+      "evidence": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:9999",
+          "truth_class": "FACT",
+          "confidence": 0.85
+        }
+      ],
+      "assumptions": [],
+      "scope": null,
+      "drifted_fields": [],
+      "last_verified_at": 1776414431.486468,
+      "fingerprint": {
+        "file_hash": "41d186ec36d926f5296b8ada92dfd004eb2f0f72",
+        "symbol_hash": null,
+        "callers_hash": null,
+        "contracts_hash": "ece6a625e956100536d636b304c35af23d427436"
+      },
+      "revalidation_error": null,
+      "claim_verdicts": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:9999",
+          "truth_class": "FACT",
+          "confidence": 0.85,
+          "status": "MOVED",
+          "reason": "symbol 'Flask' is still in src/flask/app.py but now at line 109 (claim said 9999). Non-semantic drift.",
+          "current_evidence": [
+            {
+              "file": "src/flask/app.py",
+              "line": 109,
+              "kind": "class",
+              "symbol_id": "src/flask/app.py#Flask#",
+              "moved_from": 9999,
+              "moved_to": 109
+            }
+          ]
+        }
+      ],
+      "claim_overall_status": "weakly_stale",
+      "verified_count": 0,
+      "refuted_count": 0,
+      "uncheckable_count": 0
+    },
+    {
+      "id": 7,
+      "kind": "note",
+      "target": "src/flask/app.py",
+      "body": "@defined-at(Flask, src/flask/app.py:9999) is wrong.",
+      "author": "session-m4ll0k-1776410489",
+      "created_at": 1776410489.2534652,
+      "expires_at": null,
+      "confidence": "human-asserted",
+      "confidence_score": 0.425,
+      "staleness": "weakly_stale",
+      "truth_class": "FACT",
+      "evidence": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:9999",
+          "truth_class": "FACT",
+          "confidence": 0.85
+        }
+      ],
+      "assumptions": [],
+      "scope": null,
+      "drifted_fields": [],
+      "last_verified_at": 1776414431.487349,
+      "fingerprint": {
+        "file_hash": "41d186ec36d926f5296b8ada92dfd004eb2f0f72",
+        "symbol_hash": null,
+        "callers_hash": null,
+        "contracts_hash": "ece6a625e956100536d636b304c35af23d427436"
+      },
+      "revalidation_error": null,
+      "claim_verdicts": [
+        {
+          "subject": "Flask",
+          "predicate": "defined-at",
+          "object": "src/flask/app.py:9999",
+          "truth_class": "FACT",
+          "confidence": 0.85,
+          "status": "MOVED",
+          "reason": "symbol 'Flask' is still in src/flask/app.py but now at line 109 (claim said 9999). Non-semantic drift.",
+          "current_evidence": [
+            {
+              "file": "src/flask/app.py",
+              "line": 109,
+              "kind": "class",
+              "symbol_id": "src/flask/app.py#Flask#",
+              "moved_from": 9999,
+              "moved_to": 109
+            }
+          ]
+        }
+      ],
+      "claim_overall_status": "weakly_stale",
+      "verified_count": 0,
+      "refuted_count": 0,
+      "uncheckable_count": 0
+    }
+  ],
+  "target_integrity": {
+    "target": "src/flask/app.py#wrapper",
+    "score": 0.813,
+    "factors": {
+      "retrieval_confidence": 0.9,
+      "note_freshness": 0.7727272727272727,
+      "contradiction_penalty": 1.0,
+      "ambiguity_penalty": 0.5,
+      "structural_coverage": 0.9,
+      "implicit_usage_penalty": 0.6,
+      "macro_gap_penalty": 0.6,
+      "binding_gap_penalty": 1.0,
+      "module_resolution_penalty": 1.0,
+      "stale_recovery_penalty": 1.0
+    },
+    "guidance": [
+      "AMBIGUITY: symbol 'wrapper' is defined in 3 files; a plain grep cannot disambiguate. Use `projmem symbol wrapper --context` to disambiguate.",
+      "IMPLICIT USAGE: text search finds 18 matches vs 5 structured refs. Macro / string-based / generated usage may hide real sites. Verify with `rg -w <name>` before trusting ref counts."
+    ],
+    "contradictions": [],
+    "ambiguity": [
+      {
+        "kind": "same_name",
+        "severity": "high",
+        "symbol": "wrapper",
+        "files": [
+          "src/flask/app.py",
+          "src/flask/ctx.py",
+          "src/flask/sansio/blueprints.py"
+        ],
+        "reason": "symbol 'wrapper' is defined in 3 files; a plain grep cannot disambiguate."
+      }
+    ]
+  },
+  "direct_dependencies": [
+    {
+      "file": "src/flask/typing.py",
+      "type": "imports",
+      "confidence": "high",
+      "evidence": "from . import typing",
+      "via": "imports"
+    },
+    {
+      "file": "src/flask/cli.py",
+      "type": "imports",
+      "confidence": "high",
+      "evidence": "from . import cli",
+      "via": "imports"
+    },
+    {
+      "file": "module:sys",
+      "type": "imports",
+      "confidence": "medium",
+      "evidence": "import sys",
+      "via": "imports"
+    },
+    {
+      "file": "src/flask/signals.py",
+      "type": "imports",
+      "confidence": "high",
+      "evidence": "import .signals",
+      "via": "imports"
+    },
+    {
+      "file": "module:werkzeug.routing",
+      "type": "imports",
+      "confidence": "medium",
+      "evidence": "import werkzeug.routing",
+      "via": "imports"
+    },
+    {
+      "file": "src/flask/__init__.py",
+      "type": "imports",
+      "confidence": "high",
+      "evidence": "import .",
+      "via": "imports"
+    },
+    {
+      "file": "src/flask/globals.py",
+      "type": "imports",
+      "confidence": "high",
+      "evidence": "import .globals",
+      "via": "imports"
+    },
+    {
+      "file": "src/flask/helpers.py",
+      "type": "imports",
+      "confidence": "high",
+      "evidence": "import .helpers",
+      "via": "imports"
+    },
+    {
+      "file": "module:werkzeug.datastructures",
+      "type": "imports",
+      "confidence": "medium",
+      "evidence": "import werkzeug.datastructures",
+      "via": "imports"
+    },
+    {
+      "file": "module:_typeshed.wsgi",
+      "type": "imports",
+      "confidence": "medium",
+      "evidence": "import _typeshed.wsgi",
+      "via": "imports"
+    },
+    {
+      "file": "module:warnings",
+      "type": "imports",
+      "confidence": "medium",
+      "evidence": "import warnings",
+      "via": "imports"
+    },
+    {
+      "file": "module:types",
+      "type": "imports",
+      "confidence": "medium",
+      "evidence": "import types",
+      "via": "imports"
+    },
+    {
+      "file": "module:werkzeug.exceptions",
+      "type": "imports",
+      "confidence": "medium",
+      "evidence": "import werkzeug.exceptions",
+      "via": "imports"
+    },
+    {
+      "file": "src/flask/sessions.py",
+      "type": "imports",
+      "confidence": "high",
+      "evidence": "import .sessions",
+      "via": "imports"
+    },
+    {
+      "file": "src/flask/wrappers.py",
+      "type": "imports",
+      "confidence": "high",
+      "evidence": "import .wrappers",
+      "via": "imports"
+    },
+    {
+      "file": "src/flask/testing.py",
+      "type": "imports",
+      "confidence": "high",
+      "evidence": "import .testing",
+      "via": "imports"
+    },
+    {
+      "file": "module:asgiref.sync",
+      "type": "imports",
+      "confidence": "medium",
+      "evidence": "import asgiref.sync",
+      "via": "imports"
+    },
+    {
+      "file": "module:functools",
+      "type": "imports",
+      "confidence": "medium",
+      "evidence": "import functools",
+      "via": "imports"
+    },
+    {
+      "file": "module:datetime",
+      "type": "imports",
+      "confidence": "medium",
+      "evidence": "import datetime",
+      "via": "imports"
+    },
+    {
+      "file": "module:werkzeug.serving",
+      "type": "imports",
+      "confidence": "medium",
+      "evidence": "import werkzeug.serving",
+      "via": "imports"
+    },
+    {
+      "file": "src/flask/sansio/app.py",
+      "type": "imports",
+      "confidence": "high",
+      "evidence": "import .sansio.app",
+      "via": "imports"
+    },
+    {
+      "file": "module:os",
+      "type": "imports",
+      "confidence": "medium",
+      "evidence": "import os",
+      "via": "imports"
+    },
+    {
+      "file": "module:weakref",
+      "type": "imports",
+      "confidence": "medium",
+      "evidence": "import weakref",
+      "via": "imports"
+    },
+    {
+      "file": "module:itertools",
+      "type": "imports",
+      "confidence": "medium",
+      "evidence": "import itertools",
+      "via": "imports"
+    },
+    {
+      "file": "module:werkzeug.wrappers",
+      "type": "imports",
+      "confidence": "medium",
+      "evidence": "import werkzeug.wrappers",
+      "via": "imports"
+    }
+  ],
+  "reverse_dependencies": [
+    {
+      "file": "src/flask/sessions.py",
+      "type": "imports",
+      "confidence": "high",
+      "evidence": "import .app",
+      "via": "imports"
+    },
+    {
+      "file": "src/flask/globals.py",
+      "type": "imports",
+      "confidence": "high",
+      "evidence": "import .app",
+      "via": "imports"
+    },
+    {
+      "file": "src/flask/__init__.py",
+      "type": "imports",
+      "confidence": "high",
+      "evidence": "import .app",
+      "via": "imports"
+    },
+    {
+      "file": "src/flask/cli.py",
+      "type": "imports",
+      "confidence": "high",
+      "evidence": "import .app",
+      "via": "imports"
+    },
+    {
+      "file": "src/flask/ctx.py",
+      "type": "imports",
+      "confidence": "high",
+      "evidence": "import .app",
+      "via": "imports"
+    },
+    {
+      "file": "src/flask/testing.py",
+      "type": "imports",
+      "confidence": "high",
+      "evidence": "import .app",
+      "via": "imports"
+    }
+  ],
+  "semantic_contracts": {
+    "in_target": {
+      "env": [
+        {
+          "id": 44390,
+          "kind": "env",
+          "name": "FLASK_RUN_FROM_CLI",
+          "file": "src/flask/app.py",
+          "line": 697,
+          "role": "read",
+          "confidence": "high",
+          "context": "os.environ/getenv"
+        }
+      ],
+      "schema_field": [
+        {
+          "id": 44391,
+          "kind": "schema_field",
+          "name": "cli",
+          "file": "src/flask/app.py",
+          "line": 340,
+          "role": "write_assign",
+          "confidence": "high",
+          "context": "attr-assign"
+        },
+        {
+          "id": 44392,
+          "kind": "schema_field",
+          "name": "name",
+          "file": "src/flask/app.py",
+          "line": 344,
+          "role": "write_assign",
+          "confidence": "high",
+          "context": "attr-assign"
+        },
+        {
+          "id": 44393,
+          "kind": "schema_field",
+          "name": "_got_first_request",
+          "file": "src/flask/app.py",
+          "line": 1010,
+          "role": "write_assign",
+          "confidence": "high",
+          "context": "attr-assign"
+        },
+        {
+          "id": 44394,
+          "kind": "schema_field",
+          "name": "DEBUG",
+          "file": "src/flask/app.py",
+          "line": 208,
+          "role": "write",
+          "confidence": "medium",
+          "context": "dict-literal"
+        },
+        {
+          "id": 44395,
+          "kind": "schema_field",
+          "name": "TESTING",
+          "file": "src/flask/app.py",
+          "line": 209,
+          "role": "write",
+          "confidence": "medium",
+          "context": "dict-literal"
+        },
+        {
+          "id": 44396,
+          "kind": "schema_field",
+          "name": "PROPAGATE_EXCEPTIONS",
+          "file": "src/flask/app.py",
+          "line": 210,
+          "role": "write",
+          "confidence": "medium",
+          "context": "dict-literal"
+        },
+        {
+          "id": 44397,
+          "kind": "schema_field",
+          "name": "SECRET_KEY",
+          "file": "src/flask/app.py",
+          "line": 211,
+          "role": "write",
+          "confidence": "medium",
+          "context": "dict-literal"
+        },
+        {
+          "id": 44398,
+          "kind": "schema_field",
+          "name": "SECRET_KEY_FALLBACKS",
+          "file": "src/flask/app.py",
+          "line": 212,
+          "role": "write",
+          "confidence": "medium",
+          "context": "dict-literal"
+        },
+        {
+          "id": 44399,
+          "kind": "schema_field",
+          "name": "PERMANENT_SESSION_LIFETIME",
+          "file": "src/flask/app.py",
+          "line": 213,
+          "role": "write",
+          "confidence": "medium",
+          "context": "dict-literal"
+        },
+        {
+          "id": 44400,
+          "kind": "schema_field",
+          "name": "USE_X_SENDFILE",
+          "file": "src/flask/app.py",
+          "line": 214,
+          "role": "write",
+          "confidence": "medium",
+          "context": "dict-literal"
+        },
+        {
+          "id": 44401,
+          "kind": "schema_field",
+          "name": "TRUSTED_HOSTS",
+          "file": "src/flask/app.py",
+          "line": 215,
+          "role": "write",
+          "confidence": "medium",
+          "context": "dict-literal"
+        },
+        {
+          "id": 44402,
+          "kind": "schema_field",
+          "name": "SERVER_NAME",
+          "file": "src/flask/app.py",
+          "line": 216,
+          "role": "write",
+          "confidence": "medium",
+          "context": "dict-literal"
+        },
+        {
+          "id": 44403,
+          "kind": "schema_field",
+          "name": "APPLICATION_ROOT",
+          "file": "src/flask/app.py",
+          "line": 217,
+          "role": "write",
+          "confidence": "medium",
+          "context": "dict-literal"
+        },
+        {
+          "id": 44404,
+          "kind": "schema_field",
+          "name": "SESSION_COOKIE_NAME",
+          "file": "src/flask/app.py",
+          "line": 218,
+          "role": "write",
+          "confidence": "medium",
+          "context": "dict-literal"
+        },
+        {
+          "id": 44405,
+          "kind": "schema_field",
+          "name": "SESSION_COOKIE_DOMAIN",
+          "file": "src/flask/app.py",
+          "line": 219,
+          "role": "write",
+          "confidence": "medium",
+          "context": "dict-literal"
+        },
+        {
+          "id": 44406,
+          "kind": "schema_field",
+          "name": "SESSION_COOKIE_PATH",
+          "file": "src/flask/app.py",
+          "line": 220,
+          "role": "write",
+          "confidence": "medium",
+          "context": "dict-literal"
+        },
+        {
+          "id": 44407,
+          "kind": "schema_field",
+          "name": "SESSION_COOKIE_HTTPONLY",
+          "file": "src/flask/app.py",
+          "line": 221,
+          "role": "write",
+          "confidence": "medium",
+          "context": "dict-literal"
+        },
+        {
+          "id": 44408,
+          "kind": "schema_field",
+          "name": "SESSION_COOKIE_SECURE",
+          "file": "src/flask/app.py",
+          "line": 222,
+          "role": "write",
+          "confidence": "medium",
+          "context": "dict-literal"
+        },
+        {
+          "id": 44409,
+          "kind": "schema_field",
+          "name": "SESSION_COOKIE_PARTITIONED",
+          "file": "src/flask/app.py",
+          "line": 223,
+          "role": "write",
+          "confidence": "medium",
+          "context": "dict-literal"
+        },
+        {
+          "id": 44410,
+          "kind": "schema_field",
+          "name": "SESSION_COOKIE_SAMESITE",
+          "file": "src/flask/app.py",
+          "line": 224,
+          "role": "write",
+          "confidence": "medium",
+          "context": "dict-literal"
+        },
+        {
+          "id": 44411,
+          "kind": "schema_field",
+          "name": "SESSION_REFRESH_EACH_REQUEST",
+          "file": "src/flask/app.py",
+          "line": 225,
+          "role": "write",
+          "confidence": "medium",
+          "context": "dict-literal"
+        },
+        {
+          "id": 44412,
+          "kind": "schema_field",
+          "name": "MAX_CONTENT_LENGTH",
+          "file": "src/flask/app.py",
+          "line": 226,
+          "role": "write",
+          "confidence": "medium",
+          "context": "dict-literal"
+        },
+        {
+          "id": 44413,
+          "kind": "schema_field",
+          "name": "MAX_FORM_MEMORY_SIZE",
+          "file": "src/flask/app.py",
+          "line": 227,
+          "role": "write",
+          "confidence": "medium",
+          "context": "dict-literal"
+        },
+        {
+          "id": 44414,
+          "kind": "schema_field",
+          "name": "MAX_FORM_PARTS",
+          "file": "src/flask/app.py",
+          "line": 228,
+          "role": "write",
+          "confidence": "medium",
+          "context": "dict-literal"
+        },
+        {
+          "id": 44415,
+          "kind": "schema_field",
+          "name": "SEND_FILE_MAX_AGE_DEFAULT",
+          "file": "src/flask/app.py",
+          "line": 229,
+          "role": "write",
+          "confidence": "medium",
+          "context": "dict-literal"
+        },
+        {
+          "id": 44416,
+          "kind": "schema_field",
+          "name": "TRAP_BAD_REQUEST_ERRORS",
+          "file": "src/flask/app.py",
+          "line": 230,
+          "role": "write",
+          "confidence": "medium",
+          "context": "dict-literal"
+        },
+        {
+          "id": 44417,
+          "kind": "schema_field",
+          "name": "TRAP_HTTP_EXCEPTIONS",
+          "file": "src/flask/app.py",
+          "line": 231,
+          "role": "write",
+          "confidence": "medium",
+          "context": "dict-literal"
+        },
+        {
+          "id": 44418,
+          "kind": "schema_field",
+          "name": "EXPLAIN_TEMPLATE_LOADING",
+          "file": "src/flask/app.py",
+          "line": 232,
+          "role": "write",
+          "confidence": "medium",
+          "context": "dict-literal"
+        },
+        {
+          "id": 44419,
+          "kind": "schema_field",
+          "name": "PREFERRED_URL_SCHEME",
+          "file": "src/flask/app.py",
+          "line": 233,
+          "role": "write",
+          "confidence": "medium",
+          "context": "dict-literal"
+        },
+        {
+          "id": 44420,
+          "kind": "schema_field",
+          "name": "TEMPLATES_AUTO_RELOAD",
+          "file": "src/flask/app.py",
+          "line": 234,
+          "role": "write",
+          "confidence": "medium",
+          "context": "dict-literal"
+        },
+        {
+          "id": 44421,
+          "kind": "schema_field",
+          "name": "MAX_COOKIE_SIZE",
+          "file": "src/flask/app.py",
+          "line": 235,
+          "role": "write",
+          "confidence": "medium",
+          "context": "dict-literal"
+        },
+        {
+          "id": 44422,
+          "kind": "schema_field",
+          "name": "PROVIDE_AUTOMATIC_OPTIONS",
+          "file": "src/flask/app.py",
+          "line": 236,
+          "role": "write",
+          "confidence": "medium",
+          "context": "dict-literal"
+        },
+        {
+          "id": 44423,
+          "kind": "schema_field",
+          "name": "SEND_FILE_MAX_AGE_DEFAULT",
+          "file": "src/flask/app.py",
+          "line": 382,
+          "role": "read",
+          "confidence": "medium",
+          "context": "subscript"
+        },
+        {
+          "id": 44424,
+          "kind": "schema_field",
+          "name": "host",
+          "file": "src/flask/app.py",
+          "line": 534,
+          "role": "write_assign",
+          "confidence": "high",
+          "context": "attr-assign"
+        },
+        {
+          "id": 44425,
+          "kind": "schema_field",
+          "name": "app",
+          "file": "src/flask/app.py",
+          "line": 627,
+          "role": "write",
+          "confidence": "medium",
+          "context": "dict-literal"
+        },
+        {
+          "id": 44426,
+          "kind": "schema_field",
+          "name": "debug",
+          "file": "src/flask/app.py",
+          "line": 718,
+          "role": "write_assign",
+          "confidence": "high",
+          "context": "attr-assign"
+        },
+        {
+          "id": 44427,
+          "kind": "schema_field",
+          "name": "SERVER_NAME",
+          "file": "src/flask/app.py",
+          "line": 720,
+          "role": "read",
+          "confidence": "medium",
+          "context": ".get()"
+        },
+        {
+          "id": 44428,
+          "kind": "schema_field",
+          "name": "use_reloader",
+          "file": "src/flask/app.py",
+          "line": 739,
+          "role": "write",
+          "confidence": "medium",
+          "context": ".setdefault()"
+        },
+        {
+          "id": 44429,
+          "kind": "schema_field",
+          "name": "use_debugger",
+          "file": "src/flask/app.py",
+          "line": 740,
+          "role": "write",
+          "confidence": "medium",
+          "context": ".setdefault()"
+        },
+        {
+          "id": 44430,
+          "kind": "schema_field",
+          "name": "threaded",
+          "file": "src/flask/app.py",
+          "line": 741,
+          "role": "write",
+          "confidence": "medium",
+          "context": ".setdefault()"
+        },
+        {
+          "id": 44431,
+          "kind": "schema_field",
+          "name": "_got_first_request",
+          "file": "src/flask/app.py",
+          "line": 753,
+          "role": "write_assign",
+          "confidence": "high",
+          "context": "attr-assign"
+        },
+        {
+          "id": 44432,
+          "kind": "schema_field",
+          "name": "show_exception",
+          "file": "src/flask/app.py",
+          "line": 885,
+          "role": "write_assign",
+          "confidence": "high",
+          "context": "attr-assign"
+        },
+        {
+          "id": 44433,
+          "kind": "schema_field",
+          "name": "PROPAGATE_EXCEPTIONS",
+          "file": "src/flask/app.py",
+          "line": 927,
+          "role": "read",
+          "confidence": "medium",
+          "context": "subscript"
+        },
+        {
+          "id": 44434,
+          "kind": "schema_field",
+          "name": "autoescape",
+          "file": "src/flask/app.py",
+          "line": 484,
+          "role": "write",
+          "confidence": "medium",
+          "context": "subscript"
+        },
+        {
+          "id": 44435,
+          "kind": "schema_field",
+          "name": "TEMPLATES_AUTO_RELOAD",
+          "file": "src/flask/app.py",
+          "line": 487,
+          "role": "read",
+          "confidence": "medium",
+          "context": "subscript"
+        },
+        {
+          "id": 44436,
+          "kind": "schema_field",
+          "name": "auto_reload",
+          "file": "src/flask/app.py",
+          "line": 492,
+          "role": "write",
+          "confidence": "medium",
+          "context": "subscript"
+        },
+        {
+          "id": 44437,
+          "kind": "schema_field",
+          "name": "trusted_hosts",
+          "file": "src/flask/app.py",
+          "line": 531,
+          "role": "write_assign",
+          "confidence": "high",
+          "context": "attr-assign"
+        },
+        {
+          "id": 44438,
+          "kind": "schema_field",
+          "name": "SERVER_NAME",
+          "file": "src/flask/app.py",
+          "line": 536,
+          "role": "read",
+          "confidence": "medium",
+          "context": "subscript"
+        },
+        {
+          "id": 44439,
+          "kind": "schema_field",
+          "name": "SERVER_NAME",
+          "file": "src/flask/app.py",
+          "line": 553,
+          "role": "read",
+          "confidence": "medium",
+          "context": "subscript"
+        },
+        {
+          "id": 44440,
+          "kind": "schema_field",
+          "name": "FLASK_RUN_FROM_CLI",
+          "file": "src/flask/app.py",
+          "line": 697,
+          "role": "read",
+          "confidence": "medium",
+          "context": ".get()"
+        },
+        {
+          "id": 44441,
+          "kind": "schema_field",
+          "name": "debug",
+          "file": "src/flask/app.py",
+          "line": 714,
+          "role": "write_assign",
+          "confidence": "high",
+          "context": "attr-assign"
+        },
+        {
+          "id": 44442,
+          "kind": "schema_field",
+          "name": "status",
+          "file": "src/flask/app.py",
+          "line": 1356,
+          "role": "write_assign",
+          "confidence": "high",
+          "context": "attr-assign"
+        },
+        {
+          "id": 44443,
+          "kind": "schema_field",
+          "name": "status_code",
+          "file": "src/flask/app.py",
+          "line": 1358,
+          "role": "write_assign",
+          "confidence": "high",
+          "context": "attr-assign"
+        },
+        {
+          "id": 44444,
+          "kind": "schema_field",
+          "name": "SERVER_NAME",
+          "file": "src/flask/app.py",
+          "line": 555,
+          "role": "read",
+          "confidence": "medium",
+          "context": "subscript"
+        },
+        {
+          "id": 44445,
+          "kind": "schema_field",
+          "name": "TRAP_BAD_REQUEST_ERRORS",
+          "file": "src/flask/app.py",
+          "line": 883,
+          "role": "read",
+          "confidence": "medium",
+          "context": "subscript"
+        },
+        {
+          "id": 44446,
+          "kind": "schema_field",
+          "name": "TRUSTED_HOSTS",
+          "file": "src/flask/app.py",
+          "line": 530,
+          "role": "read",
+          "confidence": "medium",
+          "context": "subscript"
+        },
+        {
+          "id": 44447,
+          "kind": "schema_field",
+          "name": "APPLICATION_ROOT",
+          "file": "src/flask/app.py",
+          "line": 556,
+          "role": "read",
+          "confidence": "medium",
+          "context": "subscript"
+        },
+        {
+          "id": 44448,
+          "kind": "schema_field",
+          "name": "PREFERRED_URL_SCHEME",
+          "file": "src/flask/app.py",
+          "line": 557,
+          "role": "read",
+          "confidence": "medium",
+          "context": "subscript"
+        }
+      ],
+      "guard": [
+        {
+          "id": 44449,
+          "kind": "guard",
+          "name": "isinstance",
+          "file": "src/flask/app.py",
+          "line": 74,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "value is None or isinstance(value, timedelta)"
+        },
+        {
+          "id": 44450,
+          "kind": "guard",
+          "name": "isinstance",
+          "file": "src/flask/app.py",
+          "line": 87,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "args and isinstance(args[0], AppContext)"
+        },
+        {
+          "id": 44451,
+          "kind": "guard",
+          "name": "_get_current_object",
+          "file": "src/flask/app.py",
+          "line": 100,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "not args"
+        },
+        {
+          "id": 44452,
+          "kind": "guard",
+          "name": "isinstance",
+          "file": "src/flask/app.py",
+          "line": 101,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "not args"
+        },
+        {
+          "id": 44453,
+          "kind": "guard",
+          "name": "_get_current_object",
+          "file": "src/flask/app.py",
+          "line": 102,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "not args"
+        },
+        {
+          "id": 44454,
+          "kind": "guard",
+          "name": "ref",
+          "file": "src/flask/app.py",
+          "line": 357,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "self.has_static_folder"
+        },
+        {
+          "id": 44455,
+          "kind": "guard",
+          "name": "add_url_rule",
+          "file": "src/flask/app.py",
+          "line": 358,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "self.has_static_folder"
+        },
+        {
+          "id": 44456,
+          "kind": "guard",
+          "name": "bool",
+          "file": "src/flask/app.py",
+          "line": 352,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "self.has_static_folder"
+        },
+        {
+          "id": 44457,
+          "kind": "guard",
+          "name": "send_static_file",
+          "file": "src/flask/app.py",
+          "line": 362,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "self.has_static_folder"
+        },
+        {
+          "id": 44458,
+          "kind": "guard",
+          "name": "self_ref",
+          "file": "src/flask/app.py",
+          "line": 362,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "self.has_static_folder"
+        },
+        {
+          "id": 44459,
+          "kind": "guard",
+          "name": "isinstance",
+          "file": "src/flask/app.py",
+          "line": 387,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(value, timedelta)"
+        },
+        {
+          "id": 44460,
+          "kind": "guard",
+          "name": "int",
+          "file": "src/flask/app.py",
+          "line": 388,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(value, timedelta)"
+        },
+        {
+          "id": 44461,
+          "kind": "guard",
+          "name": "total_seconds",
+          "file": "src/flask/app.py",
+          "line": 388,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(value, timedelta)"
+        },
+        {
+          "id": 44462,
+          "kind": "guard",
+          "name": "RuntimeError",
+          "file": "src/flask/app.py",
+          "line": 405,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "not self.has_static_folder"
+        },
+        {
+          "id": 44463,
+          "kind": "guard",
+          "name": "ValueError",
+          "file": "src/flask/app.py",
+          "line": 438,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "mode not in {'r', 'rt', 'rb'}"
+        },
+        {
+          "id": 44464,
+          "kind": "guard",
+          "name": "open",
+          "file": "src/flask/app.py",
+          "line": 443,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "mode == 'rb'"
+        },
+        {
+          "id": 44465,
+          "kind": "guard",
+          "name": "open",
+          "file": "src/flask/app.py",
+          "line": 465,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "'b' in mode"
+        },
+        {
+          "id": 44466,
+          "kind": "guard",
+          "name": "get_host",
+          "file": "src/flask/app.py",
+          "line": 534,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "request is not None"
+        },
+        {
+          "id": 44467,
+          "kind": "guard",
+          "name": "bind_to_environ",
+          "file": "src/flask/app.py",
+          "line": 548,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "request is not None"
+        },
+        {
+          "id": 44468,
+          "kind": "guard",
+          "name": "bind",
+          "file": "src/flask/app.py",
+          "line": 554,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "self.config['SERVER_NAME'] is not None"
+        },
+        {
+          "id": 44469,
+          "kind": "guard",
+          "name": "isinstance",
+          "file": "src/flask/app.py",
+          "line": 580,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "not self.debug or not isinstance(request.routing_exception, RequestRedirect) or request.routing_exception.code in {307, 308} or (request.method in {'GET', 'HEAD', 'OPTIONS'})"
+        },
+        {
+          "id": 44470,
+          "kind": "guard",
+          "name": "chain",
+          "file": "src/flask/app.py",
+          "line": 607,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "ctx.has_request"
+        },
+        {
+          "id": 44471,
+          "kind": "guard",
+          "name": "reversed",
+          "file": "src/flask/app.py",
+          "line": 607,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "ctx.has_request"
+        },
+        {
+          "id": 44472,
+          "kind": "guard",
+          "name": "get",
+          "file": "src/flask/app.py",
+          "line": 697,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "os.environ.get('FLASK_RUN_FROM_CLI') == 'true'"
+        },
+        {
+          "id": 44473,
+          "kind": "guard",
+          "name": "is_running_from_reloader",
+          "file": "src/flask/app.py",
+          "line": 698,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "os.environ.get('FLASK_RUN_FROM_CLI') == 'true'"
+        },
+        {
+          "id": 44474,
+          "kind": "guard",
+          "name": "secho",
+          "file": "src/flask/app.py",
+          "line": 699,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "os.environ.get('FLASK_RUN_FROM_CLI') == 'true'"
+        },
+        {
+          "id": 44475,
+          "kind": "guard",
+          "name": "get_load_dotenv",
+          "file": "src/flask/app.py",
+          "line": 709,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "get_load_dotenv(load_dotenv)"
+        },
+        {
+          "id": 44476,
+          "kind": "guard",
+          "name": "load_dotenv",
+          "file": "src/flask/app.py",
+          "line": 710,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "get_load_dotenv(load_dotenv)"
+        },
+        {
+          "id": 44477,
+          "kind": "guard",
+          "name": "get_debug_flag",
+          "file": "src/flask/app.py",
+          "line": 714,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "get_load_dotenv(load_dotenv)"
+        },
+        {
+          "id": 44478,
+          "kind": "guard",
+          "name": "bool",
+          "file": "src/flask/app.py",
+          "line": 718,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "debug is not None"
+        },
+        {
+          "id": 44479,
+          "kind": "guard",
+          "name": "partition",
+          "file": "src/flask/app.py",
+          "line": 724,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "server_name"
+        },
+        {
+          "id": 44480,
+          "kind": "guard",
+          "name": "int",
+          "file": "src/flask/app.py",
+          "line": 733,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "port or port == 0"
+        },
+        {
+          "id": 44481,
+          "kind": "guard",
+          "name": "int",
+          "file": "src/flask/app.py",
+          "line": 735,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "port or port == 0"
+        },
+        {
+          "id": 44482,
+          "kind": "guard",
+          "name": "isinstance",
+          "file": "src/flask/app.py",
+          "line": 857,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(e, RoutingException)"
+        },
+        {
+          "id": 44483,
+          "kind": "guard",
+          "name": "isinstance",
+          "file": "src/flask/app.py",
+          "line": 882,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(e, BadRequestKeyError) and (self.debug or self.config['TRAP_BAD_REQUEST_ERRORS'])"
+        },
+        {
+          "id": 44484,
+          "kind": "guard",
+          "name": "isinstance",
+          "file": "src/flask/app.py",
+          "line": 887,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(e, HTTPException) and (not self.trap_http_exception(e))"
+        },
+        {
+          "id": 44485,
+          "kind": "guard",
+          "name": "handle_http_exception",
+          "file": "src/flask/app.py",
+          "line": 888,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(e, HTTPException) and (not self.trap_http_exception(e))"
+        },
+        {
+          "id": 44486,
+          "kind": "guard",
+          "name": "trap_http_exception",
+          "file": "src/flask/app.py",
+          "line": 887,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(e, HTTPException) and (not self.trap_http_exception(e))"
+        },
+        {
+          "id": 44487,
+          "kind": "guard",
+          "name": "ensure_sync",
+          "file": "src/flask/app.py",
+          "line": 946,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "handler is not None"
+        },
+        {
+          "id": 44488,
+          "kind": "guard",
+          "name": "raise_routing_exception",
+          "file": "src/flask/app.py",
+          "line": 979,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "req.routing_exception is not None"
+        },
+        {
+          "id": 44489,
+          "kind": "guard",
+          "name": "getattr",
+          "file": "src/flask/app.py",
+          "line": 984,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "getattr(rule, 'provide_automatic_options', False) and req.method == 'OPTIONS'"
+        },
+        {
+          "id": 44490,
+          "kind": "guard",
+          "name": "make_default_options_response",
+          "file": "src/flask/app.py",
+          "line": 987,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "getattr(rule, 'provide_automatic_options', False) and req.method == 'OPTIONS'"
+        },
+        {
+          "id": 44491,
+          "kind": "guard",
+          "name": "warn",
+          "file": "src/flask/app.py",
+          "line": 1002,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "not self._got_first_request and self.should_ignore_error is not None"
+        },
+        {
+          "id": 44492,
+          "kind": "guard",
+          "name": "iscoroutinefunction",
+          "file": "src/flask/app.py",
+          "line": 1074,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "iscoroutinefunction(func)"
+        },
+        {
+          "id": 44493,
+          "kind": "guard",
+          "name": "async_to_sync",
+          "file": "src/flask/app.py",
+          "line": 1075,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "iscoroutinefunction(func)"
+        },
+        {
+          "id": 44494,
+          "kind": "guard",
+          "name": "create_url_adapter",
+          "file": "src/flask/app.py",
+          "line": 1182,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "(ctx := _cv_app.get(None)) is not None and ctx.has_request"
+        },
+        {
+          "id": 44495,
+          "kind": "guard",
+          "name": "RuntimeError",
+          "file": "src/flask/app.py",
+          "line": 1185,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "(ctx := _cv_app.get(None)) is not None and ctx.has_request"
+        },
+        {
+          "id": 44496,
+          "kind": "guard",
+          "name": "get",
+          "file": "src/flask/app.py",
+          "line": 1159,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "(ctx := _cv_app.get(None)) is not None and ctx.has_request"
+        },
+        {
+          "id": 44497,
+          "kind": "guard",
+          "name": "ValueError",
+          "file": "src/flask/app.py",
+          "line": 1200,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "_scheme is not None and (not _external)"
+        },
+        {
+          "id": 44498,
+          "kind": "guard",
+          "name": "_url_quote",
+          "file": "src/flask/app.py",
+          "line": 1219,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "_anchor is not None"
+        },
+        {
+          "id": 44499,
+          "kind": "guard",
+          "name": "isinstance",
+          "file": "src/flask/app.py",
+          "line": 1285,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, tuple)"
+        },
+        {
+          "id": 44500,
+          "kind": "guard",
+          "name": "len",
+          "file": "src/flask/app.py",
+          "line": 1286,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, tuple)"
+        },
+        {
+          "id": 44501,
+          "kind": "guard",
+          "name": "isinstance",
+          "file": "src/flask/app.py",
+          "line": 1293,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, tuple)"
+        },
+        {
+          "id": 44502,
+          "kind": "guard",
+          "name": "TypeError",
+          "file": "src/flask/app.py",
+          "line": 1299,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, tuple)"
+        },
+        {
+          "id": 44503,
+          "kind": "guard",
+          "name": "TypeError",
+          "file": "src/flask/app.py",
+          "line": 1307,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "rv is None"
+        },
+        {
+          "id": 44504,
+          "kind": "guard",
+          "name": "isinstance",
+          "file": "src/flask/app.py",
+          "line": 1314,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "not isinstance(rv, self.response_class)"
+        },
+        {
+          "id": 44505,
+          "kind": "guard",
+          "name": "isinstance",
+          "file": "src/flask/app.py",
+          "line": 1315,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "not isinstance(rv, self.response_class)"
+        },
+        {
+          "id": 44506,
+          "kind": "guard",
+          "name": "isinstance",
+          "file": "src/flask/app.py",
+          "line": 1315,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "not isinstance(rv, self.response_class)"
+        },
+        {
+          "id": 44507,
+          "kind": "guard",
+          "name": "response_class",
+          "file": "src/flask/app.py",
+          "line": 1319,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "not isinstance(rv, self.response_class)"
+        },
+        {
+          "id": 44508,
+          "kind": "guard",
+          "name": "isinstance",
+          "file": "src/flask/app.py",
+          "line": 1325,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "not isinstance(rv, self.response_class)"
+        },
+        {
+          "id": 44509,
+          "kind": "guard",
+          "name": "response",
+          "file": "src/flask/app.py",
+          "line": 1326,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "not isinstance(rv, self.response_class)"
+        },
+        {
+          "id": 44510,
+          "kind": "guard",
+          "name": "isinstance",
+          "file": "src/flask/app.py",
+          "line": 1327,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "not isinstance(rv, self.response_class)"
+        },
+        {
+          "id": 44511,
+          "kind": "guard",
+          "name": "callable",
+          "file": "src/flask/app.py",
+          "line": 1327,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "not isinstance(rv, self.response_class)"
+        },
+        {
+          "id": 44512,
+          "kind": "guard",
+          "name": "TypeError",
+          "file": "src/flask/app.py",
+          "line": 1344,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "not isinstance(rv, self.response_class)"
+        },
+        {
+          "id": 44513,
+          "kind": "guard",
+          "name": "force_type",
+          "file": "src/flask/app.py",
+          "line": 1331,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "not isinstance(rv, self.response_class)"
+        },
+        {
+          "id": 44514,
+          "kind": "guard",
+          "name": "with_traceback",
+          "file": "src/flask/app.py",
+          "line": 1336,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "not isinstance(rv, self.response_class)"
+        },
+        {
+          "id": 44515,
+          "kind": "guard",
+          "name": "TypeError",
+          "file": "src/flask/app.py",
+          "line": 1336,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "not isinstance(rv, self.response_class)"
+        },
+        {
+          "id": 44516,
+          "kind": "guard",
+          "name": "exc_info",
+          "file": "src/flask/app.py",
+          "line": 1342,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "not isinstance(rv, self.response_class)"
+        },
+        {
+          "id": 44517,
+          "kind": "guard",
+          "name": "type",
+          "file": "src/flask/app.py",
+          "line": 1349,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "not isinstance(rv, self.response_class)"
+        },
+        {
+          "id": 44518,
+          "kind": "guard",
+          "name": "type",
+          "file": "src/flask/app.py",
+          "line": 1341,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "not isinstance(rv, self.response_class)"
+        },
+        {
+          "id": 44519,
+          "kind": "guard",
+          "name": "isinstance",
+          "file": "src/flask/app.py",
+          "line": 1355,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "status is not None"
+        },
+        {
+          "id": 44520,
+          "kind": "guard",
+          "name": "update",
+          "file": "src/flask/app.py",
+          "line": 1362,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "headers"
+        },
+        {
+          "id": 44521,
+          "kind": "guard",
+          "name": "is_null_session",
+          "file": "src/flask/app.py",
+          "line": 1415,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "not self.session_interface.is_null_session(ctx._get_session())"
+        },
+        {
+          "id": 44522,
+          "kind": "guard",
+          "name": "save_session",
+          "file": "src/flask/app.py",
+          "line": 1416,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "not self.session_interface.is_null_session(ctx._get_session())"
+        },
+        {
+          "id": 44523,
+          "kind": "guard",
+          "name": "_get_session",
+          "file": "src/flask/app.py",
+          "line": 1415,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "not self.session_interface.is_null_session(ctx._get_session())"
+        },
+        {
+          "id": 44524,
+          "kind": "guard",
+          "name": "_get_session",
+          "file": "src/flask/app.py",
+          "line": 1416,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "not self.session_interface.is_null_session(ctx._get_session())"
+        },
+        {
+          "id": 44525,
+          "kind": "guard",
+          "name": "isinstance",
+          "file": "src/flask/app.py",
+          "line": 101,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "not isinstance(args[0], AppContext)"
+        },
+        {
+          "id": 44526,
+          "kind": "guard",
+          "name": "_get_current_object",
+          "file": "src/flask/app.py",
+          "line": 102,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "not isinstance(args[0], AppContext)"
+        },
+        {
+          "id": 44527,
+          "kind": "guard",
+          "name": "warn",
+          "file": "src/flask/app.py",
+          "line": 300,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "param is None or not (param.annotation is inspect.Parameter.empty and param.name == 'ctx' or (isinstance(param.annotation, str) and param.annotation.rpartition('.')[2] == 'AppContext') or (inspect.isc"
+        },
+        {
+          "id": 44528,
+          "kind": "guard",
+          "name": "setattr",
+          "file": "src/flask/app.py",
+          "line": 307,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "param is None or not (param.annotation is inspect.Parameter.empty and param.name == 'ctx' or (isinstance(param.annotation, str) and param.annotation.rpartition('.')[2] == 'AppContext') or (inspect.isc"
+        },
+        {
+          "id": 44529,
+          "kind": "guard",
+          "name": "setattr",
+          "file": "src/flask/app.py",
+          "line": 308,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "param is None or not (param.annotation is inspect.Parameter.empty and param.name == 'ctx' or (isinstance(param.annotation, str) and param.annotation.rpartition('.')[2] == 'AppContext') or (inspect.isc"
+        },
+        {
+          "id": 44530,
+          "kind": "guard",
+          "name": "remove_ctx",
+          "file": "src/flask/app.py",
+          "line": 307,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "param is None or not (param.annotation is inspect.Parameter.empty and param.name == 'ctx' or (isinstance(param.annotation, str) and param.annotation.rpartition('.')[2] == 'AppContext') or (inspect.isc"
+        },
+        {
+          "id": 44531,
+          "kind": "guard",
+          "name": "add_ctx",
+          "file": "src/flask/app.py",
+          "line": 308,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "param is None or not (param.annotation is inspect.Parameter.empty and param.name == 'ctx' or (isinstance(param.annotation, str) and param.annotation.rpartition('.')[2] == 'AppContext') or (inspect.isc"
+        },
+        {
+          "id": 44532,
+          "kind": "guard",
+          "name": "isinstance",
+          "file": "src/flask/app.py",
+          "line": 291,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "param is None or not (param.annotation is inspect.Parameter.empty and param.name == 'ctx' or (isinstance(param.annotation, str) and param.annotation.rpartition('.')[2] == 'AppContext') or (inspect.isc"
+        },
+        {
+          "id": 44533,
+          "kind": "guard",
+          "name": "isclass",
+          "file": "src/flask/app.py",
+          "line": 296,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "param is None or not (param.annotation is inspect.Parameter.empty and param.name == 'ctx' or (isinstance(param.annotation, str) and param.annotation.rpartition('.')[2] == 'AppContext') or (inspect.isc"
+        },
+        {
+          "id": 44534,
+          "kind": "guard",
+          "name": "issubclass",
+          "file": "src/flask/app.py",
+          "line": 297,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "param is None or not (param.annotation is inspect.Parameter.empty and param.name == 'ctx' or (isinstance(param.annotation, str) and param.annotation.rpartition('.')[2] == 'AppContext') or (inspect.isc"
+        },
+        {
+          "id": 44535,
+          "kind": "guard",
+          "name": "rpartition",
+          "file": "src/flask/app.py",
+          "line": 292,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "param is None or not (param.annotation is inspect.Parameter.empty and param.name == 'ctx' or (isinstance(param.annotation, str) and param.annotation.rpartition('.')[2] == 'AppContext') or (inspect.isc"
+        },
+        {
+          "id": 44536,
+          "kind": "guard",
+          "name": "update",
+          "file": "src/flask/app.py",
+          "line": 616,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "name in self.template_context_processors"
+        },
+        {
+          "id": 44537,
+          "kind": "guard",
+          "name": "ensure_sync",
+          "file": "src/flask/app.py",
+          "line": 616,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "name in self.template_context_processors"
+        },
+        {
+          "id": 44538,
+          "kind": "guard",
+          "name": "is_running_from_reloader",
+          "file": "src/flask/app.py",
+          "line": 698,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "not is_running_from_reloader()"
+        },
+        {
+          "id": 44539,
+          "kind": "guard",
+          "name": "secho",
+          "file": "src/flask/app.py",
+          "line": 699,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "not is_running_from_reloader()"
+        },
+        {
+          "id": 44540,
+          "kind": "guard",
+          "name": "get_debug_flag",
+          "file": "src/flask/app.py",
+          "line": 714,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "'FLASK_DEBUG' in os.environ"
+        },
+        {
+          "id": 44541,
+          "kind": "guard",
+          "name": "int",
+          "file": "src/flask/app.py",
+          "line": 735,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "sn_port"
+        },
+        {
+          "id": 44542,
+          "kind": "guard",
+          "name": "dispatch_request",
+          "file": "src/flask/app.py",
+          "line": 1016,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "rv is None"
+        },
+        {
+          "id": 44543,
+          "kind": "guard",
+          "name": "create_url_adapter",
+          "file": "src/flask/app.py",
+          "line": 1182,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "ctx is not None"
+        },
+        {
+          "id": 44544,
+          "kind": "guard",
+          "name": "RuntimeError",
+          "file": "src/flask/app.py",
+          "line": 1185,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "url_adapter is None"
+        },
+        {
+          "id": 44545,
+          "kind": "guard",
+          "name": "isinstance",
+          "file": "src/flask/app.py",
+          "line": 1293,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "len_rv == 3"
+        },
+        {
+          "id": 44546,
+          "kind": "guard",
+          "name": "TypeError",
+          "file": "src/flask/app.py",
+          "line": 1299,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "len_rv == 3"
+        },
+        {
+          "id": 44547,
+          "kind": "guard",
+          "name": "isinstance",
+          "file": "src/flask/app.py",
+          "line": 1315,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, (str, bytes, bytearray)) or isinstance(rv, cabc.Iterator)"
+        },
+        {
+          "id": 44548,
+          "kind": "guard",
+          "name": "isinstance",
+          "file": "src/flask/app.py",
+          "line": 1315,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, (str, bytes, bytearray)) or isinstance(rv, cabc.Iterator)"
+        },
+        {
+          "id": 44549,
+          "kind": "guard",
+          "name": "response_class",
+          "file": "src/flask/app.py",
+          "line": 1319,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, (str, bytes, bytearray)) or isinstance(rv, cabc.Iterator)"
+        },
+        {
+          "id": 44550,
+          "kind": "guard",
+          "name": "isinstance",
+          "file": "src/flask/app.py",
+          "line": 1325,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, (str, bytes, bytearray)) or isinstance(rv, cabc.Iterator)"
+        },
+        {
+          "id": 44551,
+          "kind": "guard",
+          "name": "response",
+          "file": "src/flask/app.py",
+          "line": 1326,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, (str, bytes, bytearray)) or isinstance(rv, cabc.Iterator)"
+        },
+        {
+          "id": 44552,
+          "kind": "guard",
+          "name": "isinstance",
+          "file": "src/flask/app.py",
+          "line": 1327,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, (str, bytes, bytearray)) or isinstance(rv, cabc.Iterator)"
+        },
+        {
+          "id": 44553,
+          "kind": "guard",
+          "name": "callable",
+          "file": "src/flask/app.py",
+          "line": 1327,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, (str, bytes, bytearray)) or isinstance(rv, cabc.Iterator)"
+        },
+        {
+          "id": 44554,
+          "kind": "guard",
+          "name": "TypeError",
+          "file": "src/flask/app.py",
+          "line": 1344,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, (str, bytes, bytearray)) or isinstance(rv, cabc.Iterator)"
+        },
+        {
+          "id": 44555,
+          "kind": "guard",
+          "name": "force_type",
+          "file": "src/flask/app.py",
+          "line": 1331,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, (str, bytes, bytearray)) or isinstance(rv, cabc.Iterator)"
+        },
+        {
+          "id": 44556,
+          "kind": "guard",
+          "name": "with_traceback",
+          "file": "src/flask/app.py",
+          "line": 1336,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, (str, bytes, bytearray)) or isinstance(rv, cabc.Iterator)"
+        },
+        {
+          "id": 44557,
+          "kind": "guard",
+          "name": "TypeError",
+          "file": "src/flask/app.py",
+          "line": 1336,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, (str, bytes, bytearray)) or isinstance(rv, cabc.Iterator)"
+        },
+        {
+          "id": 44558,
+          "kind": "guard",
+          "name": "exc_info",
+          "file": "src/flask/app.py",
+          "line": 1342,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, (str, bytes, bytearray)) or isinstance(rv, cabc.Iterator)"
+        },
+        {
+          "id": 44559,
+          "kind": "guard",
+          "name": "type",
+          "file": "src/flask/app.py",
+          "line": 1349,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, (str, bytes, bytearray)) or isinstance(rv, cabc.Iterator)"
+        },
+        {
+          "id": 44560,
+          "kind": "guard",
+          "name": "type",
+          "file": "src/flask/app.py",
+          "line": 1341,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, (str, bytes, bytearray)) or isinstance(rv, cabc.Iterator)"
+        },
+        {
+          "id": 44561,
+          "kind": "guard",
+          "name": "isinstance",
+          "file": "src/flask/app.py",
+          "line": 1355,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(status, (str, bytes, bytearray))"
+        },
+        {
+          "id": 44562,
+          "kind": "guard",
+          "name": "url_func",
+          "file": "src/flask/app.py",
+          "line": 1382,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "name in self.url_value_preprocessors"
+        },
+        {
+          "id": 44563,
+          "kind": "guard",
+          "name": "ensure_sync",
+          "file": "src/flask/app.py",
+          "line": 1387,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "name in self.before_request_funcs"
+        },
+        {
+          "id": 44564,
+          "kind": "guard",
+          "name": "reversed",
+          "file": "src/flask/app.py",
+          "line": 1412,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "name in self.after_request_funcs"
+        },
+        {
+          "id": 44565,
+          "kind": "guard",
+          "name": "ensure_sync",
+          "file": "src/flask/app.py",
+          "line": 1413,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "name in self.after_request_funcs"
+        },
+        {
+          "id": 44566,
+          "kind": "guard",
+          "name": "reversed",
+          "file": "src/flask/app.py",
+          "line": 1444,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "name in self.teardown_request_funcs"
+        },
+        {
+          "id": 44567,
+          "kind": "guard",
+          "name": "ensure_sync",
+          "file": "src/flask/app.py",
+          "line": 1446,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "name in self.teardown_request_funcs"
+        },
+        {
+          "id": 44568,
+          "kind": "guard",
+          "name": "should_ignore_error",
+          "file": "src/flask/app.py",
+          "line": 1612,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "error is not None and self.should_ignore_error is not None and self.should_ignore_error(error)"
+        },
+        {
+          "id": 44569,
+          "kind": "guard",
+          "name": "isinstance",
+          "file": "src/flask/app.py",
+          "line": 1293,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "len_rv == 2"
+        },
+        {
+          "id": 44570,
+          "kind": "guard",
+          "name": "TypeError",
+          "file": "src/flask/app.py",
+          "line": 1299,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "len_rv == 2"
+        },
+        {
+          "id": 44571,
+          "kind": "guard",
+          "name": "isinstance",
+          "file": "src/flask/app.py",
+          "line": 1325,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, (dict, list))"
+        },
+        {
+          "id": 44572,
+          "kind": "guard",
+          "name": "response",
+          "file": "src/flask/app.py",
+          "line": 1326,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, (dict, list))"
+        },
+        {
+          "id": 44573,
+          "kind": "guard",
+          "name": "isinstance",
+          "file": "src/flask/app.py",
+          "line": 1327,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, (dict, list))"
+        },
+        {
+          "id": 44574,
+          "kind": "guard",
+          "name": "callable",
+          "file": "src/flask/app.py",
+          "line": 1327,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, (dict, list))"
+        },
+        {
+          "id": 44575,
+          "kind": "guard",
+          "name": "TypeError",
+          "file": "src/flask/app.py",
+          "line": 1344,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, (dict, list))"
+        },
+        {
+          "id": 44576,
+          "kind": "guard",
+          "name": "force_type",
+          "file": "src/flask/app.py",
+          "line": 1331,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, (dict, list))"
+        },
+        {
+          "id": 44577,
+          "kind": "guard",
+          "name": "with_traceback",
+          "file": "src/flask/app.py",
+          "line": 1336,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, (dict, list))"
+        },
+        {
+          "id": 44578,
+          "kind": "guard",
+          "name": "TypeError",
+          "file": "src/flask/app.py",
+          "line": 1336,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, (dict, list))"
+        },
+        {
+          "id": 44579,
+          "kind": "guard",
+          "name": "exc_info",
+          "file": "src/flask/app.py",
+          "line": 1342,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, (dict, list))"
+        },
+        {
+          "id": 44580,
+          "kind": "guard",
+          "name": "type",
+          "file": "src/flask/app.py",
+          "line": 1349,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, (dict, list))"
+        },
+        {
+          "id": 44581,
+          "kind": "guard",
+          "name": "type",
+          "file": "src/flask/app.py",
+          "line": 1341,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, (dict, list))"
+        },
+        {
+          "id": 44582,
+          "kind": "guard",
+          "name": "isinstance",
+          "file": "src/flask/app.py",
+          "line": 1293,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv[1], (Headers, dict, tuple, list))"
+        },
+        {
+          "id": 44583,
+          "kind": "guard",
+          "name": "isinstance",
+          "file": "src/flask/app.py",
+          "line": 1327,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, BaseResponse) or callable(rv)"
+        },
+        {
+          "id": 44584,
+          "kind": "guard",
+          "name": "callable",
+          "file": "src/flask/app.py",
+          "line": 1327,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, BaseResponse) or callable(rv)"
+        },
+        {
+          "id": 44585,
+          "kind": "guard",
+          "name": "TypeError",
+          "file": "src/flask/app.py",
+          "line": 1344,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, BaseResponse) or callable(rv)"
+        },
+        {
+          "id": 44586,
+          "kind": "guard",
+          "name": "force_type",
+          "file": "src/flask/app.py",
+          "line": 1331,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, BaseResponse) or callable(rv)"
+        },
+        {
+          "id": 44587,
+          "kind": "guard",
+          "name": "with_traceback",
+          "file": "src/flask/app.py",
+          "line": 1336,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, BaseResponse) or callable(rv)"
+        },
+        {
+          "id": 44588,
+          "kind": "guard",
+          "name": "TypeError",
+          "file": "src/flask/app.py",
+          "line": 1336,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, BaseResponse) or callable(rv)"
+        },
+        {
+          "id": 44589,
+          "kind": "guard",
+          "name": "exc_info",
+          "file": "src/flask/app.py",
+          "line": 1342,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, BaseResponse) or callable(rv)"
+        },
+        {
+          "id": 44590,
+          "kind": "guard",
+          "name": "type",
+          "file": "src/flask/app.py",
+          "line": 1349,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, BaseResponse) or callable(rv)"
+        },
+        {
+          "id": 44591,
+          "kind": "guard",
+          "name": "type",
+          "file": "src/flask/app.py",
+          "line": 1341,
+          "role": "guard",
+          "confidence": "medium",
+          "context": "isinstance(rv, BaseResponse) or callable(rv)"
+        }
+      ],
+      "flag": [
+        {
+          "id": 44592,
+          "kind": "flag",
+          "name": "setdefault",
+          "file": "src/flask/app.py",
+          "line": 739,
+          "role": "read",
+          "confidence": "medium",
+          "context": "options.setdefault"
+        },
+        {
+          "id": 44593,
+          "kind": "flag",
+          "name": "setdefault",
+          "file": "src/flask/app.py",
+          "line": 740,
+          "role": "read",
+          "confidence": "medium",
+          "context": "options.setdefault"
+        },
+        {
+          "id": 44594,
+          "kind": "flag",
+          "name": "setdefault",
+          "file": "src/flask/app.py",
+          "line": 741,
+          "role": "read",
+          "confidence": "medium",
+          "context": "options.setdefault"
+        }
+      ],
+      "token": [
+        {
+          "id": 44595,
+          "kind": "token",
+          "name": "DEBUG",
+          "file": "src/flask/app.py",
+          "line": 208,
+          "role": "occurrence",
+          "confidence": "low",
+          "context": "string-literal"
+        },
+        {
+          "id": 44596,
+          "kind": "token",
+          "name": "TESTING",
+          "file": "src/flask/app.py",
+          "line": 209,
+          "role": "occurrence",
+          "confidence": "low",
+          "context": "string-literal"
+        },
+        {
+          "id": 44597,
+          "kind": "token",
+          "name": "PROPAGATE_EXCEPTIONS",
+          "file": "src/flask/app.py",
+          "line": 210,
+          "role": "occurrence",
+          "confidence": "low",
+          "context": "string-literal"
+        },
+        {
+          "id": 44598,
+          "kind": "token",
+          "name": "SECRET_KEY",
+          "file": "src/flask/app.py",
+          "line": 211,
+          "role": "occurrence",
+          "confidence": "low",
+          "context": "string-literal"
+        },
+        {
+          "id": 44599,
+          "kind": "token",
+          "name": "SECRET_KEY_FALLBACKS",
+          "file": "src/flask/app.py",
+          "line": 212,
+          "role": "occurrence",
+          "confidence": "low",
+          "context": "string-literal"
+        },
+        {
+          "id": 44600,
+          "kind": "token",
+          "name": "PERMANENT_SESSION_LIFETIME",
+          "file": "src/flask/app.py",
+          "line": 213,
+          "role": "occurrence",
+          "confidence": "low",
+          "context": "string-literal"
+        },
+        {
+          "id": 44601,
+          "kind": "token",
+          "name": "USE_X_SENDFILE",
+          "file": "src/flask/app.py",
+          "line": 214,
+          "role": "occurrence",
+          "confidence": "low",
+          "context": "string-literal"
+        },
+        {
+          "id": 44602,
+          "kind": "token",
+          "name": "TRUSTED_HOSTS",
+          "file": "src/flask/app.py",
+          "line": 215,
+          "role": "occurrence",
+          "confidence": "low",
+          "context": "string-literal"
+        },
+        {
+          "id": 44603,
+          "kind": "token",
+          "name": "SERVER_NAME",
+          "file": "src/flask/app.py",
+          "line": 216,
+          "role": "occurrence",
+          "confidence": "low",
+          "context": "string-literal"
+        },
+        {
+          "id": 44604,
+          "kind": "token",
+          "name": "APPLICATION_ROOT",
+          "file": "src/flask/app.py",
+          "line": 217,
+          "role": "occurrence",
+          "confidence": "low",
+          "context": "string-literal"
+        },
+        {
+          "id": 44605,
+          "kind": "token",
+          "name": "SESSION_COOKIE_NAME",
+          "file": "src/flask/app.py",
+          "line": 218,
+          "role": "occurrence",
+          "confidence": "low",
+          "context": "string-literal"
+        },
+        {
+          "id": 44606,
+          "kind": "token",
+          "name": "SESSION_COOKIE_DOMAIN",
+          "file": "src/flask/app.py",
+          "line": 219,
+          "role": "occurrence",
+          "confidence": "low",
+          "context": "string-literal"
+        },
+        {
+          "id": 44607,
+          "kind": "token",
+          "name": "SESSION_COOKIE_PATH",
+          "file": "src/flask/app.py",
+          "line": 220,
+          "role": "occurrence",
+          "confidence": "low",
+          "context": "string-literal"
+        },
+        {
+          "id": 44608,
+          "kind": "token",
+          "name": "SESSION_COOKIE_HTTPONLY",
+          "file": "src/flask/app.py",
+          "line": 221,
+          "role": "occurrence",
+          "confidence": "low",
+          "context": "string-literal"
+        },
+        {
+          "id": 44609,
+          "kind": "token",
+          "name": "SESSION_COOKIE_SECURE",
+          "file": "src/flask/app.py",
+          "line": 222,
+          "role": "occurrence",
+          "confidence": "low",
+          "context": "string-literal"
+        },
+        {
+          "id": 44610,
+          "kind": "token",
+          "name": "SESSION_COOKIE_PARTITIONED",
+          "file": "src/flask/app.py",
+          "line": 223,
+          "role": "occurrence",
+          "confidence": "low",
+          "context": "string-literal"
+        },
+        {
+          "id": 44611,
+          "kind": "token",
+          "name": "SESSION_COOKIE_SAMESITE",
+          "file": "src/flask/app.py",
+          "line": 224,
+          "role": "occurrence",
+          "confidence": "low",
+          "context": "string-literal"
+        },
+        {
+          "id": 44612,
+          "kind": "token",
+          "name": "SESSION_REFRESH_EACH_REQUEST",
+          "file": "src/flask/app.py",
+          "line": 225,
+          "role": "occurrence",
+          "confidence": "low",
+          "context": "string-literal"
+        },
+        {
+          "id": 44613,
+          "kind": "token",
+          "name": "MAX_CONTENT_LENGTH",
+          "file": "src/flask/app.py",
+          "line": 226,
+          "role": "occurrence",
+          "confidence": "low",
+          "context": "string-literal"
+        },
+        {
+          "id": 44614,
+          "kind": "token",
+          "name": "MAX_FORM_MEMORY_SIZE",
+          "file": "src/flask/app.py",
+          "line": 227,
+          "role": "occurrence",
+          "confidence": "low",
+          "context": "string-literal"
+        }
+      ]
+    },
+    "related_files": [
+      {
+        "file": "src/flask/cli.py",
+        "kind": "env",
+        "name": "FLASK_RUN_FROM_CLI",
+        "role": "read",
+        "line": 667,
+        "confidence": "high"
+      },
+      {
+        "file": "src/flask/blueprints.py",
+        "kind": "schema_field",
+        "name": "cli",
+        "role": "write_assign",
+        "line": 49,
+        "confidence": "high"
+      },
+      {
+        "file": "src/flask/sansio/app.py",
+        "kind": "schema_field",
+        "name": "_got_first_request",
+        "role": "write_assign",
+        "line": 408,
+        "confidence": "high"
+      },
+      {
+        "file": "tests/test_basic.py",
+        "kind": "schema_field",
+        "name": "app",
+        "role": "write_assign",
+        "line": 291,
+        "confidence": "high"
+      },
+      {
+        "file": "src/flask/templating.py",
+        "kind": "schema_field",
+        "name": "app",
+        "role": "write_assign",
+        "line": 46,
+        "confidence": "high"
+      },
+      {
+        "file": "src/flask/ctx.py",
+        "kind": "schema_field",
+        "name": "app",
+        "role": "write_assign",
+        "line": 307,
+        "confidence": "high"
+      },
+      {
+        "file": "src/flask/testing.py",
+        "kind": "schema_field",
+        "name": "app",
+        "role": "write_assign",
+        "line": 85,
+        "confidence": "high"
+      },
+      {
+        "file": "src/flask/sansio/blueprints.py",
+        "kind": "schema_field",
+        "name": "app",
+        "role": "write_assign",
+        "line": 49,
+        "confidence": "high"
+      },
+      {
+        "file": "src/flask/sansio/app.py",
+        "kind": "schema_field",
+        "name": "auto_reload",
+        "role": "write_assign",
+        "line": 564,
+        "confidence": "high"
+      },
+      {
+        "file": "tests/test_basic.py",
+        "kind": "schema_field",
+        "name": "DEBUG",
+        "role": "write",
+        "line": 1056,
+        "confidence": "medium"
+      },
+      {
+        "file": "tests/test_json.py",
+        "kind": "schema_field",
+        "name": "DEBUG",
+        "role": "write",
+        "line": 16,
+        "confidence": "medium"
+      },
+      {
+        "file": "tests/test_templating.py",
+        "kind": "schema_field",
+        "name": "DEBUG",
+        "role": "write",
+        "line": 460,
+        "confidence": "medium"
+      },
+      {
+        "file": "tests/test_apps/blueprintapp/__init__.py",
+        "kind": "schema_field",
+        "name": "DEBUG",
+        "role": "write",
+        "line": 4,
+        "confidence": "medium"
+      },
+      {
+        "file": "src/flask/sansio/app.py",
+        "kind": "schema_field",
+        "name": "DEBUG",
+        "role": "write",
+        "line": 492,
+        "confidence": "medium"
+      },
+      {
+        "file": "examples/tutorial/tests/conftest.py",
+        "kind": "schema_field",
+        "name": "TESTING",
+        "role": "write",
+        "line": 21,
+        "confidence": "medium"
+      },
+      {
+        "file": "examples/tutorial/tests/test_factory.py",
+        "kind": "schema_field",
+        "name": "TESTING",
+        "role": "write",
+        "line": 7,
+        "confidence": "medium"
+      },
+      {
+        "file": "tests/test_basic.py",
+        "kind": "schema_field",
+        "name": "PROPAGATE_EXCEPTIONS",
+        "role": "write",
+        "line": 1638,
+        "confidence": "medium"
+      },
+      {
+        "file": "tests/test_user_error_handler.py",
+        "kind": "schema_field",
+        "name": "PROPAGATE_EXCEPTIONS",
+        "role": "write",
+        "line": 241,
+        "confidence": "medium"
+      },
+      {
+        "file": "tests/test_appctx.py",
+        "kind": "schema_field",
+        "name": "PROPAGATE_EXCEPTIONS",
+        "role": "write",
+        "line": 94,
+        "confidence": "medium"
+      },
+      {
+        "file": "tests/test_config.py",
+        "kind": "schema_field",
+        "name": "SECRET_KEY",
+        "role": "write",
+        "line": 112,
+        "confidence": "medium"
+      },
+      {
+        "file": "tests/test_basic.py",
+        "kind": "schema_field",
+        "name": "SECRET_KEY_FALLBACKS",
+        "role": "write",
+        "line": 404,
+        "confidence": "medium"
+      },
+      {
+        "file": "src/flask/sessions.py",
+        "kind": "schema_field",
+        "name": "SECRET_KEY_FALLBACKS",
+        "role": "read",
+        "line": 309,
+        "confidence": "medium"
+      },
+      {
+        "file": "tests/test_config.py",
+        "kind": "schema_field",
+        "name": "PERMANENT_SESSION_LIFETIME",
+        "role": "write",
+        "line": 213,
+        "confidence": "medium"
+      },
+      {
+        "file": "src/flask/helpers.py",
+        "kind": "schema_field",
+        "name": "USE_X_SENDFILE",
+        "role": "read",
+        "line": 410,
+        "confidence": "medium"
+      },
+      {
+        "file": "tests/test_request.py",
+        "kind": "schema_field",
+        "name": "TRUSTED_HOSTS",
+        "role": "write",
+        "line": 58,
+        "confidence": "medium"
+      },
+      {
+        "file": "tests/test_testing.py",
+        "kind": "schema_field",
+        "name": "APPLICATION_ROOT",
+        "role": "write",
+        "line": 17,
+        "confidence": "medium"
+      },
+      {
+        "file": "src/flask/sessions.py",
+        "kind": "schema_field",
+        "name": "APPLICATION_ROOT",
+        "role": "read",
+        "line": 193,
+        "confidence": "medium"
+      },
+      {
+        "file": "src/flask/testing.py",
+        "kind": "schema_field",
+        "name": "APPLICATION_ROOT",
+        "role": "read",
+        "line": 67,
+        "confidence": "medium"
+      },
+      {
+        "file": "src/flask/sessions.py",
+        "kind": "schema_field",
+        "name": "SESSION_COOKIE_NAME",
+        "role": "read",
+        "line": 173,
+        "confidence": "medium"
+      },
+      {
+        "file": "src/flask/sessions.py",
+        "kind": "schema_field",
+        "name": "SESSION_COOKIE_DOMAIN",
+        "role": "read",
+        "line": 185,
+        "confidence": "medium"
+      },
+      {
+        "file": "src/flask/sessions.py",
+        "kind": "schema_field",
+        "name": "SESSION_COOKIE_PATH",
+        "role": "read",
+        "line": 193,
+        "confidence": "medium"
+      },
+      {
+        "file": "src/flask/sessions.py",
+        "kind": "schema_field",
+        "name": "SESSION_COOKIE_HTTPONLY",
+        "role": "read",
+        "line": 200,
+        "confidence": "medium"
+      },
+      {
+        "file": "src/flask/sessions.py",
+        "kind": "schema_field",
+        "name": "SESSION_COOKIE_SECURE",
+        "role": "read",
+        "line": 206,
+        "confidence": "medium"
+      },
+      {
+        "file": "src/flask/sessions.py",
+        "kind": "schema_field",
+        "name": "SESSION_COOKIE_PARTITIONED",
+        "role": "read",
+        "line": 221,
+        "confidence": "medium"
+      },
+      {
+        "file": "src/flask/sessions.py",
+        "kind": "schema_field",
+        "name": "SESSION_COOKIE_SAMESITE",
+        "role": "read",
+        "line": 213,
+        "confidence": "medium"
+      },
+      {
+        "file": "tests/test_basic.py",
+        "kind": "schema_field",
+        "name": "SESSION_REFRESH_EACH_REQUEST",
+        "role": "write",
+        "line": 523,
+        "confidence": "medium"
+      },
+      {
+        "file": "src/flask/sessions.py",
+        "kind": "schema_field",
+        "name": "SESSION_REFRESH_EACH_REQUEST",
+        "role": "read",
+        "line": 246,
+        "confidence": "medium"
+      },
+      {
+        "file": "tests/test_request.py",
+        "kind": "schema_field",
+        "name": "MAX_CONTENT_LENGTH",
+        "role": "write",
+        "line": 10,
+        "confidence": "medium"
+      },
+      {
+        "file": "src/flask/wrappers.py",
+        "kind": "schema_field",
+        "name": "MAX_CONTENT_LENGTH",
+        "role": "read",
+        "line": 86,
+        "confidence": "medium"
+      },
+      {
+        "file": "tests/test_request.py",
+        "kind": "schema_field",
+        "name": "MAX_FORM_MEMORY_SIZE",
+        "role": "write",
+        "line": 27,
+        "confidence": "medium"
+      },
+      {
+        "file": "src/flask/wrappers.py",
+        "kind": "schema_field",
+        "name": "MAX_FORM_MEMORY_SIZE",
+        "role": "read",
+        "line": 113,
+        "confidence": "medium"
+      },
+      {
+        "file": "tests/test_request.py",
+        "kind": "schema_field",
+        "name": "MAX_FORM_PARTS",
+        "role": "write",
+        "line": 28,
+        "confidence": "medium"
+      },
+      {
+        "file": "src/flask/wrappers.py",
+        "kind": "schema_field",
+        "name": "MAX_FORM_PARTS",
+        "role": "read",
+        "line": 140,
+        "confidence": "medium"
+      },
+      {
+        "file": "tests/test_blueprints.py",
+        "kind": "schema_field",
+        "name": "SEND_FILE_MAX_AGE_DEFAULT",
+        "role": "read",
+        "line": 195,
+        "confidence": "medium"
+      },
+      {
+        "file": "tests/test_helpers.py",
+        "kind": "schema_field",
+        "name": "SEND_FILE_MAX_AGE_DEFAULT",
+        "role": "write",
+        "line": 55,
+        "confidence": "medium"
+      },
+      {
+        "file": "src/flask/blueprints.py",
+        "kind": "schema_field",
+        "name": "SEND_FILE_MAX_AGE_DEFAULT",
+        "role": "read",
+        "line": 72,
+        "confidence": "medium"
+      },
+      {
+        "file": "tests/test_basic.py",
+        "kind": "schema_field",
+        "name": "TRAP_BAD_REQUEST_ERRORS",
+        "role": "write",
+        "line": 1057,
+        "confidence": "medium"
+      },
+      {
+        "file": "tests/test_json.py",
+        "kind": "schema_field",
+        "name": "TRAP_BAD_REQUEST_ERRORS",
+        "role": "write",
+        "line": 17,
+        "confidence": "medium"
+      },
+      {
+        "file": "src/flask/sansio/app.py",
+        "kind": "schema_field",
+        "name": "TRAP_BAD_REQUEST_ERRORS",
+        "role": "read",
+        "line": 910,
+        "confidence": "medium"
+      },
+      {
+        "file": "tests/test_basic.py",
+        "kind": "schema_field",
+        "name": "TRAP_HTTP_EXCEPTIONS",
+        "role": "write",
+        "line": 1087,
+        "confidence": "medium"
+      }
+    ],
+    "ambient": [
+      {
+        "kind": "schema_field",
+        "name": "name",
+        "files_count": 8,
+        "note": "Ambient contract: appears in 8 files. Not pulling peers into pack."
+      },
+      {
+        "kind": "schema_field",
+        "name": "SERVER_NAME",
+        "files_count": 7,
+        "note": "Ambient contract: appears in 7 files. Not pulling peers into pack."
+      },
+      {
+        "kind": "schema_field",
+        "name": "debug",
+        "files_count": 7,
+        "note": "Ambient contract: appears in 7 files. Not pulling peers into pack."
+      },
+      {
+        "kind": "guard",
+        "name": "isinstance",
+        "files_count": 12,
+        "note": "Ambient contract: appears in 12 files. Not pulling peers into pack."
+      },
+      {
+        "kind": "guard",
+        "name": "get",
+        "files_count": 7,
+        "note": "Ambient contract: appears in 7 files. Not pulling peers into pack."
+      },
+      {
+        "kind": "guard",
+        "name": "len",
+        "files_count": 9,
+        "note": "Ambient contract: appears in 9 files. Not pulling peers into pack."
+      },
+      {
+        "kind": "token",
+        "name": "GET",
+        "files_count": 12,
+        "note": "Ambient contract: appears in 12 files. Not pulling peers into pack."
+      }
+    ],
+    "note": "Contract detection is heuristic. High-confidence items come from argparse/click/commander parse sites, os.environ/process.env reads, struct tags, or user-declared contracts. Medium/low items are token/occurrence-based. Contracts shared by more than 6 files are reported as 'ambient' and do not pull peers into the pack."
+  },
+  "tests": [
+    {
+      "file": "tests/test_appctx.py",
+      "confidence": "low",
+      "evidence": "filename match on 'app'"
+    },
+    {
+      "file": "tests/test_apps/cliapp/importerrorapp.py",
+      "confidence": "low",
+      "evidence": "filename match on 'app'"
+    },
+    {
+      "file": "tests/test_apps/cliapp/multiapp.py",
+      "confidence": "low",
+      "evidence": "filename match on 'app'"
+    },
+    {
+      "file": "tests/test_apps/cliapp/app.py",
+      "confidence": "low",
+      "evidence": "filename match on 'app'"
+    },
+    {
+      "file": "tests/type_check/typing_app_decorators.py",
+      "confidence": "low",
+      "evidence": "filename match on 'app'"
+    }
+  ],
+  "entrypoints": [
+    {
+      "id": 255,
+      "file": "src/flask/cli.py",
+      "kind": "python-entry-candidate",
+      "confidence": "medium",
+      "evidence": "filename:cli.py",
+      "indexed": 1,
+      "relation": "imports-target (1 hop)"
+    },
+    {
+      "id": 256,
+      "file": "src/flask/cli.py",
+      "kind": "python-main-guard",
+      "confidence": "high",
+      "evidence": "__main__ guard",
+      "indexed": 1,
+      "relation": "imports-target (1 hop)"
+    },
+    {
+      "id": 257,
+      "file": "src/flask/app.py",
+      "kind": "python-entry-candidate",
+      "confidence": "medium",
+      "evidence": "filename:app.py",
+      "indexed": 1,
+      "relation": "is-target"
+    }
+  ],
+  "intra_file_calls": {
+    "nodes": [
+      {
+        "name": "_make_timedelta",
+        "kind": "function",
+        "line": 73
+      },
+      {
+        "name": "remove_ctx",
+        "kind": "function",
+        "line": 85
+      },
+      {
+        "name": "wrapper",
+        "kind": "function",
+        "line": 86
+      },
+      {
+        "name": "add_ctx",
+        "kind": "function",
+        "line": 97
+      },
+      {
+        "name": "wrapper",
+        "kind": "function",
+        "line": 98
+      },
+      {
+        "name": "Flask",
+        "kind": "class",
+        "line": 109
+      },
+      {
+        "name": "__init_subclass__",
+        "kind": "function",
+        "line": 254
+      },
+      {
+        "name": "__init__",
+        "kind": "function",
+        "line": 310
+      },
+      {
+        "name": "get_send_file_max_age",
+        "kind": "function",
+        "line": 365
+      },
+      {
+        "name": "send_static_file",
+        "kind": "function",
+        "line": 392
+      },
+      {
+        "name": "open_resource",
+        "kind": "function",
+        "line": 414
+      },
+      {
+        "name": "open_instance_resource",
+        "kind": "function",
+        "line": 447
+      },
+      {
+        "name": "create_jinja_environment",
+        "kind": "function",
+        "line": 469
+      },
+      {
+        "name": "create_url_adapter",
+        "kind": "function",
+        "line": 509
+      },
+      {
+        "name": "raise_routing_exception",
+        "kind": "function",
+        "line": 562
+      },
+      {
+        "name": "update_template_context",
+        "kind": "function",
+        "line": 590
+      },
+      {
+        "name": "make_shell_context",
+        "kind": "function",
+        "line": 620
+      },
+      {
+        "name": "run",
+        "kind": "function",
+        "line": 632
+      },
+      {
+        "name": "test_client",
+        "kind": "function",
+        "line": 755
+      },
+      {
+        "name": "test_cli_runner",
+        "kind": "function",
+        "line": 813
+      },
+      {
+        "name": "handle_http_exception",
+        "kind": "function",
+        "line": 830
+      },
+      {
+        "name": "handle_user_exception",
+        "kind": "function",
+        "line": 865
+      },
+      {
+        "name": "handle_exception",
+        "kind": "function",
+        "line": 897
+      },
+      {
+        "name": "log_exception",
+        "kind": "function",
+        "line": 950
+      },
+      {
+        "name": "dispatch_request",
+        "kind": "function",
+        "line": 966
+      },
+      {
+        "name": "full_dispatch_request",
+        "kind": "function",
+        "line": 992
+      },
+      {
+        "name": "finalize_request",
+        "kind": "function",
+        "line": 1021
+      },
+      {
+        "name": "make_default_options_response",
+        "kind": "function",
+        "line": 1053
+      },
+      {
+        "name": "ensure_sync",
+        "kind": "function",
+        "line": 1065
+      },
+      {
+        "name": "async_to_sync",
+        "kind": "function",
+        "line": 1079
+      },
+      {
+        "name": "url_for",
+        "kind": "function",
+        "line": 1102
+      },
+      {
+        "name": "make_response",
+        "kind": "function",
+        "line": 1224
+      },
+      {
+        "name": "preprocess_request",
+        "kind": "function",
+        "line": 1366
+      },
+      {
+        "name": "process_response",
+        "kind": "function",
+        "line": 1394
+      },
+      {
+        "name": "do_teardown_request",
+        "kind": "function",
+        "line": 1420
+      },
+      {
+        "name": "do_teardown_appcontext",
+        "kind": "function",
+        "line": 1453
+      },
+      {
+        "name": "app_context",
+        "kind": "function",
+        "line": 1481
+      },
+      {
+        "name": "request_context",
+        "kind": "function",
+        "line": 1501
+      },
+      {
+        "name": "test_request_context",
+        "kind": "function",
+        "line": 1517
+      },
+      {
+        "name": "wsgi_app",
+        "kind": "function",
+        "line": 1566
+      },
+      {
+        "name": "__call__",
+        "kind": "function",
+        "line": 1618
+      }
+    ],
+    "edges": [
+      {
+        "from": "__init_subclass__",
+        "to": "remove_ctx",
+        "line": 307
+      },
+      {
+        "from": "__init_subclass__",
+        "to": "add_ctx",
+        "line": 308
+      },
+      {
+        "from": "__init__",
+        "to": "send_static_file",
+        "line": 362
+      },
+      {
+        "from": "send_static_file",
+        "to": "get_send_file_max_age",
+        "line": 409
+      },
+      {
+        "from": "update_template_context",
+        "to": "ensure_sync",
+        "line": 616
+      },
+      {
+        "from": "handle_http_exception",
+        "to": "ensure_sync",
+        "line": 863
+      },
+      {
+        "from": "handle_user_exception",
+        "to": "handle_http_exception",
+        "line": 888
+      },
+      {
+        "from": "handle_user_exception",
+        "to": "ensure_sync",
+        "line": 895
+      },
+      {
+        "from": "handle_exception",
+        "to": "log_exception",
+        "line": 940
+      },
+      {
+        "from": "handle_exception",
+        "to": "ensure_sync",
+        "line": 946
+      },
+      {
+        "from": "handle_exception",
+        "to": "finalize_request",
+        "line": 948
+      },
+      {
+        "from": "dispatch_request",
+        "to": "raise_routing_exception",
+        "line": 979
+      },
+      {
+        "from": "dispatch_request",
+        "to": "make_default_options_response",
+        "line": 987
+      },
+      {
+        "from": "dispatch_request",
+        "to": "ensure_sync",
+        "line": 990
+      },
+      {
+        "from": "full_dispatch_request",
+        "to": "preprocess_request",
+        "line": 1014
+      },
+      {
+        "from": "full_dispatch_request",
+        "to": "dispatch_request",
+        "line": 1016
+      },
+      {
+        "from": "full_dispatch_request",
+        "to": "handle_user_exception",
+        "line": 1018
+      },
+      {
+        "from": "full_dispatch_request",
+        "to": "finalize_request",
+        "line": 1019
+      },
+      {
+        "from": "finalize_request",
+        "to": "make_response",
+        "line": 1039
+      },
+      {
+        "from": "finalize_request",
+        "to": "process_response",
+        "line": 1041
+      },
+      {
+        "from": "ensure_sync",
+        "to": "async_to_sync",
+        "line": 1075
+      },
+      {
+        "from": "url_for",
+        "to": "create_url_adapter",
+        "line": 1182
+      },
+      {
+        "from": "preprocess_request",
+        "to": "ensure_sync",
+        "line": 1387
+      },
+      {
+        "from": "process_response",
+        "to": "ensure_sync",
+        "line": 1408
+      },
+      {
+        "from": "process_response",
+        "to": "ensure_sync",
+        "line": 1413
+      },
+      {
+        "from": "do_teardown_request",
+        "to": "ensure_sync",
+        "line": 1446
+      },
+      {
+        "from": "do_teardown_appcontext",
+        "to": "ensure_sync",
+        "line": 1474
+      },
+      {
+        "from": "test_request_context",
+        "to": "request_context",
+        "line": 1564
+      },
+      {
+        "from": "wsgi_app",
+        "to": "request_context",
+        "line": 1592
+      },
+      {
+        "from": "wsgi_app",
+        "to": "full_dispatch_request",
+        "line": 1597
+      },
+      {
+        "from": "wsgi_app",
+        "to": "handle_exception",
+        "line": 1600
+      },
+      {
+        "from": "__call__",
+        "to": "wsgi_app",
+        "line": 1625
+      }
+    ],
+    "truncated": false,
+    "total": 32,
+    "by_caller_count": {
+      "full_dispatch_request": 4,
+      "handle_exception": 3,
+      "dispatch_request": 3,
+      "wsgi_app": 3,
+      "__init_subclass__": 2,
+      "handle_user_exception": 2,
+      "finalize_request": 2,
+      "process_response": 2,
+      "__init__": 1,
+      "send_static_file": 1,
+      "update_template_context": 1,
+      "handle_http_exception": 1,
+      "ensure_sync": 1,
+      "url_for": 1,
+      "preprocess_request": 1,
+      "do_teardown_request": 1,
+      "do_teardown_appcontext": 1,
+      "test_request_context": 1,
+      "__call__": 1
+    },
+    "partial": false,
+    "warnings": [],
+    "parser": "treesitter:python",
+    "note": "Caller attribution uses EXACT enclosing-range containment when symbol end-lines are available (M2); otherwise falls back to the nearest-preceding-function scope approximation labelled confidence=medium. Refs tagged parser=regex are a LOWER BOUND, not exact. `by_caller_count` is computed from ALL edges before truncation; `edges` may be sliced to `cap`.",
+    "caller_attribution": "exact_range"
+  },
+  "expansion_hints": [
+    "Unknowns reported \u2014 inspect `unknowns` before trusting the pack as complete.",
+    "Some edges are heuristic. Open the cited files at the anchor line to verify.",
+    "Increase `--radius 2` for transitive reverse-deps one hop further (bounded)."
+  ],
+  "repo_memory": {
+    "has_memory": true,
+    "contradicted_count": 0,
+    "_lean": true
+  }
+}

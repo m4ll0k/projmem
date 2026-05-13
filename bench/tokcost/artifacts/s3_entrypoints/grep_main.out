@@ -1,0 +1,2 @@
+src/flask/cli.py:1126:if __name__ == "__main__":
+src/flask/app.py:702:                    "   Only call 'app.run()' in an 'if __name__ =="
