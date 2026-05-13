@@ -7075,7 +7075,20 @@ def build_parser() -> argparse.ArgumentParser:
                    help="Host to bind on. Loopback addresses only — "
                         "anything else is refused at startup. Default: "
                         "127.0.0.1.")
+    s.add_argument("--no-ui", action="store_true",
+                   help="Skip mounting the static UI bundle. Useful for "
+                        "headless CI / API-only flows.")
     s.set_defaults(func=cmd_daemon)
+
+    s = sub.add_parser("ui",
+                       help="Spawn the daemon AND open http://127.0.0.1:<port> "
+                            "in your default browser. The activity-feed UI "
+                            "(Step 6) streams every lease event in real time.")
+    s.add_argument("--port", type=int, default=7777)
+    s.add_argument("--host", default="127.0.0.1")
+    s.add_argument("--no-browser", action="store_true",
+                   help="Start the daemon but don't auto-open the browser.")
+    s.set_defaults(func=cmd_ui)
 
     # ── v2 Step 3: critical-note authoring + review ────────────────────────
     s = sub.add_parser("critical",
@@ -7278,11 +7291,51 @@ def cmd_daemon(args):
     cfg = config_mod.load(args.path)
     from projmem import daemon as _d
     try:
-        return _d.run(cfg.root, host=args.host, port=args.port)
+        return _d.run(
+            cfg.root, host=args.host, port=args.port,
+            serve_ui=not getattr(args, "no_ui", False),
+        )
     except _d.BindRefusedError as e:
         _emit_error({"error": e.code, "message": str(e),
                        "hint": "Use 127.0.0.1 (default). LAN exposure is "
                                 "never appropriate for this surface."},
+                      getattr(args, "json", False))
+        return 2
+    except _d.DaemonError as e:
+        _emit_error({"error": e.code, "message": str(e)},
+                      getattr(args, "json", False))
+        return 2
+
+
+def cmd_ui(args):
+    """Spawn the daemon + auto-open the browser at the UI.
+
+    Blocks forever. Refuses to start when the UI bundle isn't on disk
+    (with a hint pointing at `npm run build` under projmem/ui/) or
+    when the daemon optional deps aren't installed.
+    """
+    cfg = config_mod.load(args.path)
+    from projmem import daemon as _d
+    if _d._ui_dist_dir() is None:
+        _emit_error({
+            "error":   "ui-bundle-missing",
+            "message": ("projmem/ui/dist/ is not present. The UI bundle "
+                          "must be built before `projmem ui` can serve it."),
+            "hint":    ("From the repo: `cd projmem/ui && npm install && "
+                          "npm run build`. The built `dist/` is shipped "
+                          "with the Python package, so a fresh `pip install` "
+                          "wouldn't normally hit this — it indicates a "
+                          "dev-install where the bundle was deleted."),
+        }, getattr(args, "json", False))
+        return 2
+    try:
+        return _d.run(
+            cfg.root, host=args.host, port=args.port,
+            open_browser=not getattr(args, "no_browser", False),
+            serve_ui=True,
+        )
+    except _d.BindRefusedError as e:
+        _emit_error({"error": e.code, "message": str(e)},
                       getattr(args, "json", False))
         return 2
     except _d.DaemonError as e:

@@ -35,4 +35,20 @@ include = ["projmem*"]
 # Ship the agent-instruction templates inside the package so `projmem init`
 # can find them after pip install.
 [tool.setuptools.package-data]
-"projmem" = ["templates/*", "templates/.*"]
+"projmem" = [
+    "templates/*",
+    "templates/.*",
+    # v2 UI bundle (Vite + React + TS + Tailwind). The compiled `dist/`
+    # is committed so pip-installed users don't need a Node toolchain.
+    # Source under projmem/ui/src/ is also shipped so curious users can
+    # `npm run build` themselves to verify or iterate.
+    "ui/dist/**",
+    "ui/dist/.*",
+    "ui/src/**",
+    "ui/index.html",
+    "ui/package.json",
+    "ui/tsconfig*.json",
+    "ui/vite.config.ts",
+    "ui/tailwind.config.js",
+    "ui/postcss.config.js",
+]

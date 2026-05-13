@@ -112,11 +112,26 @@ class DaemonState:
 # FastAPI app factory (lazy — keeps fastapi off the projmem import path)
 # ---------------------------------------------------------------------------
 
-def build_app(state: DaemonState):
+def _ui_dist_dir() -> Optional[str]:
+    """Path to the built UI bundle, or None if it isn't shipped.
+
+    The Python package ships ``projmem/ui/dist/`` via package_data so
+    pip-installed users get the bundle without a Node toolchain. Local
+    development reads from the source tree.
+    """
+    candidate = os.path.join(os.path.dirname(__file__), "ui", "dist")
+    if os.path.isdir(candidate) and os.path.isfile(
+            os.path.join(candidate, "index.html")):
+        return candidate
+    return None
+
+
+def build_app(state: DaemonState, *, serve_ui: bool = True):
     try:
         from fastapi import (FastAPI, HTTPException, Request,
                               WebSocket, WebSocketDisconnect)
         from fastapi.responses import JSONResponse
+        from fastapi.staticfiles import StaticFiles
     except ImportError as e:
         raise DaemonError(
             "daemon optional deps not installed; "
@@ -269,6 +284,18 @@ def build_app(state: DaemonState):
         finally:
             state.subscribers.discard(q)
 
+    # Static UI bundle (Step 6). MUST be mounted LAST: Starlette
+    # resolves routes in registration order, so mounting "/" earlier
+    # would shadow /healthz, /state, /events, etc. — including
+    # WebSocket upgrades (StaticFiles asserts scope['type'] == 'http'
+    # and the WS handshake never gets a chance). If the bundle isn't
+    # on disk (Node-less install with dist/ deleted), the mount is
+    # skipped and the daemon stays usable for headless flows.
+    if serve_ui:
+        dist = _ui_dist_dir()
+        if dist:
+            app.mount("/", StaticFiles(directory=dist, html=True), name="ui")
+
     return app
 
 
@@ -345,8 +372,17 @@ def _assert_loopback(host: str) -> None:
             )
 
 
-def run(root: str, *, host: str = "127.0.0.1", port: int = DEFAULT_PORT) -> int:
-    """Block forever serving the daemon. Returns process exit code."""
+def run(
+    root: str, *, host: str = "127.0.0.1", port: int = DEFAULT_PORT,
+    open_browser: bool = False, serve_ui: bool = True,
+) -> int:
+    """Block forever serving the daemon. Returns process exit code.
+
+    With ``open_browser=True`` the function spawns the user's default
+    browser pointed at ``http://host:port`` after a short delay — this
+    is the ``projmem ui`` entry path. With ``serve_ui=False`` the
+    static-bundle mount is skipped (used by tests + headless CI).
+    """
     _assert_loopback(host)
     try:
         import uvicorn  # type: ignore
@@ -357,13 +393,22 @@ def run(root: str, *, host: str = "127.0.0.1", port: int = DEFAULT_PORT) -> int:
         ) from e
 
     state = DaemonState(root)
-    app = build_app(state)
+    app = build_app(state, serve_ui=serve_ui)
 
     @app.on_event("startup")
     async def _start_socket():
         asyncio.create_task(serve_socket(state))
+        if open_browser:
+            asyncio.create_task(_open_browser_soon(host, port))
 
     config = uvicorn.Config(app, host=host, port=port, log_level="info")
     server = uvicorn.Server(config)
     server.run()
     return 0
+
+
+async def _open_browser_soon(host: str, port: int, delay: float = 0.8) -> None:
+    """Wait a moment for uvicorn to bind, then open the browser."""
+    import webbrowser
+    await asyncio.sleep(delay)
+    webbrowser.open(f"http://{host}:{port}")
