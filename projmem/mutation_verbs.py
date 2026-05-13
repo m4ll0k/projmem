@@ -385,18 +385,40 @@ def open_editing_lease(
 ) -> Dict[str, Any]:
     """Announce intent to edit ``path``; return lease + guidance + history.
 
-    Returns ``{lease_id, expires_at, guidance[], history{}, warnings[]}``.
-    The ``editing`` verb is double-duty: same call that opens the lease
-    also bundles the context the agent needs before touching the file.
+    Returns ``{lease_id, expires_at, guidance[], history{}, warnings[],
+    critical_prelude, lease_state}``. The ``editing`` verb is
+    double-duty: same call that opens the lease also bundles the
+    context the agent needs before touching the file.
+
+    When any critical note on the path (or 1-hop reverse-dep with
+    blast_radius_hops >= 1) is blocking, the lease enters
+    ``pending_approval`` state and the ⚠ CRITICAL CONTEXT prelude is
+    included. Step 5's daemon grants/denies; until then the lease
+    grants immediately but the prelude is loud enough that the agent
+    must engage.
     """
     reason = _validate_reason(reason)
     conn = store.conn
     lifeline_id = _ensure_lifeline_for_path(
         conn, path, reason=reason, agent_id=agent_id,
     )
+
+    # Critical-note detection BEFORE we commit the lease state, so the
+    # `pending_approval` state can be set in one transaction.
+    from . import critical as _crit
+    crit_direct = _crit.critical_notes_for_path(store, path)
+    crit_blast = _crit.critical_notes_via_blast_radius(store, path, hops=1)
+    crit_all = crit_direct + crit_blast
+    blocks = [c for c in crit_all if c.get("blocks_edits")]
+
     lease = _new_lease(
         conn, lifeline_id=lifeline_id, intent=reason, agent_id=agent_id,
     )
+    if blocks:
+        conn.execute(
+            "UPDATE edit_lease SET state='pending_approval' WHERE id=?",
+            (lease["lease_id"],),
+        )
     _emit_file_event(conn, lifeline_id, kind="leased", reason=reason)
     conn.commit()
 
@@ -406,8 +428,6 @@ def open_editing_lease(
         + _onehop_dep_annotations(conn, path)
     )
     warnings: List[str] = []
-    # Surface a warning if any of the guidance items have already been
-    # contradicted — the agent should resolve those before editing.
     contradicted = [g for g in guidance if g.get("staleness") == "contradicted"]
     if contradicted:
         warnings.append(
@@ -415,17 +435,28 @@ def open_editing_lease(
             "resolve before editing."
         )
 
-    return {
-        "lease_id":   lease["lease_id"],
-        "expires_at": lease["expires_at"],
-        "opened_at":  lease["opened_at"],
-        "path":       path,
-        "symbol":     symbol,
-        "lifeline_id": lifeline_id,
-        "guidance":   guidance,
-        "history":    _history_for_lifeline(conn, lifeline_id),
-        "warnings":   warnings,
+    out = {
+        "lease_id":     lease["lease_id"],
+        "expires_at":   lease["expires_at"],
+        "opened_at":    lease["opened_at"],
+        "path":         path,
+        "symbol":       symbol,
+        "lifeline_id":  lifeline_id,
+        "lease_state":  "pending_approval" if blocks else "open",
+        "guidance":     guidance,
+        "history":      _history_for_lifeline(conn, lifeline_id),
+        "warnings":     warnings,
     }
+    if crit_all:
+        out["critical_prelude"] = _crit.build_critical_prelude(crit_all)
+        out["critical_notes"] = crit_all
+        if blocks:
+            warnings.append(
+                f"{len(blocks)} CRITICAL note(s) block this edit — "
+                "lease entered pending_approval. Engage with the "
+                "prelude before proceeding."
+            )
+    return out
 
 
 def open_creating_lease(

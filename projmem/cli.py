@@ -7063,6 +7063,52 @@ def build_parser() -> argparse.ArgumentParser:
                    help="REQUIRED. Without this flag, `forget` refuses.")
     s.set_defaults(func=cmd_forget)
 
+    # ── v2 Step 3: critical-note authoring + review ────────────────────────
+    s = sub.add_parser("critical",
+                       help="Critical notes — strongest guidance kind. "
+                            "Subverbs: add | list | review | pending-review.")
+    csub = s.add_subparsers(dest="critical_action", required=True)
+
+    ca = csub.add_parser("add",
+                         help="Author a critical note. Requires "
+                              "--approved-by <user> ≥ 1 OR --self-cosign.")
+    ca.add_argument("target", help="File path, file#symbol, dir/, or @project.")
+    ca.add_argument("--reason", required=True,
+                    help="WHY ≥ 40 chars. Describe constraint + incident + "
+                         "consequence. Stored as the note body.")
+    ca.add_argument("--category", required=True,
+                    choices=["security", "compliance", "performance",
+                             "business_logic", "data_integrity", "other"])
+    ca.add_argument("--approved-by", action="append", default=[],
+                    help="Cosigner user_id. Repeatable. At least one "
+                         "required unless --self-cosign.")
+    ca.add_argument("--self-cosign", action="store_true",
+                    help="Explicit sole-maintainer confirmation. Use only "
+                         "when you genuinely are the sole reviewer.")
+    ca.add_argument("--incident-ref", action="append", default=[],
+                    dest="incident_refs",
+                    help="Issue / post-mortem reference. Repeatable.")
+    ca.add_argument("--review-window-days", type=int, default=90,
+                    help="Days until this note flags for review. Default: 90.")
+    ca.add_argument("--blast-radius-hops", type=int, default=1,
+                    help="Hops for blast-radius propagation. Default: 1.")
+    ca.add_argument("--no-blocks-edits", action="store_true",
+                    help="Don't enter pending_approval on editing. Default: "
+                         "edits DO block until human approves.")
+    ca.set_defaults(func=cmd_critical)
+
+    cl = csub.add_parser("list", help="List every critical note.")
+    cl.set_defaults(func=cmd_critical)
+
+    cr = csub.add_parser("review",
+                         help="Reset last_reviewed_at on a critical note.")
+    cr.add_argument("id", type=int)
+    cr.set_defaults(func=cmd_critical)
+
+    cp = csub.add_parser("pending-review",
+                         help="List critical notes past their review window.")
+    cp.set_defaults(func=cmd_critical)
+
     # ── v2 Step 2: read-only context + hook installer ──────────────────────
     s = sub.add_parser("context",
                        help="Read-only version of `editing`'s guidance "
@@ -7202,6 +7248,40 @@ def cmd_forget(args):
         )
     except _mv.MutationError as e:
         _emit_mutation_error(args, store, e)
+        return 2
+    _emit(result, args.json)
+    return 0
+
+
+def cmd_critical(args):
+    from projmem import critical as _crit
+    cfg, store = _open_store(args.path, allow_unindexed=True)
+    action = args.critical_action
+    try:
+        if action == "add":
+            result = _crit.add_critical(
+                store, args.target,
+                reason=args.reason,
+                category=args.category,
+                approved_by=args.approved_by,
+                self_cosign=args.self_cosign,
+                incident_refs=args.incident_refs,
+                review_window_days=args.review_window_days,
+                blast_radius_hops=args.blast_radius_hops,
+                blocks_edits=not args.no_blocks_edits,
+            )
+        elif action == "list":
+            result = {"critical_notes": _crit.list_critical(store)}
+        elif action == "review":
+            result = _crit.mark_reviewed(store, args.id)
+        elif action == "pending-review":
+            result = {"pending": _crit.pending_review(store)}
+        else:
+            result = {"error": "unknown-action", "action": action}
+    except _crit.CriticalError as e:
+        payload = e.envelope()
+        payload.setdefault("hint", "see `docs/v2-design.md` Pillar 3.")
+        _emit_error(payload, getattr(args, "json", False), store=store)
         return 2
     _emit(result, args.json)
     return 0
