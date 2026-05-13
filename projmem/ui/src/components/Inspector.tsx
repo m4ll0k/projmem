@@ -189,10 +189,11 @@ function isExternalUrl(url: string): boolean {
   return url.startsWith("http://") || url.startsWith("https://");
 }
 
-function NoteRow({ note, onShowCode, isFresh }: {
+function NoteRow({ note, onShowCode, isFresh, onDeleted }: {
   note: Annotation;
   onShowCode?: (line?: number) => void;
   isFresh?: boolean;          // pulse a moment when the row is newly saved
+  onDeleted?: () => void;
 }) {
   const sev = note.severity || note.kind;
   const stalenessColor = (
@@ -205,6 +206,30 @@ function NoteRow({ note, onShowCode, isFresh }: {
   const cited = lineMatch ? parseInt(lineMatch[1], 10) : undefined;
   const bodyParts = parseBody(note.body || "");
   const linkCount = bodyParts.filter((p) => p.type === "link").length;
+  const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting]     = useState(false);
+  // Auto-revert the confirm state if the user wanders away.
+  useEffect(() => {
+    if (!confirming) return;
+    const t = setTimeout(() => setConfirming(false), 5000);
+    return () => clearTimeout(t);
+  }, [confirming]);
+
+  const handleDelete = async () => {
+    if (!confirming) { setConfirming(true); return; }
+    setDeleting(true);
+    try {
+      await api.deleteNote(note.id);
+      onDeleted?.();
+    } catch (e: any) {
+      // surface failure in-place — most likely the row is already
+      // gone from a concurrent delete elsewhere, in which case the
+      // refresh will reconcile.
+      setConfirming(false);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <div className={`rounded-md border bg-elev px-2.5 py-2 transition-colors ${
@@ -237,6 +262,23 @@ function NoteRow({ note, onShowCode, isFresh }: {
           <span className={`${stalenessColor} text-[10px] uppercase tracking-wider`}>
             {note.staleness || "—"}
           </span>
+          {/* Delete — two-stage so an accidental click can't lose the
+              note. First click → button flips to red "confirm?"; second
+              click within ~5s commits. confirming auto-resets after
+              the timeout via a useEffect inside the wrapper. */}
+          {confirming ? (
+            <Button size="xs" variant="danger"
+                    loading={deleting}
+                    onClick={handleDelete}
+                    title="confirm delete">
+              confirm?
+            </Button>
+          ) : (
+            <Button size="xs" variant="ghost"
+                    onClick={handleDelete}
+                    aria-label="delete this note"
+                    title="delete this note">🗑</Button>
+          )}
         </div>
       </div>
 
@@ -466,15 +508,39 @@ function ExcludeToggle({ target, onChange }: {
 }) {
   const exclusions = useStore((s) => s.exclusions);
   const setExclusions = useStore((s) => s.setExclusions);
+  const setSelectedDirectory = useStore((s) => s.setSelectedDirectory);
   const existing = exclusions.find((e) => e.target === target);
+  // Surface every exclusion stored UNDER the current target. Helps the
+  // operator see "this directory itself isn't excluded, but `util/`
+  // below it is" — without that hint, exclusions look invisible from
+  // any ancestor scope and the operator thinks they didn't apply.
+  const childExclusions = exclusions.filter((e) => (
+    e.target !== target &&
+    target !== "@project" &&
+    e.target.startsWith(target)
+  )).concat(
+    target === "@project"
+      ? exclusions.filter((e) => e.target !== "@project")
+      : [],
+  );
   const [open, setOpen]   = useState(false);
   const [reason, setReason] = useState("");
   const [busy, setBusy]   = useState(false);
+  const [removingId, setRemovingId] = useState<number | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+
+  // Auto-revert "are you sure" prompt after a few seconds so a
+  // distracted operator doesn't accidentally confirm on next click.
+  useEffect(() => {
+    if (!confirmRemove) return;
+    const t = setTimeout(() => setConfirmRemove(false), 5000);
+    return () => clearTimeout(t);
+  }, [confirmRemove]);
 
   const refresh = async () => {
     try {
       const r = await api.exclusions();
-      setExclusions(r.exclusions.map((e) => ({ target: e.target, body: e.body })));
+      setExclusions(r.exclusions.map((e) => ({ id: e.id, target: e.target, body: e.body })));
     } catch { /* ignore */ }
     onChange?.();
   };
@@ -491,16 +557,43 @@ function ExcludeToggle({ target, onChange }: {
     }
   };
 
+  const remove = async (id: number) => {
+    setRemovingId(id);
+    try {
+      await api.deleteNote(id);
+      await refresh();
+    } catch { /* ignore — refresh will reconcile */ }
+    finally {
+      setRemovingId(null);
+      setConfirmRemove(false);
+    }
+  };
+
   if (existing) {
     return (
       <div className="mt-1.5 rounded-md border border-bad/30 bg-bad/5 px-2 py-1.5 text-[11px]">
-        <div className="flex items-center gap-1 mb-0.5">
+        <div className="flex items-center justify-between gap-2 mb-0.5">
           <span className="text-bad font-medium">🚫 Excluded from agent scope</span>
+          {confirmRemove ? (
+            <Button size="xs" variant="danger"
+                    loading={removingId === existing.id}
+                    onClick={() => remove(existing.id)}
+                    title="confirm — remove this exclusion">
+              confirm remove?
+            </Button>
+          ) : (
+            <Button size="xs" variant="ghost"
+                    onClick={() => setConfirmRemove(true)}
+                    aria-label="remove exclusion"
+                    title="remove this exclusion (subtree becomes in-scope again)">
+              🗑 remove
+            </Button>
+          )}
         </div>
         <div className="text-ink leading-snug mb-1">{existing.body}</div>
         <div className="text-[10px] text-muted">
-          Agent calls to `projmem editing` on files in this subtree
-          surface an OUT OF SCOPE warning in their context.
+          Agent calls to <span className="font-mono">projmem editing</span> on files in
+          this subtree surface an OUT OF SCOPE warning in their context.
         </div>
       </div>
     );
@@ -508,11 +601,40 @@ function ExcludeToggle({ target, onChange }: {
 
   if (!open) {
     return (
-      <Button
-        size="xs" variant="secondary"
-        onClick={() => setOpen(true)}
-        title="mark this subtree as out-of-scope for the AI agent"
-      >🚫 exclude this subtree from agent scope</Button>
+      <div className="space-y-1.5">
+        <Button
+          size="xs" variant="secondary"
+          onClick={() => setOpen(true)}
+          title="mark this subtree as out-of-scope for the AI agent"
+        >🚫 exclude this subtree from agent scope</Button>
+        {childExclusions.length > 0 && (
+          <div className="rounded-md border border-bad/20 bg-bad/5 px-2 py-1.5 text-[10px]">
+            <div className="text-bad font-medium mb-1">
+              {childExclusions.length} exclusion{childExclusions.length > 1 ? "s" : ""} active inside this scope
+            </div>
+            <div className="space-y-0.5 max-h-24 overflow-y-auto">
+              {childExclusions.slice(0, 8).map((ex) => (
+                <div key={ex.id} className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setSelectedDirectory(ex.target)}
+                    className="flex-1 min-w-0 text-left font-mono text-bad
+                                hover:underline truncate"
+                    title={`open ${ex.target}`}
+                  >🚫 {ex.target}</button>
+                  <Button size="xs" variant="ghost"
+                          loading={removingId === ex.id}
+                          onClick={() => remove(ex.id)}
+                          aria-label={`remove exclusion at ${ex.target}`}
+                          title="remove this exclusion">🗑</Button>
+                </div>
+              ))}
+              {childExclusions.length > 8 && (
+                <div className="text-muted">+ {childExclusions.length - 8} more</div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
     );
   }
   return (
@@ -958,7 +1080,8 @@ export function Inspector() {
                     {plainNotes.map((n) => (
                       <NoteRow key={n.id} note={n}
                                onShowCode={jumpToCode}
-                               isFresh={n.id === freshNoteId} />
+                               isFresh={n.id === freshNoteId}
+                               onDeleted={() => setRefreshTick((t) => t + 1)} />
                     ))}
                   </div>
                 )}
@@ -976,7 +1099,8 @@ export function Inspector() {
                     {guidance.map((n) => (
                       <NoteRow key={n.id} note={n}
                                onShowCode={jumpToCode}
-                               isFresh={n.id === freshNoteId} />
+                               isFresh={n.id === freshNoteId}
+                               onDeleted={() => setRefreshTick((t) => t + 1)} />
                     ))}
                   </div>
                 )}
@@ -986,7 +1110,8 @@ export function Inspector() {
                     {detail.critical.map((n) => (
                       <NoteRow key={n.id} note={n}
                                onShowCode={jumpToCode}
-                               isFresh={n.id === freshNoteId} />
+                               isFresh={n.id === freshNoteId}
+                               onDeleted={() => setRefreshTick((t) => t + 1)} />
                     ))}
                   </div>
                 )}
@@ -1106,7 +1231,8 @@ export function Inspector() {
                         !["guidance","constraint","preference","critical"].includes(n.kind))
                       .map((n) => (
                         <NoteRow key={n.id} note={n}
-                                 isFresh={n.id === freshNoteId} />
+                                 isFresh={n.id === freshNoteId}
+                                 onDeleted={() => setRefreshTick((t) => t + 1)} />
                       ))}
                   </div>
                 )}
@@ -1131,7 +1257,8 @@ export function Inspector() {
                       .filter((n) => ["guidance","constraint","preference"].includes(n.kind))
                       .map((n) => (
                         <NoteRow key={n.id} note={n}
-                                 isFresh={n.id === freshNoteId} />
+                                 isFresh={n.id === freshNoteId}
+                                 onDeleted={() => setRefreshTick((t) => t + 1)} />
                       ))}
                   </div>
                 )}
@@ -1144,7 +1271,8 @@ export function Inspector() {
                     )}
                     {dirDetail.critical.map((n) => (
                       <NoteRow key={n.id} note={n}
-                               isFresh={n.id === freshNoteId} />
+                               isFresh={n.id === freshNoteId}
+                               onDeleted={() => setRefreshTick((t) => t + 1)} />
                     ))}
                   </div>
                 )}

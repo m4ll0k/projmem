@@ -27,7 +27,7 @@ interface UIState {
   showSymbols:      boolean;
   nodeLevel:        "all" | "dirs" | "files";
   liveLeasedPaths:  string[];        // paths with an open lease right now
-  exclusions:       { target: string; body: string }[];  // kind=exclude targets
+  exclusions:       { id: number; target: string; body: string }[];  // kind=exclude rows — id surfaced so the UI can delete
   theme:            "light" | "dark";
   centerView:       "tree" | "graph" | "schema";
   projectRoot:      string;
@@ -47,7 +47,7 @@ interface UIState {
   markLeased:          (path: string) => void;
   markReleased:        (path: string) => void;
   resetLiveLeases:     (paths: string[]) => void;
-  setExclusions:       (e: { target: string; body: string }[]) => void;
+  setExclusions:       (e: { id: number; target: string; body: string }[]) => void;
   toggleTheme:         () => void;
   setTheme:            (t: "light" | "dark") => void;
   setCenterView:       (v: "tree" | "graph" | "schema") => void;

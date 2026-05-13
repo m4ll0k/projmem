@@ -102,6 +102,95 @@ class TestHttpEndpoints:
         # The daemon's in-memory buffer recorded the event.
         assert any(ev["kind"] == "note_added" for ev in state.events)
 
+    def test_delete_note_removes_row_and_broadcasts(self, client):
+        # Regression for the v2 UI delete-button — every note kind
+        # (note / guidance / exclude / critical) is one row in the
+        # annotations table, so a single DELETE /notes/{id} reaches all
+        # of them. The UI calls this on every trash-can click.
+        c, state = client
+        post = c.post("/notes", json={
+            "target": "src/a.py", "kind": "note", "body": "scratch",
+        })
+        assert post.status_code == 200
+        ann_id = post.json()["id"]
+
+        r = c.delete(f"/notes/{ann_id}")
+        assert r.status_code == 200
+        body = r.json()
+        assert body["id"] == ann_id and body["deleted"] is True
+        assert any(
+            ev["kind"] == "note_deleted" and ev["id"] == ann_id
+            for ev in state.events
+        )
+
+    def test_delete_note_404_on_unknown(self, client):
+        c, _ = client
+        r = c.delete("/notes/99999")
+        assert r.status_code == 404
+        assert r.json()["error"] == "not-found"
+
+    def test_delete_exclusion_makes_subtree_in_scope_again(self, client, repo):
+        # The deeper user-reported behavior: removing a kind=exclude
+        # row must drop the OUT OF SCOPE warning for files under that
+        # subtree on the very next lease. Without this, the UI "remove
+        # exclusion" button would be cosmetic.
+        from projmem.mutation_verbs import _exclusion_ancestors
+        from projmem.store import Store
+
+        c, _ = client
+        post = c.post("/notes", json={
+            "target": "src/legacy/",
+            "kind":   "exclude",
+            "body":   "vendored — do not edit",
+        })
+        ex_id = post.json()["id"]
+
+        st = Store(str(repo / ".projmem" / "index.db"))
+        try:
+            hit = _exclusion_ancestors(st.conn, "src/legacy/util.py")
+            assert any(r["target"] == "src/legacy/" for r in hit), hit
+        finally:
+            st.close()
+
+        c.delete(f"/notes/{ex_id}")
+
+        st = Store(str(repo / ".projmem" / "index.db"))
+        try:
+            hit_after = _exclusion_ancestors(st.conn, "src/legacy/util.py")
+            assert not hit_after, hit_after
+        finally:
+            st.close()
+
+    def test_exclusion_covers_deep_descendants(self, client, repo):
+        # The user thought exclusions only applied to "the last node",
+        # so this pins down recursive scope: an exclude at
+        # `tests/fixtures/multilang/go/util/` matches files several
+        # levels deeper. _exclusion_ancestors is the function that
+        # the editing-lease mutation calls before surfacing warnings.
+        from projmem.mutation_verbs import _exclusion_ancestors
+        from projmem.store import Store
+
+        c, _ = client
+        c.post("/notes", json={
+            "target": "tests/fixtures/multilang/go/util/",
+            "kind":   "exclude",
+            "body":   "go test fixture — no real-codebase value",
+        })
+        st = Store(str(repo / ".projmem" / "index.db"))
+        try:
+            for nested in [
+                "tests/fixtures/multilang/go/util/util.go",
+                "tests/fixtures/multilang/go/util/subdir/deep.go",
+                "tests/fixtures/multilang/go/util/a/b/c/d.go",
+            ]:
+                hit = _exclusion_ancestors(st.conn, nested)
+                assert any(
+                    r["target"] == "tests/fixtures/multilang/go/util/"
+                    for r in hit
+                ), (nested, hit)
+        finally:
+            st.close()
+
     def test_post_critical_missing_cosigner_returns_400(self, client):
         c, _ = client
         r = c.post("/critical", json={

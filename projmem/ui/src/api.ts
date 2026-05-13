@@ -52,6 +52,11 @@ export const api = {
     ),
   addNote:  (payload: {target: string; body: string; kind?: string; severity?: string}) =>
     postJSON<{id: number}>("/notes", payload),
+  deleteNote: async (id: number) => {
+    const r = await fetch(`${HTTP_BASE}/notes/${id}`, { method: "DELETE" });
+    if (!r.ok) throw new Error(`delete /notes/${id}: ${r.status}`);
+    return r.json() as Promise<{ id: number; deleted: boolean }>;
+  },
   refsList: () => getJSON<{refs: {path: string; size: number; mtime: number}[]; root_exists: boolean; root?: string}>("/refs-list"),
   exclusions: () => getJSON<{exclusions: {id: number; target: string; body: string; created_at: number}[]}>("/exclusions"),
   refUrl:   (relPath: string) => `${HTTP_BASE}/refs/${relPath.split("/").map(encodeURIComponent).join("/")}`,

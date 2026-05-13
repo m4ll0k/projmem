@@ -556,6 +556,34 @@ def build_app(state: DaemonState, *, serve_ui: bool = True):
         finally:
             store.close()
 
+    @app.delete("/notes/{ann_id}")
+    async def delete_note(ann_id: int):
+        """Remove an annotation by id. Used by every UI delete button
+        (notes, guidance, exclusions, critical — they're all rows in
+        the same table, distinguished by ``kind``)."""
+        store = state.store()
+        try:
+            row = store.conn.execute(
+                "SELECT target, kind FROM annotations WHERE id=?", (ann_id,),
+            ).fetchone()
+            if row is None:
+                return JSONResponse(
+                    {"error": "not-found", "id": ann_id},
+                    status_code=404,
+                )
+            store.conn.execute("DELETE FROM annotations WHERE id=?", (ann_id,))
+            store.conn.commit()
+        finally:
+            store.close()
+        event = state.record({
+            "kind":   "note_deleted",
+            "id":     ann_id,
+            "target": row["target"],
+            "note_kind": row["kind"],
+        })
+        await state.broadcast(event)
+        return {"id": ann_id, "deleted": True}
+
     @app.post("/notes")
     async def post_note(payload: Dict[str, Any]):
         target = payload.get("target")

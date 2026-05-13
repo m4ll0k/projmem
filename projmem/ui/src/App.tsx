@@ -64,7 +64,7 @@ export function App() {
         const ex = await api.exclusions();
         if (cancelled) return;
         setExclusions(ex.exclusions.map((e) => ({
-          target: e.target, body: e.body,
+          id: e.id, target: e.target, body: e.body,
         })));
       } catch {
         /* exclusions are non-critical; tolerate */
