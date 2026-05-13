@@ -1,0 +1,14 @@
+{
+  "leases_attempted": 100,
+  "files": 20,
+  "elapsed_s": 15.651,
+  "leases_per_sec": 6.39,
+  "cli_open_ok": 100,
+  "cli_close_ok": 100,
+  "ws_total_events": 200,
+  "ws_leased_total": 100,
+  "ws_released_total": 100,
+  "missing_leased": {},
+  "missing_released": {},
+  "verdict": "pass"
+}

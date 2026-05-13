@@ -7,11 +7,14 @@ import { api, connectEvents } from "./api";
 import { useStore } from "./store";
 
 export function App() {
-  const setStatus      = useStore((s) => s.setStatus);
-  const pushEvent      = useStore((s) => s.pushEvent);
-  const setPaused      = useStore((s) => s.setPaused);
-  const setOpenLeases  = useStore((s) => s.setOpenLeases);
-  const setProjectRoot = useStore((s) => s.setProjectRoot);
+  const setStatus       = useStore((s) => s.setStatus);
+  const pushEvent       = useStore((s) => s.pushEvent);
+  const setPaused       = useStore((s) => s.setPaused);
+  const setOpenLeases   = useStore((s) => s.setOpenLeases);
+  const setProjectRoot  = useStore((s) => s.setProjectRoot);
+  const markLeased      = useStore((s) => s.markLeased);
+  const markReleased    = useStore((s) => s.markReleased);
+  const resetLiveLeases = useStore((s) => s.resetLiveLeases);
 
   useEffect(() => {
     let cancelled = false;
@@ -29,17 +32,38 @@ export function App() {
     refresh();
     const t = setInterval(refresh, 5000);
 
+    // Keep liveLeasedPaths in sync with the daemon's broadcast stream.
+    // Lease state transitions are the truth source — node halos in the
+    // graph flip on/off the moment the event arrives.
+    const onEvent = (ev: any) => {
+      pushEvent(ev);
+      const path = ev?.path;
+      if (typeof path === "string" && path.length > 0) {
+        if (ev.kind === "leased")                 markLeased(path);
+        else if (ev.kind === "released")          markReleased(path);
+        else if (ev.kind === "abandoned")         markReleased(path);
+        else if (ev.kind === "deleted")           markReleased(path);
+      }
+    };
+
     const disconnect = connectEvents(
-      pushEvent,
+      onEvent,
       (s) => setStatus(s),
     );
+
+    // On reconnect, drop stale live-lease state and let the next batch
+    // of events repopulate.
+    const dropStale = () => resetLiveLeases([]);
+    window.addEventListener("focus", dropStale);
 
     return () => {
       cancelled = true;
       clearInterval(t);
+      window.removeEventListener("focus", dropStale);
       disconnect();
     };
-  }, [setStatus, pushEvent, setPaused, setOpenLeases, setProjectRoot]);
+  }, [setStatus, pushEvent, setPaused, setOpenLeases, setProjectRoot,
+      markLeased, markReleased, resetLiveLeases]);
 
   return (
     <div className="h-full flex flex-col">

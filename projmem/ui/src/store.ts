@@ -24,6 +24,7 @@ interface UIState {
   selectedLifeline: string | null;
   showGhosts:       boolean;
   showSymbols:      boolean;
+  liveLeasedPaths:  string[];        // paths with an open lease right now
   projectRoot:      string;
 
   setPaused:           (b: boolean) => void;
@@ -36,6 +37,9 @@ interface UIState {
   setShowGhosts:       (b: boolean) => void;
   setShowSymbols:      (b: boolean) => void;
   setProjectRoot:      (r: string) => void;
+  markLeased:          (path: string) => void;
+  markReleased:        (path: string) => void;
+  resetLiveLeases:     (paths: string[]) => void;
 }
 
 export const useStore = create<UIState>((set) => ({
@@ -47,6 +51,7 @@ export const useStore = create<UIState>((set) => ({
   selectedLifeline: null,
   showGhosts:       false,
   showSymbols:      false,
+  liveLeasedPaths:  [],
   projectRoot:      "",
 
   setPaused:           (b) => set({ paused: b }),
@@ -64,4 +69,13 @@ export const useStore = create<UIState>((set) => ({
   setShowGhosts:       (b) => set({ showGhosts: b }),
   setShowSymbols:      (b) => set({ showSymbols: b }),
   setProjectRoot:      (r) => set({ projectRoot: r }),
+  markLeased:          (path) => set((st) => (
+    st.liveLeasedPaths.includes(path)
+      ? st
+      : { liveLeasedPaths: [...st.liveLeasedPaths, path] }
+  )),
+  markReleased:        (path) => set((st) => ({
+    liveLeasedPaths: st.liveLeasedPaths.filter((p) => p !== path),
+  })),
+  resetLiveLeases:     (paths) => set({ liveLeasedPaths: paths }),
 }));

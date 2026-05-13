@@ -109,6 +109,7 @@ export function GraphView() {
   const showSymbols         = useStore((s) => s.showSymbols);
   const setShowSymbols      = useStore((s) => s.setShowSymbols);
   const setSelectedLifeline = useStore((s) => s.setSelectedLifeline);
+  const liveLeasedPaths     = useStore((s) => s.liveLeasedPaths);
 
   const [nodes, setNodes] = useState<GraphNode[]>([]);
   const [edges, setEdges] = useState<GraphEdge[]>([]);
@@ -244,6 +245,27 @@ export function GraphView() {
           })
       );
 
+    // Pulsing halo for live-leased nodes (Claude is editing this file
+    // RIGHT NOW). Two overlapping circles whose r + opacity animate
+    // 0→1.5× radius outward at 1.2 Hz. The halos are filled blue +
+    // transparent so they read as a glow. We always render the halo
+    // element but flip `display` based on live-leased state so the
+    // simulation tick handler doesn't have to recreate DOM each
+    // frame. Animated via SVG SMIL (works in every browser projmem
+    // targets; no JS RAF loop needed).
+    const halo = node.append("g").attr("class", "halo")
+      .attr("pointer-events", "none")
+      .style("display", "none");
+    halo.append("circle")
+      .attr("class", "halo-ring")
+      .attr("fill", "#2563eb")
+      .attr("fill-opacity", 0.18);
+    halo.append("animate")
+      .attr("attributeName", "opacity")
+      .attr("values", "0.4;0.85;0.4")
+      .attr("dur", "1.2s")
+      .attr("repeatCount", "indefinite");
+
     // Circles.
     node.append("circle")
       .attr("r", (d) => nodeRadius(d))
@@ -304,23 +326,42 @@ export function GraphView() {
     return () => { sim.stop(); };
   }, [nodes, edges, setSelectedLifeline]);
 
-  // Label visibility: hide labels by default at any zoom; reveal them
-  // selectively for leased/critical nodes (always visible), the
-  // hovered node (any zoom), and EVERY node at zoom ≥ 1.4×.
+  // Label visibility + live-leased halo are both DOM-pass effects.
+  // We walk every g.node once and flip flags so the simulation tick
+  // handler stays free.
   useEffect(() => {
     const root = innerGRef.current;
     if (!root) return;
     const showAll = zoomLevel >= 1.4;
+    const liveSet = new Set(liveLeasedPaths);
+
     root.querySelectorAll<SVGGElement>("g.node").forEach((g) => {
-      const label = g.querySelector<SVGTextElement>("text.node-label");
-      if (!label) return;
-      const nid = (g as any).__data__?.id;
       const d = (g as any).__data__ as GraphNode | undefined;
-      const alwaysShow = d?.critical || d?.leased;
-      const isHovered  = hoveredId === nid;
-      label.style.display = (showAll || alwaysShow || isHovered) ? "" : "none";
+      const nid = d?.id;
+
+      // Live-leased halo: visible only while the lease is open.
+      const halo = g.querySelector<SVGGElement>("g.halo");
+      const haloRing = g.querySelector<SVGCircleElement>("circle.halo-ring");
+      const isLive   = !!(d?.path && liveSet.has(d.path));
+      if (halo) halo.style.display = isLive ? "" : "none";
+      if (haloRing && d) {
+        haloRing.setAttribute("r", String(nodeRadius(d) + 12));
+      }
+
+      // Dim non-leased nodes when ANY lease is live — focus mode.
+      const dim = liveSet.size > 0 && !isLive;
+      g.style.opacity = dim ? "0.28" : "1";
+
+      // Labels.
+      const label = g.querySelector<SVGTextElement>("text.node-label");
+      if (label) {
+        const alwaysShow = d?.critical || d?.leased || isLive;
+        const isHovered  = hoveredId === nid;
+        label.style.display =
+          (showAll || alwaysShow || isHovered) ? "" : "none";
+      }
     });
-  }, [zoomLevel, hoveredId, nodes]);
+  }, [zoomLevel, hoveredId, nodes, liveLeasedPaths]);
 
   const releasePins = () => {
     for (const n of simNodesRef.current) {

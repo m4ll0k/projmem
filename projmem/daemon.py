@@ -581,6 +581,68 @@ async def serve_socket(state: DaemonState) -> None:
         await server.serve_forever()
 
 
+async def poll_file_events(state: DaemonState, *,
+                           interval: float = 0.5) -> None:
+    """Tail the ``file_event`` table and broadcast every new row.
+
+    Every projmem mutation verb (editing / creating / moving / deleting
+    / done / abandoned) appends to ``file_event`` from the CLI's own
+    process — the daemon never sees those calls directly. Without
+    this poll, the UI's WS subscribers only receive events triggered
+    by the daemon's HTTP endpoints, and a `projmem editing` from a
+    terminal would silently change disk state.
+
+    Best-effort: any SQLite error (busy, locked, race during reindex)
+    is swallowed and retried next tick. We also batch up to 100 rows
+    per tick to keep latency reasonable under stress.
+    """
+    last_id = 0
+    try:
+        s = state.store()
+        try:
+            row = s.conn.execute(
+                "SELECT MAX(id) FROM file_event").fetchone()
+            if row and row[0]:
+                last_id = int(row[0])
+        finally:
+            s.close()
+    except Exception:
+        pass
+
+    while True:
+        await asyncio.sleep(interval)
+        try:
+            s = state.store()
+            try:
+                rows = s.conn.execute(
+                    "SELECT fe.id, fe.kind, fe.at, fe.reason, fe.lifeline_id, "
+                    "fl.current_path FROM file_event fe "
+                    "JOIN file_lifeline fl ON fl.id = fe.lifeline_id "
+                    "WHERE fe.id > ? ORDER BY fe.id ASC LIMIT 100",
+                    (last_id,),
+                ).fetchall()
+            finally:
+                s.close()
+        except Exception:
+            continue
+        for r in rows:
+            event = {
+                "kind":        r["kind"],
+                "at":          r["at"],
+                "lifeline_id": r["lifeline_id"],
+                "path":        r["current_path"],
+                "reason":      r["reason"],
+                "source":      "file_event-poller",
+            }
+            state.record(event)
+            try:
+                await state.broadcast(event)
+            except Exception:
+                pass
+            if r["id"] > last_id:
+                last_id = r["id"]
+
+
 async def _handle_socket_client(reader, writer, state: DaemonState) -> None:
     try:
         while True:
@@ -653,6 +715,7 @@ def run(
     @app.on_event("startup")
     async def _start_socket():
         asyncio.create_task(serve_socket(state))
+        asyncio.create_task(poll_file_events(state))
         if open_browser:
             asyncio.create_task(_open_browser_soon(host, port))
 
