@@ -470,4 +470,3 @@ Every command emits JSON when called with `--json`. The full catalog with flag d
 - [docs/v2-design.md](./docs/v2-design.md) — v2 lifelines, leases, mutation verbs, UI, hooks
 - [docs/claims.md](./docs/claims.md) — verifier deep-dive
 - [docs/agent-integration.md](./docs/agent-integration.md) — wiring into specific agents
-- [bench/multisession/REAL_RESULTS.md](./bench/multisession/REAL_RESULTS.md) — benchmarks

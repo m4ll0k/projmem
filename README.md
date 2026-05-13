@@ -10,7 +10,6 @@
 [![license: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20NC-blue.svg)](./LICENSE)
 [![tests: 752 passing](https://img.shields.io/badge/tests-752%20passing-brightgreen.svg)](./tests)
 [![python: 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#install)
-[![bench: 38% tokens saved](https://img.shields.io/badge/bench-%E2%88%9238%25%20tokens-orange.svg)](./bench/multisession/REAL_RESULTS.md)
 
 </div>
 
@@ -282,7 +281,7 @@ Schema migrations live in `projmem/migrations/m00*.py` and run on first connect.
 
 ## The seven verbs that matter (v1)
 
-projmem ships 60+ subcommands, but real benchmark data showed agents only ever use seven:
+projmem ships 60+ subcommands, but in practice agents only ever use seven:
 
 | Verb | Calls (36 runs) | What it does |
 |---|---:|---|
@@ -346,21 +345,6 @@ UI is also where you approve pending-approval leases (a critical rule blocked an
 
 ---
 
-## Real benchmark numbers
-
-57 agent runs with `claude-sonnet-4-6`. Full methodology + raw transcripts in [`bench/multisession/REAL_RESULTS.md`](./bench/multisession/REAL_RESULTS.md).
-
-| | Baseline | **`projmem`** | Free-form `notes.md` |
-|---|---:|---:|---:|
-| Correctness (session-2) | 0/7 (truthful NO_RECORD) | **7/7** | 7/7 |
-| Mean tokens / session-2 | 1330 | **1051** | 1688 |
-| **Token cost vs `notes.md`** | — | **−38%** | baseline |
-| Variance | wide | **tight (1039–1065)** | wide (1548–1894) |
-
-projmem ties scratchpad on correctness but uses **38% fewer tokens** — the agent reads pre-computed `staleness: contradicted` once, instead of re-investigating manually.
-
----
-
 ## Limits — known and intentional
 
 - **Local only.** No cloud sync. Two operators on the same repo work from separate `.projmem/` dirs unless they commit them (and the indexer is deterministic enough that committing the DB is sometimes useful).
@@ -385,7 +369,6 @@ projmem ties scratchpad on correctness but uses **38% fewer tokens** — the age
 | Works with any LLM agent | ✓ | per-IDE | per-IDE | ✓ |
 | MCP server included | — | — | — | ✓ |
 | CI / pre-commit gate | — | — | — | ✓ |
-| Token cost on multi-session work | baseline | n/a | n/a | **−38%** |
 
 ---
 
@@ -397,7 +380,6 @@ projmem ties scratchpad on correctness but uses **38% fewer tokens** — the age
 - ✓ Filesystem auto-sweeper (default on)
 - ✓ Lifelines + tombstones across renames/deletes
 - ✓ MCP server for Cursor / Claude Desktop / Continue
-- ✓ Two real-LLM benchmarks (controlled + in-the-wild)
 - 🚧 PyPI publish — planned
 - 🚧 LSP shim (editor diagnostics) — planned
 
@@ -413,7 +395,6 @@ projmem ties scratchpad on correctness but uses **38% fewer tokens** — the age
 | [`docs/claims.md`](./docs/claims.md) | Verifier deep-dive — predicates, truth classes, staleness |
 | [`docs/agent-integration.md`](./docs/agent-integration.md) | Wiring projmem into specific agents |
 | [`docs/ECOSYSTEM.md`](./docs/ECOSYSTEM.md) | How projmem differs from SCIP / LSIF / Semgrep / CodeQL |
-| [`bench/multisession/REAL_RESULTS.md`](./bench/multisession/REAL_RESULTS.md) | Benchmark methodology + raw numbers |
 
 ---
 

@@ -54,12 +54,13 @@ dist/
 projmem/ui/vite.config.d.ts
 projmem/ui/vite.config.js
 
-# Benchmark scratch (heavy; never ship)
+# Benchmarks live entirely outside the public repo — dev-only
+# scaffolding (drivers, graders, raw transcripts) that would
+# distract from the product. Local checkouts can still keep a
+# bench/ tree; it just won't be tracked.
+bench/
 /tmp/memtrace_bench/
-bench/multisession/results/
-bench/results/
 
-bench/x
 examples/
 
 # projmem's own output

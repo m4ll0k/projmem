@@ -197,14 +197,15 @@ is done.
 
 ## Why this exists (failure-mode evidence)
 
-- v1 benchmarks: agents without projmem produced 0/7 truthful answers
-  on multi-session memory tasks; agents with projmem produced 7/7,
-  using 38% fewer tokens than free-form scratchpad. The verifier
-  catches drift the scratchpad cannot.
-- v2 hypothesis (benchmark TBD in `bench/v2/`): agents bypassing
-  `projmem editing` reintroduce deleted code at a measurable rate;
-  agents using the four mutation verbs do not. When the numbers land
-  they will replace this paragraph.
+- Without the verifier, agents read prose notes as ground truth and
+  re-investigate or fabricate when the underlying code has drifted.
+  The verifier catches that — a saved FACT becomes REFUTED the
+  moment the cited symbol moves or disappears, and projmem surfaces
+  the `contradicted` flag at session start.
+- Without the mutation verbs, agents that delete or rename files
+  silently break the notes that depended on them. The verbs keep the
+  lifeline intact across moves and tombstone deletes so prior
+  context remains queryable.
 
 The rules above are not opinions about good behavior. They are the
 conditions under which the agent's output is trustworthy.
