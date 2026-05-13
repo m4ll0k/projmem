@@ -148,7 +148,9 @@ def build_app(state: DaemonState, *, serve_ui: bool = True):
                 "events_buffered": len(state.events)}
 
     @app.get("/graph")
-    async def get_graph(include_ghosts: bool = False, limit: int = 5000):
+    async def get_graph(include_ghosts: bool = False, limit: int = 5000,
+                        include_symbols: bool = False,
+                        symbol_kinds: str = "function,class,method"):
         """Nodes + edges for the Step 7 graph view.
 
         Nodes = active lifelines (one per current file path). Each
@@ -265,11 +267,104 @@ def build_app(state: DaemonState, *, serve_ui: bool = True):
                                     "kind":   "replaced_by",
                                 })
 
+            # Symbol-level nodes for monolithic files. The graph
+            # treats each function/class/method as a child node
+            # connected to its containing file with a 'contains' edge.
+            # Defaults to function/class/method only; pass &symbol_kinds=...
+            # to widen (comma-separated).
+            if include_symbols and paths:
+                allowed_kinds = tuple(
+                    k.strip() for k in (symbol_kinds or "").split(",") if k.strip()
+                )
+                if allowed_kinds:
+                    kind_placeholders = ",".join("?" * len(allowed_kinds))
+                    path_placeholders = ",".join("?" * len(paths))
+                    sym_rows = store.conn.execute(
+                        f"SELECT file, name, kind, line FROM symbols "
+                        f"WHERE file IN ({path_placeholders}) "
+                        f"AND kind IN ({kind_placeholders}) "
+                        f"ORDER BY file, line LIMIT 3000",
+                        tuple(paths) + tuple(allowed_kinds),
+                    ).fetchall()
+                    for sr in sym_rows:
+                        parent_id = path_to_id.get(sr["file"])
+                        if not parent_id:
+                            continue
+                        sym_node_id = f"sym:{sr['file']}:{sr['name']}:{sr['line']}"
+                        nodes.append({
+                            "id":        sym_node_id,
+                            "path":      sr["file"],
+                            "label":     sr["name"],
+                            "symbol":    True,
+                            "symbol_kind": sr["kind"],
+                            "line":      sr["line"],
+                            "staleness": "fresh",
+                            "critical":  False,
+                            "rev_deps":  0,
+                            "leased":    False,
+                            "ghost":     False,
+                        })
+                        edges.append({
+                            "source": parent_id,
+                            "target": sym_node_id,
+                            "kind":   "contains",
+                        })
+
+            # Compute file labels (basename without dir) on the server side
+            # so the UI can render text alongside circles without splitting
+            # paths client-side every frame.
+            import os as _os
+            for n in nodes:
+                if "label" in n:
+                    continue
+                p = n.get("path")
+                n["label"] = _os.path.basename(p) if p else "—"
+
             return {"nodes": nodes, "edges": edges,
                     "include_ghosts": include_ghosts,
+                    "include_symbols": include_symbols,
                     "node_count": len(nodes), "edge_count": len(edges)}
         finally:
             store.close()
+
+    @app.get("/file")
+    async def get_file(path: str, max_bytes: int = 200_000):
+        """Read a source file under the project root. Hard guard against
+        path traversal — every request is realpath-checked to live
+        inside the index root."""
+        import os as _os
+        real_root = _os.path.realpath(state.root)
+        candidate = _os.path.realpath(_os.path.join(real_root, path))
+        if (candidate != real_root
+                and not candidate.startswith(real_root + _os.sep)):
+            return JSONResponse(
+                {"error": "path-outside-repo", "path": path},
+                status_code=400,
+            )
+        try:
+            size = _os.path.getsize(candidate)
+        except OSError as e:
+            return JSONResponse(
+                {"error": "file-not-found", "path": path, "detail": str(e)},
+                status_code=404,
+            )
+        truncated = size > max_bytes
+        try:
+            with open(candidate, "rb") as f:
+                blob = f.read(max_bytes)
+        except OSError as e:
+            return JSONResponse(
+                {"error": "read-failed", "path": path, "detail": str(e)},
+                status_code=500,
+            )
+        try:
+            text = blob.decode("utf-8")
+        except UnicodeDecodeError:
+            # Binary or non-UTF8 file — surface the size + a hint
+            # rather than spamming the UI with mojibake.
+            return {"path": path, "binary": True, "size": size}
+        return {"path": path, "size": size, "truncated": truncated,
+                "text": text}
 
     @app.get("/lifeline/{lifeline_id}")
     async def get_lifeline(lifeline_id: str):

@@ -435,6 +435,11 @@ def open_editing_lease(
             "resolve before editing."
         )
 
+    # v2.1 skills — path-scoped cognitive instructions. Surfaced
+    # alongside guidance with a distinct prelude format.
+    from . import skills as _skills
+    skills_active = _skills.skills_for_path(store, path, trigger="on_edit")
+
     out = {
         "lease_id":     lease["lease_id"],
         "expires_at":   lease["expires_at"],
@@ -444,9 +449,12 @@ def open_editing_lease(
         "lifeline_id":  lifeline_id,
         "lease_state":  "pending_approval" if blocks else "open",
         "guidance":     guidance,
+        "skills":       skills_active,
         "history":      _history_for_lifeline(conn, lifeline_id),
         "warnings":     warnings,
     }
+    if skills_active:
+        out["skill_prelude"] = _skills.build_skill_prelude(skills_active)
     if crit_all:
         out["critical_prelude"] = _crit.build_critical_prelude(crit_all)
         out["critical_notes"] = crit_all

@@ -7090,6 +7090,79 @@ def build_parser() -> argparse.ArgumentParser:
                    help="Start the daemon but don't auto-open the browser.")
     s.set_defaults(func=cmd_ui)
 
+    # ── v2.1 skills — path-scoped cognitive instructions ────────────────────
+    s = sub.add_parser("skill",
+                       help="Path-scoped cognitive instructions. "
+                            "Verbs: add | list | list-for | attach | "
+                            "detach | edit | disable | enable | test.")
+    skub = s.add_subparsers(dest="skill_action", required=True)
+
+    sa = skub.add_parser("add", help="Author a skill.")
+    sa.add_argument("name", help="Unique skill name (e.g. lateral-thinking).")
+    sa.add_argument("--prompt", required=True,
+                    help="Body of the cognitive instruction; ≥ 8 chars.")
+    sa.add_argument("--scope", dest="scope_pattern", required=True,
+                    help="Glob pattern: 'src/payment/**', 'tests/**', '**'.")
+    sa.add_argument("--trigger", default="on_edit",
+                    choices=["on_edit", "on_read", "on_create", "always"])
+    sa.add_argument("--inject-as", dest="inject_as", default="prelude",
+                    choices=["reminder", "prelude", "system"],
+                    help="Format. reminder = soft, prelude = thinking mode "
+                         "(default), system = hard methodology override.")
+    sa.add_argument("--description", default=None)
+    sa.add_argument("--tag", action="append", default=[], dest="tags")
+    sa.add_argument("--author", default=None, dest="authored_by")
+    sa.set_defaults(func=cmd_skill)
+
+    sl = skub.add_parser("list", help="List every skill.")
+    sl.add_argument("--include-disabled", action="store_true")
+    sl.set_defaults(func=cmd_skill)
+
+    sf = skub.add_parser("list-for",
+                         help="List skills that would apply to a path.")
+    sf.add_argument("target", help="File path to check.")
+    sf.add_argument("--trigger", default=None,
+                    choices=["on_edit", "on_read", "on_create", "always"])
+    sf.set_defaults(func=cmd_skill)
+
+    sat = skub.add_parser("attach",
+                          help="Explicitly pin a skill to a path.")
+    sat.add_argument("name")
+    sat.add_argument("target", help="File path to attach the skill to.")
+    sat.set_defaults(func=cmd_skill)
+
+    sdt = skub.add_parser("detach", help="Remove an explicit pin.")
+    sdt.add_argument("name")
+    sdt.add_argument("target", help="File path to detach the skill from.")
+    sdt.set_defaults(func=cmd_skill)
+
+    se = skub.add_parser("edit", help="Update a skill's fields.")
+    se.add_argument("name")
+    se.add_argument("--prompt")
+    se.add_argument("--scope", dest="scope_pattern")
+    se.add_argument("--trigger",
+                    choices=["on_edit", "on_read", "on_create", "always"])
+    se.add_argument("--inject-as", dest="inject_as",
+                    choices=["reminder", "prelude", "system"])
+    se.add_argument("--description")
+    se.add_argument("--tag", action="append", default=None, dest="tags")
+    se.set_defaults(func=cmd_skill)
+
+    sd = skub.add_parser("disable", help="Soft-off a skill (keep its body).")
+    sd.add_argument("name")
+    sd.set_defaults(func=cmd_skill)
+
+    sen = skub.add_parser("enable", help="Re-enable a disabled skill.")
+    sen.add_argument("name")
+    sen.set_defaults(func=cmd_skill)
+
+    st = skub.add_parser("test",
+                         help="Preview whether a skill would inject for a path.")
+    st.add_argument("name")
+    st.add_argument("--on", required=True, dest="target",
+                    help="Path to test injection against.")
+    st.set_defaults(func=cmd_skill)
+
     # ── v2 Step 3: critical-note authoring + review ────────────────────────
     s = sub.add_parser("critical",
                        help="Critical notes — strongest guidance kind. "
@@ -7342,6 +7415,58 @@ def cmd_ui(args):
         _emit_error({"error": e.code, "message": str(e)},
                       getattr(args, "json", False))
         return 2
+
+
+def cmd_skill(args):
+    from projmem import skills as _sk
+    cfg, store = _open_store(args.path, allow_unindexed=True)
+    action = args.skill_action
+    try:
+        if action == "add":
+            result = _sk.add_skill(
+                store, name=args.name, prompt=args.prompt,
+                scope_pattern=args.scope_pattern, trigger=args.trigger,
+                inject_as=args.inject_as,
+                authored_by=getattr(args, "authored_by", None),
+                description=args.description,
+                tags=args.tags or (),
+            )
+        elif action == "list":
+            result = {"skills": _sk.list_skills(
+                store, include_disabled=args.include_disabled)}
+        elif action == "list-for":
+            result = {
+                "path":   args.target,
+                "skills": _sk.skills_for_path(
+                    store, args.target, trigger=args.trigger,
+                ),
+            }
+        elif action == "attach":
+            result = _sk.attach_skill(store, args.name, args.target)
+        elif action == "detach":
+            result = _sk.detach_skill(store, args.name, args.target)
+        elif action == "edit":
+            kwargs = {k: getattr(args, k, None) for k in (
+                "prompt", "scope_pattern", "trigger", "inject_as",
+                "description", "tags",
+            ) if getattr(args, k, None) is not None}
+            result = _sk.edit_skill(store, args.name, **kwargs)
+        elif action == "disable":
+            result = _sk.disable_skill(store, args.name, enabled=False)
+        elif action == "enable":
+            result = _sk.disable_skill(store, args.name, enabled=True)
+        elif action == "test":
+            result = _sk.test_skill(store, args.name, path=args.target)
+        else:
+            result = {"error": "unknown-action", "action": action}
+    except _sk.SkillError as e:
+        payload = e.envelope()
+        payload.setdefault("hint",
+                            "see `docs/v2-design.md` Pillar 3.5 (skills).")
+        _emit_error(payload, getattr(args, "json", False), store=store)
+        return 2
+    _emit(result, args.json)
+    return 0
 
 
 def cmd_critical(args):

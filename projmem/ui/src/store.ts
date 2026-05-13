@@ -23,6 +23,7 @@ interface UIState {
   selectedEvent:    DaemonEvent | null;
   selectedLifeline: string | null;
   showGhosts:       boolean;
+  showSymbols:      boolean;
   projectRoot:      string;
 
   setPaused:           (b: boolean) => void;
@@ -33,6 +34,7 @@ interface UIState {
   setSelectedEvent:    (ev: DaemonEvent | null) => void;
   setSelectedLifeline: (id: string | null) => void;
   setShowGhosts:       (b: boolean) => void;
+  setShowSymbols:      (b: boolean) => void;
   setProjectRoot:      (r: string) => void;
 }
 
@@ -44,6 +46,7 @@ export const useStore = create<UIState>((set) => ({
   selectedEvent:    null,
   selectedLifeline: null,
   showGhosts:       false,
+  showSymbols:      false,
   projectRoot:      "",
 
   setPaused:           (b) => set({ paused: b }),
@@ -59,5 +62,6 @@ export const useStore = create<UIState>((set) => ({
   setSelectedEvent:    (ev) => set({ selectedEvent: ev }),
   setSelectedLifeline: (id) => set({ selectedLifeline: id }),
   setShowGhosts:       (b) => set({ showGhosts: b }),
+  setShowSymbols:      (b) => set({ showSymbols: b }),
   setProjectRoot:      (r) => set({ projectRoot: r }),
 }));

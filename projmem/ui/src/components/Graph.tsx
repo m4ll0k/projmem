@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   forceSimulation, forceLink, forceManyBody, forceCenter, forceCollide,
   Simulation, SimulationNodeDatum, SimulationLinkDatum,
@@ -23,12 +23,14 @@ const STALENESS_COLOR: Record<string, string> = {
 };
 
 function nodeFill(n: GraphNode): string {
+  if (n.symbol) return "#fef3c7";                 // soft amber for symbols
   return STALENESS_COLOR[n.staleness] ?? "#a3a3a3";
 }
 
 function nodeStroke(n: GraphNode): string {
-  if (n.critical) return "#dc2626";
-  if (n.leased)   return "#2563eb";
+  if (n.critical)  return "#dc2626";
+  if (n.leased)    return "#2563eb";
+  if (n.symbol)    return "#d97706";
   return "#e5e5e5";
 }
 
@@ -39,16 +41,30 @@ function nodeStrokeWidth(n: GraphNode): number {
 }
 
 function nodeRadius(n: GraphNode): number {
-  if (n.ghost) return 3;
-  return 4 + Math.min(10, Math.log2(1 + n.rev_deps) * 1.6);
+  if (n.symbol) return 3.5;
+  if (n.ghost)  return 3;
+  return 5 + Math.min(12, Math.log2(1 + n.rev_deps) * 1.8);
 }
 
 function edgeColor(e: GraphEdge): string {
-  return e.kind === "replaced_by" ? "#a3a3a3" : "#cbd5e1";
+  if (e.kind === "replaced_by") return "#a3a3a3";
+  if (e.kind === "contains")    return "#fbbf24";
+  return "#cbd5e1";
 }
 
 function edgeDash(e: GraphEdge): string {
-  return e.kind === "replaced_by" ? "4 4" : "";
+  if (e.kind === "replaced_by") return "4 4";
+  if (e.kind === "contains")    return "2 3";
+  return "";
+}
+
+function edgeWidth(e: GraphEdge): number {
+  return e.kind === "contains" ? 0.8 : 1.2;
+}
+
+function truncLabel(s: string, max = 22): string {
+  if (s.length <= max) return s;
+  return s.slice(0, max - 1) + "…";
 }
 
 // ── Simulation typing ──────────────────────────────────────────────────────
@@ -64,19 +80,21 @@ export function GraphView() {
 
   const showGhosts          = useStore((s) => s.showGhosts);
   const setShowGhosts       = useStore((s) => s.setShowGhosts);
+  const showSymbols         = useStore((s) => s.showSymbols);
+  const setShowSymbols      = useStore((s) => s.setShowSymbols);
   const setSelectedLifeline = useStore((s) => s.setSelectedLifeline);
 
   const [nodes, setNodes] = useState<GraphNode[]>([]);
   const [edges, setEdges] = useState<GraphEdge[]>([]);
+  const [zoomLevel, setZoomLevel] = useState(1);
   const [loading, setLoading] = useState(false);
   const [warning, setWarning] = useState<string | null>(null);
   const simRef = useRef<Simulation<SimNode, SimLink> | null>(null);
 
-  // Fetch graph data + ghost-toggle reactively.
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    api.graph(showGhosts)
+    api.graph(showGhosts, showSymbols)
       .then((g) => {
         if (cancelled) return;
         setNodes(g.nodes);
@@ -90,11 +108,8 @@ export function GraphView() {
       .catch((e) => !cancelled && setWarning(String(e)))
       .finally(() => !cancelled && setLoading(false));
     return () => { cancelled = true; };
-  }, [showGhosts]);
+  }, [showGhosts, showSymbols]);
 
-  // Run the force simulation + render every tick. We build SimNode + SimLink
-  // arrays from the props; d3-force mutates them in place with x/y. The
-  // result is read back inside the tick handler to update SVG transforms.
   useEffect(() => {
     if (!svgRef.current || !innerGRef.current) return;
     if (nodes.length === 0) {
@@ -104,15 +119,20 @@ export function GraphView() {
     }
 
     const simNodes: SimNode[] = nodes.map((n) => ({ ...n }));
-    const idIndex = new Map(simNodes.map((n, i) => [n.id, i]));
+    const idIndex = new Map(simNodes.map((n) => [n.id, n]));
     const simLinks: SimLink[] = edges
       .filter((e) => idIndex.has(e.source) && idIndex.has(e.target))
       .map((e) => ({ source: e.source, target: e.target, kind: e.kind }));
 
+    // 'contains' edges keep symbols close to their parent file; other
+    // edges use the default distance.
     const sim = forceSimulation<SimNode, SimLink>(simNodes)
       .force("link", forceLink<SimNode, SimLink>(simLinks)
-        .id((d) => d.id).distance(28).strength(0.6))
-      .force("charge", forceManyBody().strength(-80))
+        .id((d) => d.id)
+        .distance((l) => (l.kind === "contains" ? 12 : 32))
+        .strength((l) => (l.kind === "contains" ? 0.95 : 0.6)))
+      .force("charge", forceManyBody().strength((d: any) =>
+        (d as GraphNode).symbol ? -25 : -90))
       .force("collide", forceCollide<SimNode>().radius((d) => nodeRadius(d) + 2))
       .force("center", forceCenter(0, 0))
       .alpha(1)
@@ -128,21 +148,29 @@ export function GraphView() {
 
     const linkSel = linkG.selectAll("line").data(simLinks).join("line")
       .attr("stroke", (d: any) => edgeColor(d))
-      .attr("stroke-width", 1.2)
+      .attr("stroke-width", (d: any) => edgeWidth(d))
       .attr("stroke-dasharray", (d: any) => edgeDash(d));
 
-    const nodeSel = nodeG.selectAll<SVGCircleElement, SimNode>("circle")
+    const node = nodeG.selectAll<SVGGElement, SimNode>("g.node")
       .data(simNodes, (d) => d.id)
-      .join("circle")
-      .attr("r", (d) => nodeRadius(d))
-      .attr("fill", (d) => nodeFill(d))
-      .attr("fill-opacity", (d) => d.ghost ? 0.35 : 1)
-      .attr("stroke", (d) => nodeStroke(d))
-      .attr("stroke-width", (d) => nodeStrokeWidth(d))
+      .join("g")
+      .attr("class", "node")
       .style("cursor", "pointer")
-      .on("click", (_event, d) => setSelectedLifeline(d.id))
+      .on("click", (_event, d) => {
+        // Symbol nodes select their parent file's lifeline; file
+        // nodes select themselves.
+        if (d.symbol && d.path) {
+          // Look up parent lifeline by path.
+          const parent = simNodes.find(
+            (m) => !m.symbol && m.path === d.path,
+          );
+          if (parent) setSelectedLifeline(parent.id);
+        } else {
+          setSelectedLifeline(d.id);
+        }
+      })
       .call(
-        drag<SVGCircleElement, SimNode>()
+        drag<SVGGElement, SimNode>()
           .on("start", (event, d) => {
             if (!event.active) sim.alphaTarget(0.3).restart();
             d.fx = d.x; d.fy = d.y;
@@ -154,7 +182,30 @@ export function GraphView() {
           })
       );
 
-    nodeSel.append("title").text((d) => `${d.path ?? "(tombstoned)"}\n${d.staleness}`);
+    node.append("circle")
+      .attr("r", (d) => nodeRadius(d))
+      .attr("fill", (d) => nodeFill(d))
+      .attr("fill-opacity", (d) => d.ghost ? 0.35 : 1)
+      .attr("stroke", (d) => nodeStroke(d))
+      .attr("stroke-width", (d) => nodeStrokeWidth(d));
+
+    node.append("title").text((d) => {
+      if (d.symbol) return `${d.symbol_kind ?? "symbol"} ${d.label} — ${d.path}:${d.line}`;
+      return `${d.path ?? "(tombstoned)"}\n${d.staleness}`;
+    });
+
+    // Labels: alongside the node, not centered (centered text on small
+    // circles is unreadable). Symbol nodes get italic labels.
+    node.append("text")
+      .attr("class", "node-label")
+      .attr("x", (d) => nodeRadius(d) + 3)
+      .attr("y", 3)
+      .attr("font-size", (d) => d.symbol ? 8 : 10)
+      .attr("font-family", "ui-monospace, SFMono-Regular, monospace")
+      .attr("fill", (d) => d.symbol ? "#92400e" : "#0a0a0a")
+      .attr("font-style", (d) => d.symbol ? "italic" : "normal")
+      .attr("pointer-events", "none")
+      .text((d) => truncLabel(d.label, d.symbol ? 18 : 26));
 
     sim.on("tick", () => {
       linkSel
@@ -162,45 +213,63 @@ export function GraphView() {
         .attr("y1", (d: any) => (d.source as SimNode).y ?? 0)
         .attr("x2", (d: any) => (d.target as SimNode).x ?? 0)
         .attr("y2", (d: any) => (d.target as SimNode).y ?? 0);
-      nodeSel
-        .attr("cx", (d) => d.x ?? 0)
-        .attr("cy", (d) => d.y ?? 0);
+      node.attr("transform",
+        (d) => `translate(${d.x ?? 0}, ${d.y ?? 0})`);
     });
 
-    // Pan + zoom — the inner <g> gets the transform.
-    const zoomBehavior: ZoomBehavior<SVGSVGElement, unknown> = zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.2, 8])
-      .on("zoom", (event) => {
-        inner.attr("transform", event.transform.toString());
-      });
+    const zoomBehavior: ZoomBehavior<SVGSVGElement, unknown> =
+      zoom<SVGSVGElement, unknown>()
+        .scaleExtent([0.1, 12])
+        .on("zoom", (event) => {
+          inner.attr("transform", event.transform.toString());
+          setZoomLevel(event.transform.k);
+        });
     select(svgRef.current).call(zoomBehavior);
     select(svgRef.current).call(zoomBehavior.transform, zoomIdentity);
 
-    return () => {
-      sim.stop();
-    };
+    return () => { sim.stop(); };
   }, [nodes, edges, setSelectedLifeline]);
+
+  // Hide labels at very low zoom so the canvas stays readable.
+  useEffect(() => {
+    if (!innerGRef.current) return;
+    const labels = innerGRef.current.querySelectorAll("text.node-label");
+    const visible = zoomLevel >= 0.7;
+    labels.forEach((el) => {
+      (el as SVGTextElement).style.display = visible ? "" : "none";
+    });
+  }, [zoomLevel, nodes]);
 
   return (
     <div className="relative h-full w-full bg-white overflow-hidden">
       <svg ref={svgRef} className="absolute inset-0 w-full h-full"
-           viewBox="-300 -300 600 600"
+           viewBox="-400 -300 800 600"
            preserveAspectRatio="xMidYMid meet">
         <g ref={innerGRef} />
       </svg>
-      <div className="absolute top-2 right-2 flex items-center gap-2 rounded bg-white/90 border border-line px-2 py-1 text-xs shadow-sm">
+      <div className="absolute top-2 right-2 flex items-center gap-3 rounded bg-white/90 border border-line px-2 py-1 text-xs shadow-sm">
+        <label className="flex items-center gap-1 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showSymbols}
+            onChange={(e) => setShowSymbols(e.target.checked)}
+          />
+          <span>show symbols</span>
+        </label>
         <label className="flex items-center gap-1 cursor-pointer">
           <input
             type="checkbox"
             checked={showGhosts}
             onChange={(e) => setShowGhosts(e.target.checked)}
           />
-          <span>show ghost nodes</span>
+          <span>show ghosts</span>
         </label>
         <span className="text-muted">·</span>
         <span className="font-mono text-muted">
           {nodes.length}n / {edges.length}e
         </span>
+        <span className="text-muted">·</span>
+        <span className="font-mono text-muted">{zoomLevel.toFixed(1)}×</span>
       </div>
       {loading && (
         <div className="absolute bottom-2 left-2 text-xs text-muted bg-white/80 px-2 py-1 rounded">
@@ -217,6 +286,15 @@ export function GraphView() {
           no lifelines yet — `projmem index` to populate
         </div>
       )}
+      <div className="absolute top-2 left-2 rounded bg-white/90 border border-line px-2 py-1 text-[10px] shadow-sm space-y-0.5 max-w-[180px]">
+        <div className="font-semibold tracking-tight">Legend</div>
+        <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full" style={{background:"#16a34a"}}/> fresh</div>
+        <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full" style={{background:"#d97706"}}/> stale</div>
+        <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full" style={{background:"#dc2626"}}/> contradicted</div>
+        <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full border-2" style={{background:"#fff", borderColor:"#dc2626"}}/> critical</div>
+        <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full border-2" style={{background:"#fff", borderColor:"#2563eb"}}/> leased</div>
+        <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-full italic" style={{background:"#fef3c7", border:"1px solid #d97706"}}/> symbol</div>
+      </div>
     </div>
   );
 }

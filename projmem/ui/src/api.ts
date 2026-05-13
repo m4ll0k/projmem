@@ -30,9 +30,18 @@ async function postJSON<T>(path: string, body?: unknown): Promise<T> {
 export const api = {
   state:    () => getJSON<DaemonState>("/state"),
   healthz:  () => getJSON<{ ok: boolean }>("/healthz"),
-  graph:    (includeGhosts: boolean) =>
-    getJSON<GraphPayload>(`/graph?include_ghosts=${includeGhosts ? 1 : 0}`),
+  graph:    (includeGhosts: boolean, includeSymbols: boolean = false) =>
+    getJSON<GraphPayload>(
+      `/graph?include_ghosts=${includeGhosts ? 1 : 0}` +
+      `&include_symbols=${includeSymbols ? 1 : 0}`,
+    ),
   lifeline: (id: string) => getJSON<LifelineDetail>(`/lifeline/${id}`),
+  file:     (path: string) =>
+    getJSON<{path: string; text?: string; binary?: boolean; size?: number; truncated?: boolean}>(
+      `/file?path=${encodeURIComponent(path)}`,
+    ),
+  addNote:  (payload: {target: string; body: string; kind?: string; severity?: string}) =>
+    postJSON<{id: number}>("/notes", payload),
   pause:    () => postJSON("/control/pause"),
   resume:   () => postJSON("/control/resume"),
   approve:  (lease: string) => postJSON(`/control/approve/${lease}`),

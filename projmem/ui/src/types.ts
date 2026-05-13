@@ -52,13 +52,17 @@ export type Staleness =
   | "unknown";
 
 export interface GraphNode {
-  id:                string;          // lifeline_id (UUID)
+  id:                string;          // lifeline_id OR `sym:<file>:<name>:<line>`
   path:              string | null;   // current_path; null possible for ghosts
+  label:             string;          // basename for files, symbol name for symbols
   staleness:         Staleness;
   critical:          boolean;
   rev_deps:          number;
   leased:            boolean;
   ghost:             boolean;
+  symbol?:           boolean;
+  symbol_kind?:      string;          // "function" | "class" | "method" | …
+  line?:             number;
   tombstoned_at?:    number | null;
   tombstoned_reason?: string | null;
 }
