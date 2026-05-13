@@ -371,6 +371,9 @@ projmem notes          # shows what you found, AND whether any belief is now con
 | PyPI package                          | planned   | Today: `pip install -e .` from clone. Soon: `pip install projmem` |
 | Codex driver in benchmark harness     | planned   | Currently Claude-only on the bench; Codex driver wired but unrun |
 | `note_add` MCP tool with prose form   | planned   | MCP currently exposes `note_add` with structured args; should accept prose too |
+| Skills (v2.1)                         | designed  | Path-scoped cognitive instructions — teach projmem how you think, and it'll remind your AI agent to think that way every time it touches the right code. Spec in `docs/v2-design.md` Pillar 3.5. |
+
+> **Coming in v2.1: skills — path-scoped cognitive instructions.** Teach projmem how you think, and it'll remind your AI agent to think that way every time it touches the right code.
 
 ---
 

@@ -72,6 +72,95 @@ Critical notes also propagate: when computing guidance for a file, the system wa
 
 Authoring also has review cadence. Every critical note has `last_reviewed_at` and a configurable review window (default 90 days). Past the window, the UI surfaces "review needed." Not invalid — flagged. A human re-confirms or amends. The verifier can check whether the symbols still exist; it cannot check whether the *reasoning* is still right. Only humans can. projmem at least makes sure the human is reminded.
 
+### Pillar 3.5: Skills — path-scoped cognitive instructions (v2.1)
+
+A fifth payload type, parked explicitly for **v2.1** so v2.0 stays
+scoped. Listed here so the schema + the editing-response shape leave
+room from day one.
+
+**What they are.** A skill is not a fact about the code (`note`),
+context about what to watch out for (`guidance`), or a load-bearing
+warning (`critical`). It's a **reusable cognitive instruction** — a
+prompt fragment that tells the agent *how to think* when working in a
+particular zone of the codebase. Examples: `src/payment/**` → "Use
+lateral thinking. Question every assumption. This file has caused 4
+production incidents; if your first solution feels obvious, it's
+wrong." `src/parsers/**` → "Think adversarially. For every input
+format, ask what a malicious input would look like." `migrations/**`
+→ "Forward-only. Never edit an already-applied migration; new
+problems get new migrations."
+
+**Why it's a separate kind, not just a note.** The injection
+*semantics* differ. Notes are facts the verifier checks; guidance is
+advice surfaced at edit time; critical is a hard prelude that may
+block. Skills are **mindsets** — they shape Claude's reasoning style
+for the duration of a lease and render as a `🧠 Cognitive mode` (or
+`⚙ Methodology override`) block distinct from `[guidance]` notes.
+Different verbs too (`skill add/attach/detach/list/test/disable`),
+because skills are project-wide reusables with their own lifecycle
+while notes are one-off observations. Conflating them dilutes both.
+
+**Why this becomes a multiplier.** Once skills are first-class, they
+share between projects: `projmem skill import lateral-thinking`,
+`projmem skill export team-skills.json`. The community publishes
+`rails-convention-skills`, `secure-coding-skills`,
+`acme-corp-style-skills`. Each is a versioned, scope-targeted prompt
+fragment. Nobody has a sharable, scope-aware library of AI thinking
+modes — that's the gap skills fill. It's also what turns projmem
+from a tool into a substrate that Cursor Rules / Continue config /
+team prompt-libs should be built on, because nothing else has scope
++ lifelines + a PreToolUse injection point in one place.
+
+**Schema sketch** (additive in v2.1; nothing in v2.0 blocks it):
+
+```
+skill (
+  id            uuid pk,
+  name          text unique not null,        -- "lateral-thinking"
+  prompt        text not null,                -- the injection body
+  scope_pattern text not null,                -- glob "src/payment/**"
+  trigger       enum (on_edit | on_read | on_create | always),
+  inject_as     enum (reminder | prelude | system),
+  authored_by   user_id,
+  created_at    timestamp,
+  description   text,
+  tags          text[],
+  enabled       bool default true
+)
+skill_attachment (
+  skill_id      uuid fk,
+  lifeline_id   uuid fk | null,    -- null = pattern-based attach
+  added_at      timestamp
+)
+```
+
+Two attach modes: pattern-based (the common case) and per-lifeline
+(the override). The `editing` response gains a `skills[]` field
+alongside `guidance[]`; the hook prelude renders them distinctly so
+the agent tells "how to think" apart from "what to know."
+
+**Injection formats** (chosen via `inject_as`):
+
+- **Reminder** — `💡 Skill active: boy-scout-rule` (soft prefs).
+- **Prelude** — `🧠 Cognitive mode: lateral-thinking` (thinking modes).
+- **System** — `⚙ Methodology override: red-team-parser` (hard
+  methodology; the strongest tier).
+
+**Out of scope for v2.0.** Don't implement; design the schema so
+the v2.1 add is a feature flip, not a migration. v2.1 narrative
+becomes: *"You learned to use projmem to capture facts, guidance,
+and critical warnings. Now teach it how you think."*
+
+**Bonus v2.1 ideas that fall out for free**: skill conflicts +
+composition (skills declare `conflicts_with` / `composes_with`); skill
+effectiveness metrics (cross-reference injection log with edit-revert
+rate to rank skills empirically); skill-suggested guidance (a skill
+includes trigger questions that the agent must answer in `projmem
+done <lease> --reason "..."`, validated server-side before `done`
+accepts).
+
+---
+
 ### Pillar 4: The CLAUDE.md constitution
 
 CLAUDE.md changes from polite suggestions to a constitution. Imperatives only:
