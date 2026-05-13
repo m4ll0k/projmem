@@ -102,11 +102,39 @@ export function HelpModal({ open, onClose }: {
             </ul>
           </Section>
 
-          <Section title="What the agent sees (Claude / Codex / Gemini …)">
+          <Section title="Pick your agent — projmem speaks all of them">
             <p>
-              Tell your agent to call <span className="font-mono">projmem</span> before
-              editing. The two key commands:
+              <span className="font-mono">projmem init &lt;agent&gt;</span> drops the
+              right instruction file(s) for whatever assistant you use. The
+              agent then knows to call projmem before editing.
             </p>
+            <div className="overflow-x-auto mt-1.5">
+              <table className="text-[11px] font-mono w-full">
+                <thead className="text-muted">
+                  <tr className="text-left">
+                    <th className="pr-3 pb-1 font-normal">init flag</th>
+                    <th className="pr-3 pb-1 font-normal">drops</th>
+                    <th className="pb-1 font-normal">for</th>
+                  </tr>
+                </thead>
+                <tbody className="text-ink">
+                  <tr><td className="pr-3 py-0.5">claude</td>     <td className="pr-3">CLAUDE.md</td>      <td>Claude Code · Anthropic API · MCP</td></tr>
+                  <tr><td className="pr-3 py-0.5">codex</td>      <td className="pr-3">AGENTS.md</td>      <td>OpenAI Codex CLI</td></tr>
+                  <tr><td className="pr-3 py-0.5">gemini</td>     <td className="pr-3">GEMINI.md</td>      <td>Gemini CLI · Code Assist</td></tr>
+                  <tr><td className="pr-3 py-0.5">cursor</td>     <td className="pr-3">.cursorrules</td>   <td>Cursor editor</td></tr>
+                  <tr><td className="pr-3 py-0.5">copilot</td>    <td className="pr-3">.github/copilot-instructions.md</td><td>GitHub Copilot</td></tr>
+                  <tr><td className="pr-3 py-0.5">aider</td>      <td className="pr-3">AGENTS.md</td>      <td>aider · droid · trae · hermes · openclaw</td></tr>
+                  <tr><td className="pr-3 py-0.5">opencode</td>   <td className="pr-3">opencode.md</td>    <td>OpenCode</td></tr>
+                  <tr><td className="pr-3 py-0.5">antigravity</td><td className="pr-3">antigravity.md</td><td>Antigravity</td></tr>
+                  <tr><td className="pr-3 py-0.5">kiro</td>       <td className="pr-3">.kiro/steering/</td><td>Kiro</td></tr>
+                  <tr><td className="pr-3 py-0.5">all</td>        <td className="pr-3">every file above</td><td>multi-agent setup</td></tr>
+                  <tr><td className="pr-3 py-0.5 text-accent">auto</td><td className="pr-3 text-accent">picks from env vars</td><td className="text-accent">default if you omit the flag</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </Section>
+
+          <Section title="The CLI surface (what your agent calls)">
             <pre className="bg-code-bg border border-line rounded p-2 text-[11px]
                             font-mono leading-relaxed overflow-x-auto mt-1.5">
 {`# Announce intent + receive context (notes, guidance, critical, history, exclusions).
@@ -114,6 +142,9 @@ projmem editing path/to/file.py --reason "fix race in poller"
 
 # Read-only briefing without opening a lease.
 projmem context path/to/file.py
+
+# Line-precise context (file:line).
+projmem at path/to/file.py:42
 
 # Pin a fact during the session.
 projmem note add path/to/file.py "imports run() from helpers.py"
@@ -123,10 +154,11 @@ projmem done <lease-id>`}
             </pre>
             <p className="text-xs text-muted">
               The <span className="font-mono">editing</span> response surfaces the
-              highest-leverage context first: line-scoped notes for the file,
-              then file notes, then directory notes, then project-wide notes.
-              An exclusion or critical rule shows up in <span className="font-mono">warnings[]</span> so
-              the agent can't miss it.
+              highest-leverage context first: line-scoped notes &gt; symbol &gt;
+              file &gt; dir &gt; project-wide. Critical rules and exclusions
+              show up in <span className="font-mono">warnings[]</span> so the
+              agent can't miss them, and a pending-approval lease blocks the
+              edit until you click <i>approve</i> in this UI.
             </p>
           </Section>
 
@@ -182,15 +214,42 @@ projmem done <lease-id>`}
             </ul>
           </Section>
 
-          <Section title="Quick start in one line">
+          <Section title="Quick start">
+            <p className="mb-1.5">
+              <b>Fresh project</b> — drop instructions for your agent, build
+              the index, open the UI:
+            </p>
             <pre className="bg-code-bg border border-line rounded p-2 text-[11px]
                             font-mono overflow-x-auto">
-{`projmem init && projmem index && projmem ui`}
+{`cd path/to/your/repo
+projmem init claude       # or codex / gemini / cursor / copilot / all / auto
+projmem index
+projmem ui --port 7777`}
             </pre>
-            <p className="text-xs text-muted">
-              Then tell your agent: "before editing any file, run
-              <span className="font-mono"> projmem editing &lt;file&gt; --reason &lt;why&gt;</span> and
-              read the warnings + guidance it returns."
+            <p className="mt-2.5 mb-1.5">
+              <b>Existing project</b> — the repo already has a
+              <span className="font-mono"> .projmem/</span> dir, you just want
+              to refresh:
+            </p>
+            <pre className="bg-code-bg border border-line rounded p-2 text-[11px]
+                            font-mono overflow-x-auto">
+{`projmem init claude --reindex   # or just: projmem index --force
+projmem ui --port 7777`}
+            </pre>
+            <p className="mt-2.5 mb-1.5">
+              <b>Switching agents</b> or running multiple at once — overwrite
+              with <span className="font-mono">--force</span>, or drop every
+              instruction file in one shot:
+            </p>
+            <pre className="bg-code-bg border border-line rounded p-2 text-[11px]
+                            font-mono overflow-x-auto">
+{`projmem init all --force         # CLAUDE.md + AGENTS.md + GEMINI.md + .cursorrules + …
+projmem init gemini --force      # just swap to a different one`}
+            </pre>
+            <p className="text-xs text-muted mt-2">
+              Once the instruction file is in place your agent will read it on
+              every session and call <span className="font-mono">projmem editing</span> before
+              touching files. You don't need to remind it each turn.
             </p>
           </Section>
 
