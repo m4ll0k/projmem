@@ -107,6 +107,21 @@ body {
 [data-theme="dark"] .hljs-variable,
 [data-theme="dark"] .hljs-params   { color: #f9a8d4; }
 
+/* d3-rendered SVG labels. Inheriting via currentColor + a CSS rule
+ * means theme switching repaints them without re-running the d3
+ * simulation. `.node-label` already uses currentColor (= var(--ink)
+ * via the parent svg's text-ink class). Symbol labels override to
+ * the warm-orange semantic color so they read as "this is a function
+ * or class inside a file, not the file itself." */
+.node-label-symbol { color: var(--warn); }
+
+/* The hierarchical schema view's labels follow the same convention.
+ * Files dim slightly so directories read as the navigational layer. */
+svg.text-ink text { fill: currentColor; }
+.schema-label-dir   { color: var(--ink); }
+.schema-label-file  { color: var(--muted); }
+.schema-label-root  { color: var(--accent); font-weight: 700; }
+
 /* Subtle scrollbars, dark + light */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb {

@@ -256,18 +256,21 @@ export function GraphSchema() {
         }
       });
 
+    // The line + critical/leased colors come from CSS vars so they
+    // reflow on theme change without re-running the layout. Section
+    // colors are vibrant enough to read on both themes.
     nodeSel.append("circle")
       .attr("r", (d) => nodeRadius(d.data.kind))
       .attr("fill", (d) => {
-        if (d.data.kind === "root") return "#71717a";
+        if (d.data.kind === "root") return "var(--muted)";
         return sectionColor(topLevel(d.data.path));
       })
       .attr("fill-opacity", (d) => d.data.kind === "file" ? 1 : 0.55)
       .attr("stroke", (d) => {
         const n = d.data.node;
-        if (n?.critical) return "#dc2626";
-        if (n?.leased)   return "#2563eb";
-        return "#e5e5e5";
+        if (n?.critical) return "var(--bad)";
+        if (n?.leased)   return "var(--accent)";
+        return "var(--line)";
       })
       .attr("stroke-width", (d) => {
         const n = d.data.node;
@@ -282,8 +285,12 @@ export function GraphSchema() {
     const truncName = (s: string, max: number = 40): string =>
       s.length <= max ? s : s.slice(0, max - 1) + "…";
 
+    // Labels — directories get the strong `--ink` color, files get
+    // a slightly dimmer one so dirs read as the structural element.
+    // currentColor inherits from the SVG's text-ink class so theme
+    // switches re-paint instantly without re-running layout.
     nodeSel.append("text")
-      .attr("class", "node-label")
+      .attr("class", (d) => "node-label schema-label-" + d.data.kind)
       .attr("dy", 4)
       .attr("x", (d) => nodeRadius(d.data.kind) + 6)
       .attr("text-anchor", "start")
@@ -376,16 +383,16 @@ export function GraphSchema() {
       if (!circle) return;
       if (isLive || isSelected) {
         circle.setAttribute("r", "7");
-        circle.setAttribute("stroke", "#2563eb");
+        circle.setAttribute("stroke", "var(--accent)");
         circle.setAttribute("stroke-width", "3");
       } else if (isHovered) {
         circle.setAttribute("r", kind === "file" ? "4.5" : "5");
-        circle.setAttribute("stroke", "#2563eb");
+        circle.setAttribute("stroke", "var(--accent)");
         circle.setAttribute("stroke-width", "1.5");
       } else {
         circle.setAttribute(
           "r", kind === "root" ? "5" : kind === "dir" ? "4" : "3.5");
-        circle.setAttribute("stroke", "#e5e5e5");
+        circle.setAttribute("stroke", "var(--line)");
         circle.setAttribute("stroke-width", "1");
       }
 

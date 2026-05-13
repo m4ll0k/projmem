@@ -423,13 +423,19 @@ export function GraphView() {
              "\n\n(drag = pin · double-click = unpin)";
     });
 
+    // Labels use `currentColor` so they inherit the SVG's text color,
+    // which we drive from a Tailwind theme class. Switching themes
+    // re-paints labels instantly without rebuilding the simulation.
+    // Symbols get a CSS class instead of an inline color for the same
+    // reason — `.node-label-symbol` resolves to var(--warn) in both
+    // themes, which is the warm-orange semantic token.
     node.append("text")
-      .attr("class", "node-label")
+      .attr("class", (d) => "node-label" + (d.symbol ? " node-label-symbol" : ""))
       .attr("x", (d) => nodeRadius(d) + 3)
       .attr("y", 3)
       .attr("font-size", (d) => d.symbol ? 8 : 10)
       .attr("font-family", "ui-monospace, SFMono-Regular, monospace")
-      .attr("fill", (d) => d.symbol ? palette.warn : palette.ink)
+      .attr("fill", "currentColor")
       .attr("font-style", (d) => d.symbol ? "italic" : "normal")
       .attr("pointer-events", "none")
       .text((d) => truncLabel(d.label, d.symbol ? 18 : 30));
@@ -689,7 +695,11 @@ export function GraphView() {
 
   return (
     <div className="relative h-full w-full bg-bg overflow-hidden">
-      <svg ref={svgRef} className="absolute inset-0 w-full h-full"
+      {/* text-ink on the SVG sets currentColor for every label inside,
+          including the d3-rendered <text> elements. CSS rule in
+          index.css overrides for `.node-label-symbol` so symbol
+          labels resolve to var(--warn) instead. */}
+      <svg ref={svgRef} className="absolute inset-0 w-full h-full text-ink"
            viewBox="-400 -300 800 600"
            preserveAspectRatio="xMidYMid meet">
         <g ref={innerGRef} />
