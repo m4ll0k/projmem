@@ -16,6 +16,21 @@
 
 ---
 
+## Start every prompt with `pj:`
+
+That's the entire conversational protocol. Begin a message to Claude / Codex / Gemini / Cursor / Continue with `pj:` and the agent's first tool call **must** be `projmem context` or `projmem editing`, not Edit / Read / Bash. Warnings (`OUT OF SCOPE`, `CRITICAL`) halt the agent at the planning stage so the user sees them before any code moves.
+
+```
+You:    pj: delete tests/fixtures/sample_project/cli/main.py
+Agent:  → runs projmem context first
+        → sees CRITICAL: "never delete this file — load-bearing reducer"
+        → halts and asks
+```
+
+The `pj:` rule is baked into every `projmem init <agent>` template — once you've run it, the agent picks it up on every new session, no reminder needed.
+
+---
+
 ## Why this exists
 
 Every AI coding tool today has the same failure mode:
@@ -120,6 +135,31 @@ projmem init all --force   # drops CLAUDE.md + AGENTS.md + GEMINI.md + .cursorru
 | `auto` | picks from env vars | default if you omit the flag |
 
 Then tell your agent something like: `pj: add a /healthz endpoint`. The `pj:` prefix is the conversational protocol baked into every instruction file — the agent's first tool call must be `projmem context` or `projmem editing`, not Edit/Read/Bash.
+
+---
+
+## Screenshots
+
+<div align="center">
+
+<img src="./assets/screenshots/ui-overview.png" width="900" alt="projmem UI — activity feed, graph, inspector" />
+
+*The live UI: activity feed on the left, tree/graph/schema in the center, inspector on the right.*
+
+<br/><br/>
+
+<table>
+<tr>
+<td width="50%"><img src="./assets/screenshots/graph.png" alt="force-directed graph" /><br/><em>Force-directed graph with directory clustering</em></td>
+<td width="50%"><img src="./assets/screenshots/inspector-code.png" alt="line-annotation menu" /><br/><em>Code tab — click a gutter line number to add note · guidance · critical</em></td>
+</tr>
+<tr>
+<td><img src="./assets/screenshots/inspector-notes.png" alt="notes inspector with line badges" /><br/><em>Notes tab with line-scoped badges and staleness indicators</em></td>
+<td><img src="./assets/screenshots/help-modal.png" alt="orientation popup" /><br/><em>First-run help popup explains every section</em></td>
+</tr>
+</table>
+
+</div>
 
 ---
 

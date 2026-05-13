@@ -340,19 +340,28 @@ For every tool call the hook:
 
 ## The `pj:` convention
 
-Every instruction template (CLAUDE.md / AGENTS.md / GEMINI.md) ships with this section:
+**This is the simplest thing in the whole tool.** Start any prompt to your agent with `pj:` and it switches into projmem-first mode: the first tool call **must** be `projmem context` or `projmem editing`, not Edit / Read / Bash. The agent reads warnings (`OUT OF SCOPE`, `CRITICAL`) and halts at the planning stage if any fire.
 
-> When the user begins a message with `pj:` (e.g. `pj: delete src/foo.py`,
-> `pj: implement caching in handlers.py`), that is an explicit instruction
-> to consult projmem **before** doing anything else. The agent's first
-> tool call **must** be `projmem context` or `projmem editing`, not Edit,
-> Read, or Bash.
+### Examples
 
-Use it whenever you want the agent to plan with projmem-checked context. Example:
+```
+pj: refactor the auth module to use httpOnly cookies
+pj: delete tests/fixtures/old_format.json
+pj: explain how the reducer in store/cart.ts handles partial updates
+pj: rename `verify_token` to `verify_jwt` across the codebase
+```
 
-> **You:** `pj: delete tests/fixtures/sample_project/cli/main.py`
->
-> **Agent:** *runs `projmem context tests/fixtures/sample_project/cli/main.py` first* → sees `CRITICAL: never delete this file` → halts and asks.
+For each one, the agent's first action is `projmem context <relevant_file>` (or `projmem editing` if it intends to modify), gets the notes/guidance/critical/exclusion bundle, then plans.
+
+### What's special about `pj:`
+
+- **It's a plain-text trigger.** No subcommand, no installation, no flag — just two characters and a colon. Works in every chat / CLI / IDE that takes prose.
+- **It's baked into every `projmem init <agent>` template** (CLAUDE.md / AGENTS.md / GEMINI.md / .cursorrules / …). Once you've run init, the agent reads it at session start and follows it automatically.
+- **It complements the hook, doesn't replace it.** The PreToolUse hook is the safety net that fires at tool-call time. `pj:` shifts the same check earlier — to **planning time** — so the user sees the warning before a tool call is even attempted.
+
+### Why two letters
+
+Because friction matters. `pj:` is the shortest unambiguous prefix; `projmem:` works too but takes seven keystrokes you'd skip half the time. We tested `m:` and `p:` against this codebase's existing prompts — too many false matches. `pj:` is short, unique, and survives autocomplete.
 
 The hook is the safety net; `pj:` is the planning shortcut.
 
