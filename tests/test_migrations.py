@@ -234,3 +234,88 @@ def test_store_reopen_does_not_reapply_migrations(tmp_path):
         assert _table_exists(s2.conn, "file_lifeline")
     finally:
         s2.close()
+
+
+# ---------- upsert_file auto-creates lifelines for new files ----------------
+
+def test_upsert_file_creates_lifeline_for_new_file(tmp_path):
+    """A fresh `projmem index` adds files AFTER the migration runs, so the
+    backfill phase sees zero rows. `Store.upsert_file` must close that gap
+    by ensuring every newly-indexed path gets a lifeline + 'created' event.
+    """
+    db_path = str(tmp_path / ".projmem" / "index.db")
+    store = Store(db_path)
+    try:
+        store.upsert_file("src/new.py", "py", "h", time.time(), 1, "ast")
+        store.conn.commit()
+        row = store.conn.execute(
+            "SELECT lifeline_id FROM files WHERE path=?", ("src/new.py",),
+        ).fetchone()
+        assert row["lifeline_id"], "files row missing lifeline_id"
+        ll = store.conn.execute(
+            "SELECT current_path, created_reason FROM file_lifeline "
+            "WHERE id=?", (row["lifeline_id"],),
+        ).fetchone()
+        assert ll["current_path"] == "src/new.py"
+        assert ll["created_reason"] == "indexed — no explicit creation event"
+        # Matching 'created' event.
+        ev = store.conn.execute(
+            "SELECT kind FROM file_event WHERE lifeline_id=?",
+            (row["lifeline_id"],),
+        ).fetchone()
+        assert ev["kind"] == "created"
+    finally:
+        store.close()
+
+
+def test_upsert_file_is_idempotent_for_lifeline(tmp_path):
+    """Re-indexing the same path must NOT create a second lifeline."""
+    db_path = str(tmp_path / ".projmem" / "index.db")
+    store = Store(db_path)
+    try:
+        store.upsert_file("src/same.py", "py", "h1", time.time(), 1, "ast")
+        store.upsert_file("src/same.py", "py", "h2", time.time(), 2, "ast")
+        store.upsert_file("src/same.py", "py", "h3", time.time(), 3, "ast")
+        store.conn.commit()
+        n = store.conn.execute(
+            "SELECT COUNT(*) FROM file_lifeline WHERE current_path=?",
+            ("src/same.py",),
+        ).fetchone()[0]
+        assert n == 1
+        events = store.conn.execute(
+            "SELECT COUNT(*) FROM file_event WHERE kind='created'"
+        ).fetchone()[0]
+        assert events == 1
+    finally:
+        store.close()
+
+
+def test_upsert_file_self_heals_legacy_row_without_lifeline(tmp_path):
+    """A file that landed in `files` before the upsert_file fix (or via a
+    direct INSERT skipping `upsert_file`) is missing a lifeline_id. Calling
+    upsert_file on the same path must heal it on the next index.
+    """
+    db_path = str(tmp_path / ".projmem" / "index.db")
+    store = Store(db_path)
+    try:
+        # Bypass upsert_file: insert directly without lifeline_id.
+        store.conn.execute(
+            "INSERT INTO files(path, lang, hash, mtime, size, parser, "
+            "indexed_at, stale, lifeline_id) "
+            "VALUES(?, ?, ?, ?, ?, ?, ?, 0, NULL)",
+            ("src/legacy.py", "py", "h", time.time(), 1, "ast", time.time()),
+        )
+        store.conn.commit()
+        assert store.conn.execute(
+            "SELECT COUNT(*) FROM file_lifeline WHERE current_path=?",
+            ("src/legacy.py",),
+        ).fetchone()[0] == 0
+        # Re-index: triggers the self-heal path.
+        store.upsert_file("src/legacy.py", "py", "h2", time.time(), 2, "ast")
+        store.conn.commit()
+        assert store.conn.execute(
+            "SELECT COUNT(*) FROM file_lifeline WHERE current_path=?",
+            ("src/legacy.py",),
+        ).fetchone()[0] == 1
+    finally:
+        store.close()

@@ -368,6 +368,44 @@ class Store:
             "indexed_at=excluded.indexed_at,stale=0",
             (path, lang, hash_, mtime, size, parser, time.time()),
         )
+        self._ensure_lifeline(path)
+
+    def _ensure_lifeline(self, path: str) -> None:
+        """Create a lifeline + 'created' file_event if this file has none.
+
+        Bridges the gap between migration-time backfill (which only sees
+        files already in the index) and post-migration indexing of new
+        files. Idempotent: if the file already carries a `lifeline_id`,
+        this is a single SELECT and returns.
+
+        Files indexed via plain `projmem index` (without going through
+        the Step 1 `creating` verb) get `created_reason =
+        "indexed — no explicit creation event"` so the UI can later
+        render them with a distinct treatment, the same way implicit
+        leases will be marked.
+        """
+        row = self.conn.execute(
+            "SELECT lifeline_id FROM files WHERE path=?", (path,),
+        ).fetchone()
+        if not row or row[0]:
+            return
+        import uuid
+        lid = str(uuid.uuid4())
+        now = time.time()
+        reason = "indexed — no explicit creation event"
+        self.conn.execute(
+            "INSERT INTO file_lifeline(id, current_path, created_at, "
+            "created_reason) VALUES(?, ?, ?, ?)",
+            (lid, path, now, reason),
+        )
+        self.conn.execute(
+            "INSERT INTO file_event(lifeline_id, kind, at, reason) "
+            "VALUES(?, 'created', ?, ?)",
+            (lid, now, reason),
+        )
+        self.conn.execute(
+            "UPDATE files SET lifeline_id=? WHERE path=?", (lid, path),
+        )
 
     def delete_file_data(self, path: str) -> None:
         for t in ("symbols", "refs", "contracts"):
