@@ -2,10 +2,118 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ──────────────────────────────────────────────────────────────────────
+ * Theme tokens. `data-theme` on <html> drives every color through a
+ * single CSS-variable indirection so we never hard-code a hex in JSX.
+ *
+ *   Light theme — modern minimal, soft warm white background, ink
+ *                 text, Apple-blue accent, semantic warmth from
+ *                 orange + green + red.
+ *   Dark theme  — near-black-with-warmth background, soft off-white
+ *                 text, teal accent (the terminal hint), warmer
+ *                 semantic colors so they pop on dark.
+ *
+ * The Tailwind config maps named utilities (`bg-paper`, `text-ink`,
+ * etc.) to these variables — see tailwind.config.js.
+ * ──────────────────────────────────────────────────────────────── */
+
+:root,
+[data-theme="light"] {
+  --bg:        #fafafa;
+  --bg-elev:   #ffffff;
+  --bg-sunken: #f4f4f5;
+  --ink:       #18181b;
+  --muted:     #71717a;
+  --line:      #e4e4e7;
+  --line-soft: #f1f5f9;
+  --accent:    #2563eb;
+  --accent-fg: #ffffff;
+  --good:      #16a34a;
+  --warn:      #ea580c;
+  --bad:       #dc2626;
+  --ghost:     #a1a1aa;
+  --code-bg:   #fafafa;
+  --halo:      rgba(37, 99, 235, 0.22);
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --bg:        #0a0a0c;
+  --bg-elev:   #18181b;
+  --bg-sunken: #09090b;
+  --ink:       #f4f4f5;
+  --muted:     #a1a1aa;
+  --line:      #27272a;
+  --line-soft: #1f1f23;
+  --accent:    #5eead4;
+  --accent-fg: #042f2e;
+  --good:      #4ade80;
+  --warn:      #fb923c;
+  --bad:       #f87171;
+  --ghost:     #52525b;
+  --code-bg:   #0f0f12;
+  --halo:      rgba(94, 234, 212, 0.28);
+  color-scheme: dark;
+}
+
 html, body, #root { height: 100%; margin: 0; }
 
-#root {
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-               "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
-  font-size: 14px;
+body {
+  background: var(--bg);
+  color: var(--ink);
 }
+
+#root {
+  font-family: ui-sans-serif, system-ui, -apple-system, "SF Pro Text",
+               "Segoe UI", Roboto, "Helvetica Neue", Arial,
+               "Apple Color Emoji", "Segoe UI Emoji";
+  font-size: 13.5px;
+  letter-spacing: -0.005em;
+}
+
+/* highlight.js — minimal dual-theme rules layered over a base reset */
+.hljs {
+  display: block;
+  overflow-x: auto;
+  padding: 0;
+  background: transparent !important;
+  color: var(--ink);
+}
+[data-theme="light"] .hljs-comment,
+[data-theme="light"] .hljs-quote   { color: #71717a; font-style: italic; }
+[data-theme="light"] .hljs-keyword,
+[data-theme="light"] .hljs-selector-tag,
+[data-theme="light"] .hljs-built_in { color: #b45309; }
+[data-theme="light"] .hljs-string,
+[data-theme="light"] .hljs-attr     { color: #15803d; }
+[data-theme="light"] .hljs-number,
+[data-theme="light"] .hljs-literal  { color: #2563eb; }
+[data-theme="light"] .hljs-title.function_,
+[data-theme="light"] .hljs-title.class_ { color: #7c3aed; }
+[data-theme="light"] .hljs-variable,
+[data-theme="light"] .hljs-params   { color: #be185d; }
+
+[data-theme="dark"] .hljs-comment,
+[data-theme="dark"] .hljs-quote    { color: #71717a; font-style: italic; }
+[data-theme="dark"] .hljs-keyword,
+[data-theme="dark"] .hljs-selector-tag,
+[data-theme="dark"] .hljs-built_in { color: #fbbf24; }
+[data-theme="dark"] .hljs-string,
+[data-theme="dark"] .hljs-attr     { color: #86efac; }
+[data-theme="dark"] .hljs-number,
+[data-theme="dark"] .hljs-literal  { color: #5eead4; }
+[data-theme="dark"] .hljs-title.function_,
+[data-theme="dark"] .hljs-title.class_ { color: #c084fc; }
+[data-theme="dark"] .hljs-variable,
+[data-theme="dark"] .hljs-params   { color: #f9a8d4; }
+
+/* Subtle scrollbars, dark + light */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+::-webkit-scrollbar-track { background: transparent; }

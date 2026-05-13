@@ -4,21 +4,31 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Minimal palette aligned with the brief's "shadcn/ui look".
-        // Real shadcn primitives land in Step 7 when the graph + inspector
-        // need dialogs / popovers / tabs. Step 6 stays headless-light.
-        ink:    "#0a0a0a",
-        paper:  "#fafafa",
-        muted:  "#737373",
-        line:   "#e5e5e5",
-        accent: "#2563eb",
-        warn:   "#d97706",
-        bad:    "#dc2626",
-        good:   "#16a34a",
-        ghost:  "#a3a3a3",
+        // Theme-aware tokens — every utility resolves through a CSS var
+        // so the same JSX works in light + dark without a per-class
+        // `dark:` prefix. See src/index.css for the variable bindings.
+        bg:       "var(--bg)",
+        paper:    "var(--bg-elev)",
+        elev:     "var(--bg-elev)",
+        sunken:   "var(--bg-sunken)",
+        ink:      "var(--ink)",
+        muted:    "var(--muted)",
+        line:     "var(--line)",
+        "line-soft": "var(--line-soft)",
+        accent:   "var(--accent)",
+        "accent-fg": "var(--accent-fg)",
+        good:     "var(--good)",
+        warn:     "var(--warn)",
+        bad:      "var(--bad)",
+        ghost:    "var(--ghost)",
+        "code-bg":"var(--code-bg)",
       },
       fontFamily: {
-        mono: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+        mono: ["ui-monospace", "SFMono-Regular", "Menlo",
+                "JetBrains Mono", "monospace"],
+      },
+      boxShadow: {
+        soft: "0 1px 2px rgba(0,0,0,0.04), 0 4px 12px -4px rgba(0,0,0,0.06)",
       },
     },
   },

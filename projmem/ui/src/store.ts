@@ -25,6 +25,7 @@ interface UIState {
   showGhosts:       boolean;
   showSymbols:      boolean;
   liveLeasedPaths:  string[];        // paths with an open lease right now
+  theme:            "light" | "dark";
   projectRoot:      string;
 
   setPaused:           (b: boolean) => void;
@@ -40,6 +41,23 @@ interface UIState {
   markLeased:          (path: string) => void;
   markReleased:        (path: string) => void;
   resetLiveLeases:     (paths: string[]) => void;
+  toggleTheme:         () => void;
+  setTheme:            (t: "light" | "dark") => void;
+}
+
+
+// Preferred theme — saved override beats prefers-color-scheme beats light.
+function initialTheme(): "light" | "dark" {
+  try {
+    const v = localStorage.getItem("projmem.theme");
+    if (v === "light" || v === "dark") return v;
+  } catch { /* ignore */ }
+  if (typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches) {
+    return "dark";
+  }
+  return "light";
 }
 
 export const useStore = create<UIState>((set) => ({
@@ -52,6 +70,7 @@ export const useStore = create<UIState>((set) => ({
   showGhosts:       false,
   showSymbols:      false,
   liveLeasedPaths:  [],
+  theme:            initialTheme(),
   projectRoot:      "",
 
   setPaused:           (b) => set({ paused: b }),
@@ -78,4 +97,13 @@ export const useStore = create<UIState>((set) => ({
     liveLeasedPaths: st.liveLeasedPaths.filter((p) => p !== path),
   })),
   resetLiveLeases:     (paths) => set({ liveLeasedPaths: paths }),
+  toggleTheme:         () => set((st) => {
+    const next: "light" | "dark" = st.theme === "dark" ? "light" : "dark";
+    try { localStorage.setItem("projmem.theme", next); } catch { /* ignore */ }
+    return { theme: next };
+  }),
+  setTheme:            (t) => set(() => {
+    try { localStorage.setItem("projmem.theme", t); } catch { /* ignore */ }
+    return { theme: t };
+  }),
 }));

@@ -7,6 +7,12 @@ import { api, connectEvents } from "./api";
 import { useStore } from "./store";
 
 export function App() {
+  // Apply the theme to <html> as a data attribute on every change.
+  const theme           = useStore((s) => s.theme);
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
+
   const setStatus       = useStore((s) => s.setStatus);
   const pushEvent       = useStore((s) => s.pushEvent);
   const setPaused       = useStore((s) => s.setPaused);
@@ -66,16 +72,16 @@ export function App() {
       markLeased, markReleased, resetLiveLeases]);
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col bg-bg text-ink">
       <TopBar />
       <main className="flex-1 grid grid-cols-[260px_1fr_320px] min-h-0">
-        <section className="border-r border-line bg-white min-h-0">
+        <section className="border-r border-line bg-bg min-h-0">
           <div className="border-b border-line px-3 py-2 text-xs font-semibold tracking-tight">
             Activity
           </div>
           <ActivityFeed />
         </section>
-        <section className="bg-white min-h-0 min-w-0 relative">
+        <section className="bg-bg min-h-0 min-w-0 relative">
           <GraphView />
         </section>
         <Inspector />

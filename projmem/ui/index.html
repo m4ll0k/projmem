@@ -1,11 +1,27 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
     <title>projmem · local</title>
+    <script>
+      // Pre-paint theme so there's no flash. Uses the same localStorage
+      // key + prefers-color-scheme fallback as src/store.ts::initialTheme.
+      (function () {
+        try {
+          var v = localStorage.getItem("projmem.theme");
+          if (v !== "light" && v !== "dark") {
+            v = (window.matchMedia &&
+                 window.matchMedia("(prefers-color-scheme: dark)").matches)
+                ? "dark" : "light";
+          }
+          document.documentElement.setAttribute("data-theme", v);
+        } catch (e) { /* ignore */ }
+      })();
+    </script>
   </head>
-  <body class="bg-paper text-ink">
+  <body class="bg-bg text-ink">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
