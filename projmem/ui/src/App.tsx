@@ -3,6 +3,7 @@ import { TopBar } from "./components/TopBar";
 import { ActivityFeed } from "./components/ActivityFeed";
 import { Inspector } from "./components/Inspector";
 import { GraphView } from "./components/Graph";
+import { GraphSchema } from "./components/GraphSchema";
 import { TreeView } from "./components/Tree";
 import { api, connectEvents } from "./api";
 import { useStore } from "./store";
@@ -93,11 +94,16 @@ export function App() {
 function CenterPane() {
   const centerView    = useStore((s) => s.centerView);
   const setCenterView = useStore((s) => s.setCenterView);
+  const labels: Record<typeof centerView, string> = {
+    tree:   "stable, sortable, searchable",
+    schema: "hierarchical · directory tree",
+    graph:  "force-directed · import edges",
+  };
   return (
     <section className="bg-bg min-h-0 min-w-0 relative flex flex-col">
       <div className="border-b border-line px-3 py-1.5 flex items-center gap-2 bg-bg">
         <div className="inline-flex rounded border border-line overflow-hidden">
-          {(["tree", "graph"] as const).map((v) => (
+          {(["tree", "schema", "graph"] as const).map((v) => (
             <button
               key={v}
               onClick={() => setCenterView(v)}
@@ -109,14 +115,12 @@ function CenterPane() {
             >{v}</button>
           ))}
         </div>
-        <span className="text-[11px] text-muted">
-          {centerView === "tree"
-            ? "stable, sortable, searchable"
-            : "force-directed; positions may shift on refetch"}
-        </span>
+        <span className="text-[11px] text-muted">{labels[centerView]}</span>
       </div>
       <div className="flex-1 min-h-0">
-        {centerView === "tree" ? <TreeView /> : <GraphView />}
+        {centerView === "tree"   ? <TreeView />     :
+         centerView === "schema" ? <GraphSchema /> :
+                                   <GraphView />}
       </div>
     </section>
   );

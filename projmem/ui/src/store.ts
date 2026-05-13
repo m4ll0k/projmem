@@ -26,7 +26,7 @@ interface UIState {
   showSymbols:      boolean;
   liveLeasedPaths:  string[];        // paths with an open lease right now
   theme:            "light" | "dark";
-  centerView:       "tree" | "graph";
+  centerView:       "tree" | "graph" | "schema";
   projectRoot:      string;
 
   setPaused:           (b: boolean) => void;
@@ -44,7 +44,7 @@ interface UIState {
   resetLiveLeases:     (paths: string[]) => void;
   toggleTheme:         () => void;
   setTheme:            (t: "light" | "dark") => void;
-  setCenterView:       (v: "tree" | "graph") => void;
+  setCenterView:       (v: "tree" | "graph" | "schema") => void;
 }
 
 
@@ -73,10 +73,10 @@ export const useStore = create<UIState>((set) => ({
   showSymbols:      false,
   liveLeasedPaths:  [],
   theme:            initialTheme(),
-  centerView:       ((): "tree" | "graph" => {
+  centerView:       ((): "tree" | "graph" | "schema" => {
     try {
       const v = localStorage.getItem("projmem.centerView");
-      if (v === "graph" || v === "tree") return v;
+      if (v === "graph" || v === "tree" || v === "schema") return v;
     } catch { /* ignore */ }
     return "tree";
   })(),

@@ -147,6 +147,47 @@ function LeaseCard({ lease, dimmed }: { lease: OpenLease; dimmed: boolean }) {
 
 // ─── Notes / Guidance rendering ────────────────────────────────────────────
 
+// Parse markdown-style links out of free-text. Returns alternating
+// text + link parts so the renderer can wrap external refs (papers,
+// PDFs, internal docs) as clickable affordances.
+type BodyPart =
+  | { type: "text"; value: string }
+  | { type: "link"; title: string; url: string };
+
+function parseBody(text: string): BodyPart[] {
+  const parts: BodyPart[] = [];
+  let lastEnd = 0;
+  const re = /\[([^\]]+)\]\(([^)]+)\)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > lastEnd) {
+      parts.push({ type: "text", value: text.slice(lastEnd, m.index) });
+    }
+    parts.push({ type: "link", title: m[1], url: m[2] });
+    lastEnd = m.index + m[0].length;
+  }
+  if (lastEnd < text.length) {
+    parts.push({ type: "text", value: text.slice(lastEnd) });
+  }
+  return parts;
+}
+
+function resolveRefUrl(url: string): string {
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  if (url.startsWith(".projmem/refs/")) {
+    return api.refUrl(url.slice(".projmem/refs/".length));
+  }
+  if (url.startsWith("refs/")) {
+    return api.refUrl(url.slice("refs/".length));
+  }
+  // Bare filename — assume it's already relative to .projmem/refs/.
+  return api.refUrl(url);
+}
+
+function isExternalUrl(url: string): boolean {
+  return url.startsWith("http://") || url.startsWith("https://");
+}
+
 function NoteRow({ note, onShowCode }: {
   note: Annotation;
   onShowCode?: (line?: number) => void;
@@ -158,17 +199,19 @@ function NoteRow({ note, onShowCode }: {
     note.staleness === "fresh"          ? "text-good"             :
                                           "text-muted"
   );
-  // Body may contain backtick-wrapped symbol references with file:line —
-  // the v1 auto-extracted FACT shape. Surface the first :line if present
-  // so the operator can jump straight to the relevant code.
   const lineMatch = (note.body || "").match(/:(\d+)\b/);
   const cited = lineMatch ? parseInt(lineMatch[1], 10) : undefined;
+  const bodyParts = parseBody(note.body || "");
+  const linkCount = bodyParts.filter((p) => p.type === "link").length;
 
   return (
     <div className="rounded-md border border-line bg-elev px-2.5 py-2">
       <div className="flex items-center justify-between text-[11px] mb-1">
         <span className="font-medium">[{sev}]</span>
         <div className="flex items-center gap-2">
+          {linkCount > 0 && (
+            <span className="text-[10px] text-muted">📎 {linkCount}</span>
+          )}
           {onShowCode && cited && (
             <button onClick={() => onShowCode(cited)}
                     className="text-[10px] text-accent hover:underline">
@@ -181,7 +224,18 @@ function NoteRow({ note, onShowCode }: {
         </div>
       </div>
       <div className="text-xs whitespace-pre-wrap break-words leading-snug">
-        {note.body}
+        {bodyParts.map((p, i) =>
+          p.type === "text"
+            ? <span key={i}>{p.value}</span>
+            : <a key={i}
+                 href={resolveRefUrl(p.url)}
+                 target="_blank" rel="noopener noreferrer"
+                 className="inline-flex items-center gap-0.5 text-accent
+                            hover:underline break-all"
+                 title={p.url}>
+                {isExternalUrl(p.url) ? "🌐" : "📄"} {p.title}
+              </a>
+        )}
       </div>
     </div>
   );
@@ -304,7 +358,7 @@ function AddNoteForm({ target, kind, onSaved, onPickLine }: {
           : "Free-text note. Backtick-around-symbol-name + file:line auto-extracts a FACT claim."}
         className="w-full text-xs font-mono bg-bg border border-line rounded p-1.5 text-ink"
       />
-      <div className="flex items-center gap-2 text-[11px]">
+      <div className="flex items-center gap-2 text-[11px] flex-wrap">
         <span className="text-muted">line:</span>
         <input
           value={line}
@@ -312,6 +366,7 @@ function AddNoteForm({ target, kind, onSaved, onPickLine }: {
           placeholder="optional"
           className="w-16 bg-bg border border-line rounded px-1 py-0.5 text-ink font-mono"
         />
+        <AttachRefButton onPick={(md) => setBody((b) => b ? b + " " + md : md)} />
         {kind === "guidance" && (
           <>
             <span className="text-muted ml-2">severity:</span>
@@ -340,6 +395,86 @@ function AddNoteForm({ target, kind, onSaved, onPickLine }: {
           cancel
         </button>
       </div>
+    </div>
+  );
+}
+
+// ─── Attach-reference button ───────────────────────────────────────────────
+// Lets the operator insert a `[title](url-or-path)` markdown link into
+// the note body. Two flavors: external URL (paste the URL) or pick
+// from the project's .projmem/refs/ library. The latter is the
+// game-changer for "we have a paper that justifies this guidance" —
+// drop the PDF in .projmem/refs/, link to it from the note, the
+// daemon serves it through GET /refs/<path> with the right MIME type.
+
+function AttachRefButton({ onPick }: { onPick: (md: string) => void }) {
+  const [open, setOpen]     = useState(false);
+  const [title, setTitle]   = useState("");
+  const [url, setUrl]       = useState("");
+  const [refs, setRefs]     = useState<{path: string; size: number}[]>([]);
+  const [refsErr, setRefsErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    api.refsList()
+      .then((d) => setRefs(d.refs))
+      .catch((e) => setRefsErr(String(e?.message ?? e)));
+  }, [open]);
+
+  const insert = () => {
+    if (!title.trim() || !url.trim()) return;
+    onPick(`[${title.trim()}](${url.trim()})`);
+    setTitle(""); setUrl(""); setOpen(false);
+  };
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)}
+              className="text-[10px] px-1.5 py-0.5 rounded border border-line text-muted hover:bg-sunken">
+        📎 attach
+      </button>
+    );
+  }
+  return (
+    <div className="w-full mt-1 rounded-md border border-accent/30 bg-accent/5 p-1.5 space-y-1 text-[11px]">
+      <div className="flex items-center gap-1">
+        <input value={title}
+               onChange={(e) => setTitle(e.target.value)}
+               placeholder="title (e.g. SEC-204 advisory)"
+               className="flex-1 bg-bg border border-line rounded px-1 py-0.5 text-ink"/>
+        <input value={url}
+               onChange={(e) => setUrl(e.target.value)}
+               placeholder="https://… or refs/papers/foo.pdf"
+               className="flex-[2] bg-bg border border-line rounded px-1 py-0.5 text-ink font-mono"/>
+        <button onClick={insert} className="px-2 py-0.5 rounded bg-accent text-accent-fg">add</button>
+        <button onClick={() => setOpen(false)} className="px-2 py-0.5 rounded border border-line text-muted">x</button>
+      </div>
+      {refsErr && <div className="text-bad">{refsErr}</div>}
+      {refs.length > 0 ? (
+        <div>
+          <div className="text-muted mb-0.5">
+            from <span className="font-mono">.projmem/refs/</span>:
+          </div>
+          <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
+            {refs.slice(0, 25).map((r) => (
+              <button key={r.path}
+                      onClick={() => {
+                        setUrl(`refs/${r.path}`);
+                        if (!title) setTitle(r.path.split("/").pop() || r.path);
+                      }}
+                      className="px-1.5 py-0.5 rounded bg-bg border border-line text-ink font-mono text-[10px] hover:border-accent"
+                      title={r.path}>
+                {r.path}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="text-muted">
+          drop files in <span className="font-mono">.projmem/refs/</span> to
+          surface them here (papers, PDFs, design docs, …)
+        </div>
+      )}
     </div>
   );
 }

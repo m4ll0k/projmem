@@ -327,6 +327,71 @@ def build_app(state: DaemonState, *, serve_ui: bool = True):
         finally:
             store.close()
 
+    @app.get("/refs/{rel_path:path}")
+    async def get_ref(rel_path: str):
+        """Serve files under ``.projmem/refs/<...>`` to the UI.
+
+        Use case: research papers / PDFs / notes you want to link from
+        a guidance or critical note. The user drops files under
+        ``.projmem/refs/`` (any depth); a note body referencing
+        ``.projmem/refs/papers/SEC-204.pdf`` then renders as a clickable
+        link served by this endpoint. Path-traversal guarded with a
+        realpath check against ``.projmem/refs/``.
+        """
+        import os as _os
+        refs_root = _os.path.realpath(
+            _os.path.join(state.root, ".projmem", "refs"))
+        candidate = _os.path.realpath(_os.path.join(refs_root, rel_path))
+        if candidate != refs_root and not candidate.startswith(refs_root + _os.sep):
+            return JSONResponse(
+                {"error": "path-outside-refs", "path": rel_path},
+                status_code=400,
+            )
+        if not _os.path.isfile(candidate):
+            return JSONResponse(
+                {"error": "not-found", "path": rel_path}, status_code=404)
+        # Sniff content-type by extension. We deliberately keep this
+        # tiny — no full mimetypes lookup, just the formats we expect
+        # someone to drop in a research library.
+        ext = candidate.rsplit(".", 1)[-1].lower() if "." in candidate else ""
+        ct_map = {
+            "pdf":  "application/pdf",
+            "md":   "text/markdown; charset=utf-8",
+            "txt":  "text/plain; charset=utf-8",
+            "html": "text/html; charset=utf-8",
+            "png":  "image/png",
+            "jpg":  "image/jpeg",
+            "jpeg": "image/jpeg",
+            "svg":  "image/svg+xml",
+            "json": "application/json",
+        }
+        from fastapi.responses import FileResponse
+        return FileResponse(candidate,
+                             media_type=ct_map.get(ext, "application/octet-stream"))
+
+    @app.get("/refs-list")
+    async def list_refs():
+        """List every file under ``.projmem/refs/`` so the UI can show
+        a browsable research library. Returns relative paths only;
+        the operator's filesystem layout is opaque to the browser."""
+        import os as _os
+        refs_root = _os.path.join(state.root, ".projmem", "refs")
+        if not _os.path.isdir(refs_root):
+            return {"refs": [], "root_exists": False}
+        out = []
+        for dirpath, _dirs, files in _os.walk(refs_root):
+            for f in files:
+                full = _os.path.join(dirpath, f)
+                rel = _os.path.relpath(full, refs_root)
+                try:
+                    st = _os.stat(full)
+                except OSError:
+                    continue
+                out.append({"path": rel, "size": st.st_size,
+                             "mtime": st.st_mtime})
+        out.sort(key=lambda r: r["path"])
+        return {"refs": out, "root_exists": True, "root": refs_root}
+
     @app.get("/file")
     async def get_file(path: str, max_bytes: int = 200_000):
         """Read a source file under the project root. Hard guard against

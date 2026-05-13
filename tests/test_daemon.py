@@ -245,6 +245,42 @@ class TestGraphEndpoint:
         assert "consolidated" in (ghost.get("tombstoned_reason") or "")
 
 
+class TestRefsEndpoint:
+    """`.projmem/refs/` lets the operator drop research material
+    (papers, design docs, PDFs) that notes can `[link]()` to. The
+    daemon serves these read-only with a path-traversal guard."""
+
+    def test_lists_empty_when_no_refs_dir(self, client):
+        c, _ = client
+        r = c.get("/refs-list")
+        assert r.status_code == 200
+        d = r.json()
+        assert d["root_exists"] is False
+        assert d["refs"] == []
+
+    def test_serves_a_real_file(self, client, repo):
+        c, _ = client
+        refs = repo / ".projmem" / "refs" / "papers"
+        refs.mkdir(parents=True)
+        (refs / "SEC-204.md").write_text("# SEC-204 advisory\n\nDo X.\n")
+        r = c.get("/refs/papers/SEC-204.md")
+        assert r.status_code == 200
+        assert "SEC-204 advisory" in r.text
+        # Listing surfaces it.
+        lst = c.get("/refs-list").json()
+        assert any(x["path"] == "papers/SEC-204.md" for x in lst["refs"])
+
+    def test_path_traversal_is_refused(self, client, repo):
+        c, _ = client
+        (repo / ".projmem" / "refs").mkdir(parents=True)
+        r = c.get("/refs/..%2F..%2Fetc%2Fpasswd")
+        # Either 400 (caught by our guard) or 404 (FastAPI's path
+        # parameter rejected the encoded slashes); both are correct
+        # from a security standpoint. The MUST-NOT is "200 with the
+        # file's contents."
+        assert r.status_code in (400, 404)
+
+
 class TestLifelineEndpoint:
     def test_lifeline_returns_full_detail(self, client):
         from projmem import mutation_verbs as _mv

@@ -415,11 +415,38 @@ export function GraphView() {
       });
     }
 
+    // Spotlight: when focus mode is active, also keep every file in
+    // the SAME DIRECTORY SUBTREE as a leased file lit (at 0.4). Adds
+    // the "lit branch" effect on top of the 1-hop import neighborhood.
+    const litDirPrefixes = new Set<string>();
+    if (focusActive) {
+      for (const p of liveSet) {
+        const i = p.lastIndexOf("/");
+        if (i >= 0) litDirPrefixes.add(p.slice(0, i + 1));
+        // Also any directory above this one — the lit branch goes all
+        // the way down to the root of the codebase.
+        let parent = p.slice(0, i);
+        while (parent) {
+          litDirPrefixes.add(parent + "/");
+          const j = parent.lastIndexOf("/");
+          parent = j >= 0 ? parent.slice(0, j) : "";
+        }
+      }
+    }
+    const inLitBranch = (path: string | null): boolean => {
+      if (!path) return false;
+      for (const pre of litDirPrefixes) {
+        if (path.startsWith(pre)) return true;
+      }
+      return false;
+    };
+
     root.querySelectorAll<SVGGElement>("g.node").forEach((g) => {
       const d = (g as any).__data__ as GraphNode | undefined;
       const nid = d?.id ?? "";
       const isLive = !!(d?.path && liveSet.has(d.path));
       const isNeighbor = !isLive && neighborIds.has(nid);
+      const inBranch   = !isLive && !isNeighbor && inLitBranch(d?.path ?? null);
 
       // Halo.
       const halo = g.querySelector<SVGGElement>("g.halo");
@@ -429,12 +456,13 @@ export function GraphView() {
         haloRing.setAttribute("r", String(nodeRadius(d) + 12));
       }
 
-      // Opacity — strong focus mode.
+      // Opacity — strong spotlight mode.
       let opacity = "1";
       if (focusActive) {
-        if (isLive)        opacity = "1";
+        if (isLive)         opacity = "1";
         else if (isNeighbor) opacity = "0.55";
-        else                 opacity = "0.08";
+        else if (inBranch)   opacity = "0.40";
+        else                 opacity = "0.04";   // practically invisible
       }
       g.style.opacity = opacity;
 
@@ -444,7 +472,7 @@ export function GraphView() {
         const alwaysShow = d?.critical || isLive;
         const isHovered  = hoveredId === nid;
         let show = showAll || alwaysShow || isHovered;
-        if (focusActive && !isLive && !isHovered) show = false;
+        if (focusActive && !isLive && !isNeighbor && !isHovered) show = false;
         label.style.display = show ? "" : "none";
       }
     });
