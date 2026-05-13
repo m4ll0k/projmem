@@ -793,17 +793,65 @@ async def serve_socket(state: DaemonState) -> None:
     write directly through the projmem CLI. This listener is the
     forward-compat path for future hooks that want to push live
     events (e.g. "tool started" before projmem editing finishes).
+
+    Failures here must NOT take down the HTTP/WS server — the socket
+    is a forward-compat surface and no current operator depends on it.
+    We log a single clear warning and return; HTTP/WS keep serving.
     """
     sock_path = os.path.join(state.root, ".projmem", SOCKET_NAME)
+    parent = os.path.dirname(sock_path)
+
+    # Defense in depth — `projmem ui` should work even if someone runs
+    # it without ever calling `projmem init`. The .projmem/ dir is
+    # owned by the operator (0700) so credentials/sockets never become
+    # world-readable.
+    try:
+        os.makedirs(parent, mode=0o700, exist_ok=True)
+    except OSError as e:
+        print(
+            f"⚠ projmem: unix-socket parent dir unusable at {parent!r}: {e}. "
+            "Forward-compat hook channel is offline; HTTP/WS unaffected.",
+            file=__import__("sys").stderr,
+        )
+        return
+
     try:
         os.unlink(sock_path)
     except FileNotFoundError:
         pass
-    server = await asyncio.start_unix_server(
-        lambda r, w: _handle_socket_client(r, w, state),
-        path=sock_path,
-    )
-    os.chmod(sock_path, 0o600)  # owner-only
+    except OSError as e:
+        # Stale socket from a prior process we can't remove (e.g. owned
+        # by another user). Log and bail — same non-fatal posture as
+        # a bind failure below.
+        print(
+            f"⚠ projmem: could not remove stale socket {sock_path!r}: {e}. "
+            "Forward-compat hook channel is offline.",
+            file=__import__("sys").stderr,
+        )
+        return
+
+    try:
+        server = await asyncio.start_unix_server(
+            lambda r, w: _handle_socket_client(r, w, state),
+            path=sock_path,
+        )
+    except (FileNotFoundError, PermissionError, OSError) as e:
+        # uvloop on some platforms surfaces a bare FileNotFoundError
+        # even though the parent dir exists — typically a path-length
+        # or sandbox restriction. Don't kill the daemon over it.
+        print(
+            f"⚠ projmem: could not bind unix socket at {sock_path!r}: {e}. "
+            "Forward-compat hook channel is offline; HTTP + WebSocket "
+            "endpoints continue to serve normally.",
+            file=__import__("sys").stderr,
+        )
+        return
+
+    try:
+        os.chmod(sock_path, 0o600)  # owner-only
+    except OSError:
+        # Non-fatal — chmod best-effort; the socket is already open.
+        pass
     async with server:
         await server.serve_forever()
 

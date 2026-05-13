@@ -102,6 +102,31 @@ class TestHttpEndpoints:
         # The daemon's in-memory buffer recorded the event.
         assert any(ev["kind"] == "note_added" for ev in state.events)
 
+    def test_serve_socket_survives_missing_parent_dir(self, tmp_path, capsys):
+        # Regression: uvloop on Python 3.14 surfaced a bare
+        # FileNotFoundError when serve_socket raced startup; the task
+        # crashed with "Task exception was never retrieved" while the
+        # rest of the daemon kept serving. Hardened path must self-heal
+        # via makedirs + wrap bind in try/except.
+        import asyncio
+        state = d.DaemonState(str(tmp_path))   # tmp_path has no .projmem/
+
+        async def run():
+            # Should NOT raise — it must create .projmem/ and bind, OR
+            # log a warning and return cleanly. Either way, no uncaught
+            # FileNotFoundError propagates out of the task.
+            task = asyncio.create_task(d.serve_socket(state))
+            await asyncio.sleep(0.1)
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+        asyncio.run(run())
+
+        # `.projmem/` must now exist (created by the defensive makedirs).
+        assert (tmp_path / ".projmem").is_dir()
+
     def test_inspector_critical_categories_match_backend(self):
         # The /critical endpoint rejects categories outside
         # projmem.critical.CATEGORIES with a 400 + CategoryError envelope.
