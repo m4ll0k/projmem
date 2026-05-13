@@ -2,7 +2,7 @@
 
 # `projmem`
 
-### drift-aware code memory for AI agents
+### Drift-aware code memory for AI agents — when the code changes, your saved beliefs are flagged refuted *before* you ship.
 
 > grep tells you what's in the code.
 > projmem tells you whether what you (or your agent) **believed** about the code is still true — and refuses tool calls that would violate it.
