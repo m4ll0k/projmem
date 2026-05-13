@@ -14,7 +14,6 @@ This directory holds the images referenced from the project README and USAGE doc
 | `inspector-notes.png`| Inspector's **notes** + **guidance** tab with at least one note pinned, including a `@ line N` badge | Select a file with notes attached |
 | `help-modal.png`     | The `? help` popup open, showing the orientation sections | Click the **`? help`** button in the top bar |
 | `activity-feed.png`  | The left rail with a mix of `leased`/`edited`/`released`/`note_added` events | Any moment after some agent activity |
-| `pj-flow.png` *(optional)* | A terminal screenshot of a chat session: user types `pj: …`, the agent's first tool call is `projmem context` | Optional — illustrates the `pj:` convention |
 
 ## Capture tips
 
