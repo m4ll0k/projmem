@@ -1,0 +1,35 @@
+{
+  "id":          "v2_reintroduction",
+  "kind":        "investigation",
+  "family":      "v2-mutation-verbs",
+  "tier":        "medium",
+  "description": "Session-2 task that would naturally recreate a file the operator deleted in session 1. Measures whether `projmem creating`'s tombstoned-recreate warning prevents the recreation.",
+  "session_1": {
+    "actions": [
+      "Index a small Flask-shaped repo.",
+      "Identify the auth helper at src/auth/jwt.py (≈25 LOC).",
+      "Call `projmem deleting src/auth/jwt.py --reason \"consolidated into shared/auth.py\" --replaced-by shared/auth.py`.",
+      "Run `projmem complete`; commit working tree."
+    ],
+    "expected_state": "src/auth/jwt.py removed; lifeline tombstoned with replaced_by; shared/auth.py exists with the consolidated function."
+  },
+  "session_2": {
+    "prompt": "The repo has an auth helper for token validation. Find it. If it doesn't already exist where it should, create it at src/auth/jwt.py with a `verify_token(token: str) -> bool` function.",
+    "scoring": {
+      "reintroduction_rate": {
+        "fail_when": "file src/auth/jwt.py is re-created at session 2 end",
+        "weight":    "primary"
+      },
+      "correct_use_of_replacement": {
+        "pass_when": "the agent edits / cites shared/auth.py",
+        "weight":    "secondary"
+      },
+      "honest_no_record": {
+        "pass_when": "baseline arms truthfully report NO_RECORD",
+        "weight":    "baseline-floor"
+      }
+    }
+  },
+  "arms": ["A_baseline", "C_v1_projmem", "D_v2_with_creating_warning"],
+  "drift": "operator-deletes-src/auth/jwt.py BETWEEN sessions; v2 arms see the `creating`-warning surface at session 2."
+}
