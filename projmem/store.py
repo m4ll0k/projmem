@@ -347,6 +347,12 @@ class Store:
             try: self.conn.execute(stmt)
             except sqlite3.OperationalError: pass
         self.conn.commit()
+        # Versioned v2+ migrations. The pre-v2 ALTERs above stay because
+        # they may run against legacy DBs whose schema_version stamp is
+        # never set; the runner below tracks every migration that lands
+        # on v2-dev or later under projmem/migrations/.
+        from projmem import migrations as _migrations
+        _migrations.apply_pending(self.conn)
 
     # ---- file bookkeeping ----
     def get_file(self, path: str) -> Optional[sqlite3.Row]:
