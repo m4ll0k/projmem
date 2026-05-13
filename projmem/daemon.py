@@ -856,6 +856,79 @@ async def serve_socket(state: DaemonState) -> None:
         await server.serve_forever()
 
 
+async def filesystem_sweeper(state: DaemonState, *,
+                              interval: float = 5.0) -> None:
+    """Periodically re-walk the project tree, incrementally index, and
+    emit synthetic file_event rows for paths that appeared or vanished
+    on disk without going through ``projmem creating/editing/deleting``.
+
+    Two cases drove this:
+      1. ``projmem init <agent>`` writes instruction files (CLAUDE.md,
+         AGENTS.md, …) and the UI didn't show them until the user
+         re-ran ``projmem index``.
+      2. AI agents that write files via their own tool (not via
+         ``projmem creating``) silently desynced the UI from disk.
+
+    The sweeper closes both. It runs in a thread (the indexer touches
+    SQLite + does CPU work), interval defaults to 5s, and any exception
+    is logged but does not kill the task. Opt out with ``--no-watch``.
+    """
+    import sys as _sys
+    while True:
+        try:
+            await asyncio.to_thread(_one_filesystem_sweep, state)
+        except Exception as e:
+            print(f"⚠ projmem fs-sweeper: {e}", file=_sys.stderr)
+        await asyncio.sleep(interval)
+
+
+def _one_filesystem_sweep(state: DaemonState) -> None:
+    from . import config as _cfg, indexer as _idx
+    cfg = _cfg.load(state.root)
+    store = state.store()
+    try:
+        # Snapshot path → lifeline_id BEFORE the index runs.
+        before_rows = store.conn.execute(
+            "SELECT path, lifeline_id FROM files"
+        ).fetchall()
+        before = {r["path"]: r["lifeline_id"] for r in before_rows}
+        # The indexer is idempotent — skips files whose hash hasn't
+        # changed, so an empty-delta sweep is cheap (walk + mtime
+        # compare). Heavy lifting only fires when something changed.
+        _idx.index_all(cfg, store)
+        after_rows = store.conn.execute(
+            "SELECT path, lifeline_id FROM files"
+        ).fetchall()
+        after = {r["path"]: r["lifeline_id"] for r in after_rows}
+
+        now = time.time()
+        new_paths      = set(after)  - set(before)
+        deleted_paths  = set(before) - set(after)
+
+        # Synthetic created/deleted events so the poll_file_events
+        # broadcaster can ship them to UI subscribers — same pipe as
+        # agent-driven `projmem creating/deleting`.
+        for p in new_paths:
+            lid = after.get(p)
+            if lid:
+                store.conn.execute(
+                    "INSERT INTO file_event(lifeline_id, kind, at, reason) "
+                    "VALUES(?, 'created', ?, 'fs-watcher')",
+                    (lid, now),
+                )
+        for p in deleted_paths:
+            lid = before.get(p)
+            if lid:
+                store.conn.execute(
+                    "INSERT INTO file_event(lifeline_id, kind, at, reason) "
+                    "VALUES(?, 'deleted', ?, 'fs-watcher')",
+                    (lid, now),
+                )
+        store.conn.commit()
+    finally:
+        store.close()
+
+
 async def poll_file_events(state: DaemonState, *,
                            interval: float = 0.5) -> None:
     """Tail the ``file_event`` table and broadcast every new row.
@@ -967,6 +1040,7 @@ def _assert_loopback(host: str) -> None:
 def run(
     root: str, *, host: str = "127.0.0.1", port: int = DEFAULT_PORT,
     open_browser: bool = False, serve_ui: bool = True,
+    watch: bool = True, watch_interval: float = 5.0,
 ) -> int:
     """Block forever serving the daemon. Returns process exit code.
 
@@ -991,6 +1065,10 @@ def run(
     async def _start_socket():
         asyncio.create_task(serve_socket(state))
         asyncio.create_task(poll_file_events(state))
+        if watch:
+            asyncio.create_task(
+                filesystem_sweeper(state, interval=watch_interval),
+            )
         if open_browser:
             asyncio.create_task(_open_browser_soon(host, port))
 

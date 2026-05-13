@@ -7101,6 +7101,15 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--host", default="127.0.0.1")
     s.add_argument("--no-browser", action="store_true",
                    help="Start the daemon but don't auto-open the browser.")
+    s.add_argument("--no-watch", action="store_true",
+                   help="Disable the filesystem sweeper. With watch enabled "
+                        "(the default), the daemon re-indexes new/modified/"
+                        "deleted files every --watch-interval seconds so the "
+                        "UI stays in sync with disk even when files appear "
+                        "outside `projmem creating/editing`.")
+    s.add_argument("--watch-interval", type=float, default=5.0,
+                   help="Filesystem sweeper cadence in seconds. Default 5.0. "
+                        "Smaller = snappier, more CPU.")
     s.set_defaults(func=cmd_ui)
 
     # ── v2.1 skills — path-scoped cognitive instructions ────────────────────
@@ -7419,6 +7428,8 @@ def cmd_ui(args):
             cfg.root, host=args.host, port=args.port,
             open_browser=not getattr(args, "no_browser", False),
             serve_ui=True,
+            watch=not getattr(args, "no_watch", False),
+            watch_interval=float(getattr(args, "watch_interval", 5.0)),
         )
     except _d.BindRefusedError as e:
         _emit_error({"error": e.code, "message": str(e)},

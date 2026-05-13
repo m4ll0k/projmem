@@ -102,6 +102,60 @@ class TestHttpEndpoints:
         # The daemon's in-memory buffer recorded the event.
         assert any(ev["kind"] == "note_added" for ev in state.events)
 
+    def test_filesystem_sweeper_picks_up_new_file_on_disk(self, tmp_path):
+        # The whole reason this exists: `projmem init claude` writes
+        # CLAUDE.md, the user runs `projmem ui`, and the file must
+        # show up without a manual `projmem index`. Before the
+        # sweeper, the daemon only emitted events when an agent called
+        # `projmem creating` explicitly — silent desync.
+        from projmem import daemon as _d
+
+        # Seed an empty .projmem/ with the migrated schema by opening
+        # a Store, which runs migrations on connect.
+        (tmp_path / ".projmem").mkdir()
+        (tmp_path / "a.py").write_text("x = 1\n")
+        s = Store(str(tmp_path / ".projmem" / "index.db"))
+        s.close()
+
+        state = _d.DaemonState(str(tmp_path))
+        _d._one_filesystem_sweep(state)   # initial sweep — a.py lands
+
+        store = state.store()
+        try:
+            paths = {r["path"] for r in store.conn.execute(
+                "SELECT path FROM files")}
+        finally:
+            store.close()
+        assert "a.py" in paths
+
+        # Add a new file. The next sweep must index it AND emit a
+        # synthetic `created` row in file_event so the WS broadcaster
+        # can ship it to subscribers.
+        (tmp_path / "CLAUDE.md").write_text("# instructions\n")
+        before_evt_max = 0
+        store = state.store()
+        try:
+            row = store.conn.execute(
+                "SELECT MAX(id) AS m FROM file_event").fetchone()
+            before_evt_max = (row["m"] or 0) if row else 0
+        finally:
+            store.close()
+
+        _d._one_filesystem_sweep(state)
+
+        store = state.store()
+        try:
+            paths = {r["path"] for r in store.conn.execute(
+                "SELECT path FROM files")}
+            new_events = list(store.conn.execute(
+                "SELECT kind, reason FROM file_event WHERE id > ?",
+                (before_evt_max,)))
+        finally:
+            store.close()
+        assert "CLAUDE.md" in paths
+        kinds_reasons = [(e["kind"], e["reason"]) for e in new_events]
+        assert ("created", "fs-watcher") in kinds_reasons, kinds_reasons
+
     def test_serve_socket_survives_missing_parent_dir(self, tmp_path, capsys):
         # Regression: uvloop on Python 3.14 surfaced a bare
         # FileNotFoundError when serve_socket raced startup; the task

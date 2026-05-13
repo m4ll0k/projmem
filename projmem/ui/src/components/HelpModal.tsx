@@ -214,6 +214,38 @@ projmem done <lease-id>`}
             </ul>
           </Section>
 
+          <Section title="Live disk sync">
+            <p>
+              <span className="font-mono">projmem ui</span> keeps the UI in
+              sync with disk automatically. A background sweeper re-indexes
+              every <b>5 seconds</b> by default, so:
+            </p>
+            <ul className="list-disc list-inside space-y-1 mt-1.5">
+              <li>
+                Files dropped by <span className="font-mono">projmem init</span>
+                (CLAUDE.md, AGENTS.md, …) show up on their own.
+              </li>
+              <li>
+                Files your agent writes via its <i>own</i> tools (not via
+                <span className="font-mono"> projmem creating</span>) get
+                detected, indexed, and broadcast as <span className="font-mono">created</span>/
+                <span className="font-mono">deleted</span>/<span className="font-mono">edited</span> events
+                — the activity feed, graph, tree, and schema refresh
+                without a manual <span className="font-mono">projmem index</span>.
+              </li>
+              <li>
+                On a quiet workspace the sweeper is cheap — the indexer
+                skips files whose hash hasn't changed.
+              </li>
+            </ul>
+            <p className="text-xs text-muted mt-2">
+              Disable with <span className="font-mono">projmem ui --no-watch</span>
+              {" "}(useful when you'd rather drive everything through explicit
+              <span className="font-mono"> projmem creating/editing</span> calls), or
+              tune the cadence with <span className="font-mono">--watch-interval 1.0</span>.
+            </p>
+          </Section>
+
           <Section title="Quick start">
             <p className="mb-1.5">
               <b>Fresh project</b> — drop instructions for your agent, build
