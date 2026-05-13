@@ -9,6 +9,23 @@ MCP-equivalent verbs where applicable.
 
 ---
 
+## The `pj:` convention — user-triggered projmem consultation
+
+When the user begins a message with `pj:` (e.g. `pj: delete src/foo.py`,
+`pj: refactor handlers.py`), that is an explicit instruction to consult
+projmem **before** doing anything else. Sequence:
+
+1. Identify every file/symbol referenced in the request.
+2. Run `projmem context <path>` (read-only) or `projmem editing <path>
+   --reason "<why>"` if you intend to modify.
+3. If any returned warning contains `OUT OF SCOPE` or `CRITICAL`,
+   **halt** and surface the warning to the user before any further
+   action.
+4. Only then plan and execute.
+
+The first tool call after a `pj:` request **must** be `projmem`,
+not Edit, Read, or Bash.
+
 ## Non-negotiables
 
 ### 1. projmem must be available

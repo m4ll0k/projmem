@@ -6,6 +6,26 @@ holds, or the agent stops and reports the violation.
 
 ---
 
+## The `pj:` convention — user-triggered projmem consultation
+
+When the user begins a message with `pj:` (e.g. `pj: delete src/foo.py`,
+`pj: implement caching in handlers.py`), that is an explicit instruction
+to consult projmem **before** doing anything else. Sequence:
+
+1. Identify every file or symbol referenced in the request.
+2. For each file: run `projmem context <path>` (read-only briefing) or
+   `projmem editing <path> --reason "<why>"` if you intend to modify.
+3. Read every entry in the returned `warnings[]` array. If any contains
+   `OUT OF SCOPE` or `CRITICAL`, **stop and report to the user** —
+   describe the warning and ask whether to proceed.
+4. Only then plan and execute.
+
+Treat `pj:` as a hard precondition: the agent's first tool call after a
+`pj:` request **must** be a `projmem` invocation, not an Edit, Read, or
+Bash. The PreToolUse hook will refuse mutations on guarded paths anyway,
+but `pj:` shifts the check earlier so the user gets the warning at the
+planning stage rather than at the tool-call stage.
+
 ## Non-negotiables
 
 ### 1. projmem must be available

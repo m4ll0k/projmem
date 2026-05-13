@@ -214,6 +214,44 @@ projmem done <lease-id>`}
             </ul>
           </Section>
 
+          <Section title="Stop hallucinated edits — two enforcement layers">
+            <p>
+              Prompt-only instructions ("read CLAUDE.md before editing")
+              get ignored. projmem closes the gap with two stacked layers:
+            </p>
+            <p className="mt-1.5"><b>Layer 1 — the <span className="font-mono">pj:</span> convention.</b> Prefix any
+              user request with <span className="font-mono">pj:</span> and the
+              instruction file tells the agent its first tool call MUST be
+              <span className="font-mono"> projmem context</span> or
+              <span className="font-mono"> projmem editing</span>. If any
+              warning contains <span className="text-bad">OUT OF SCOPE</span> or
+              <span className="text-bad"> CRITICAL</span>, the agent halts and
+              asks. Example:
+            </p>
+            <pre className="bg-code-bg border border-line rounded p-2 text-[11px]
+                            font-mono overflow-x-auto mt-1.5">
+{`# In your chat (Claude / Codex / Gemini / Cursor):
+pj: delete tests/fixtures/sample_project/cli/main.py`}
+            </pre>
+            <p className="mt-2.5"><b>Layer 2 — Claude Code tool hooks.</b> Install
+              once and the daemon refuses tool calls at the API boundary —
+              hallucination can't bypass it. Catches both file-tools
+              (Edit/Write/NotebookEdit) AND dangerous Bash
+              (rm/rmdir/unlink/mv/shred/dd):</p>
+            <pre className="bg-code-bg border border-line rounded p-2 text-[11px]
+                            font-mono overflow-x-auto mt-1.5">
+{`projmem hook install --claude-code`}
+            </pre>
+            <p className="text-xs text-muted mt-2">
+              On <span className="font-mono">rm -rf</span> against an excluded or
+              critical-guarded path the hook returns
+              <span className="font-mono"> permissionDecision: "deny"</span> with
+              the warning surfaced as the reason — Claude Code refuses the tool
+              call outright. Clear the warning in this UI (approve the critical,
+              or remove the exclusion) to unblock.
+            </p>
+          </Section>
+
           <Section title="Live disk sync">
             <p>
               <span className="font-mono">projmem ui</span> keeps the UI in

@@ -22,91 +22,153 @@ from __future__ import annotations
 
 
 PRE_TOOL_USE_SCRIPT = r'''#!/usr/bin/env python3
-"""projmem PreToolUse hook — injects context before file-touching tools.
+"""projmem PreToolUse hook — context + enforcement before risky tools.
 
-Reads the Claude Code hook payload from stdin, calls ``projmem editing``
-on the target path, and returns the formatted guidance via the
-``additionalContext`` field so Claude sees it in the tool result.
+This is the *enforcement* layer that prompt-only CLAUDE.md instructions
+can't provide. For every tool that could mutate a file (Edit / Write /
+NotebookEdit) and every dangerous shell command (rm / rmdir / unlink /
+mv / cp -f / dd / shred / >redirect), the hook calls ``projmem editing``
+on the target path BEFORE the tool runs.
+
+Three outcomes:
+
+  1. No warnings → injects guidance as additionalContext, lets the
+     tool proceed.
+  2. OUT OF SCOPE (exclusion) → returns permissionDecision="deny" so
+     Claude Code REFUSES the tool call. The agent can't bypass a
+     human-set exclusion by hallucinating past CLAUDE.md.
+  3. CRITICAL note blocking edits → same deny, with the reason from
+     the critical note surfaced verbatim. The user clicks Approve in
+     the projmem UI to unblock.
 
 Treated as a no-op if:
   * projmem is not on PATH
   * the repo has no .projmem/ index
-  * the tool isn't a file-touching tool (Edit / Write / Read)
-  * the tool input has no `file_path`
+  * the tool isn't a known risky one
+  * no file path can be derived from the tool input
 
-Never raises. Always exits 0 so a misconfigured projmem never breaks
-a Claude Code session.
+Never raises. Failure modes fall through to "allow" so a misconfigured
+projmem never bricks a Claude Code session.
 """
 import json
 import os
+import shlex
 import shutil
 import subprocess
 import sys
 
 
-FILE_TOUCH_TOOLS = {"Edit", "Write", "Read", "NotebookEdit"}
+# File-touching tools — file_path / path arg is the target.
+FILE_TOUCH_TOOLS = {"Edit", "Write", "NotebookEdit"}
+
+# Read-only tools — projmem context is helpful, but never blocks.
+FILE_READ_TOOLS = {"Read"}
+
+# Bash subcommands that mutate the filesystem. Path args are positional
+# after the flags. shlex parses the command string safely (no shell
+# evaluation), so a malicious path like `$(rm -rf /)` cannot escape.
+RISKY_BASH_CMDS = {"rm", "rmdir", "unlink", "mv", "shred", "dd"}
+
 PROJMEM_REASON = "claude-code PreToolUse"
 
 
-def _silent_exit():
-    sys.exit(0)
-
-
-def main() -> int:
-    try:
-        payload = json.load(sys.stdin)
-    except (json.JSONDecodeError, ValueError):
-        return _silent_exit() or 0
-
-    tool = payload.get("tool_name") or payload.get("tool")
-    if tool not in FILE_TOUCH_TOOLS:
-        return 0
-
-    tool_input = payload.get("tool_input") or payload.get("tool_args") or {}
-    file_path = tool_input.get("file_path") or tool_input.get("path")
-    if not file_path or not isinstance(file_path, str):
-        return 0
-
+def _projmem_editing(cwd, path, tool, intent_note):
+    """Call `projmem editing <path>` and return the parsed JSON, or None
+    if anything went wrong (no PATH / no .projmem/ / projmem errored)."""
     if not shutil.which("projmem"):
-        return 0
-
-    cwd = payload.get("cwd") or os.getcwd()
+        return None
     if not os.path.isdir(os.path.join(cwd, ".projmem")):
-        return 0
-
-    # `editing` is double-duty: returns lease + guidance + history + warnings.
-    # Argv only — file_path lands as a positional, reason as a flag value.
-    # A path containing $(rm -rf /) survives intact.
+        return None
     try:
         result = subprocess.run(
-            ["projmem", "--path", cwd, "editing", file_path,
-             "--reason", f"{PROJMEM_REASON}: {tool} on {file_path}",
+            ["projmem", "--path", cwd, "editing", path,
+             "--reason", f"{PROJMEM_REASON}: {tool} {intent_note}",
              "--json"],
             capture_output=True, text=True, timeout=10,
         )
     except (OSError, subprocess.TimeoutExpired):
-        return 0
+        return None
     if result.returncode != 0:
-        # Reason-quality or no-index — fail silent so the agent's flow
-        # isn't blocked. We deliberately do NOT surface the projmem
-        # error here because Claude Code would treat it as the tool's
-        # error and the user would think Edit/Write failed.
-        return 0
-
+        return None
     try:
-        info = json.loads(result.stdout or "{}")
+        return json.loads(result.stdout or "{}")
     except (json.JSONDecodeError, ValueError):
-        return 0
+        return None
 
-    # Build a human-readable context block. Note bodies are passed as
-    # data only — no eval, no f-string injection into shell strings.
+
+def _extract_bash_paths(cmd_str):
+    """Pull file path operands out of a known-risky bash command.
+
+    Returns a list of (path, intent) tuples. Intent is a short string
+    used in the projmem reason — helps the audit trail say *why* a
+    lease was opened (e.g., "rm" vs "mv source").
+    """
+    if not cmd_str:
+        return []
+    try:
+        # `posix=True` matches a real shell's word-splitting; comments
+        # and redirections stay as tokens but we filter them below.
+        tokens = shlex.split(cmd_str, posix=True)
+    except ValueError:
+        return []
+    if not tokens:
+        return []
+    cmd = os.path.basename(tokens[0])
+    if cmd not in RISKY_BASH_CMDS:
+        return []
+    paths = []
+    for tok in tokens[1:]:
+        if not tok or tok.startswith("-"):
+            continue
+        if tok in (";", "&&", "||", "|", ">", ">>", "<"):
+            break
+        paths.append((tok, cmd))
+    return paths
+
+
+def _summarize_warnings(warnings):
+    """Pick out the strongest deny-worthy warning, return (kind, text)
+    or (None, None) if nothing should block. ``kind`` is "exclusion" or
+    "critical" — both deny, but the reasons read differently."""
+    for w in warnings or []:
+        s = str(w)
+        if "OUT OF SCOPE" in s:
+            return ("exclusion", s)
+    for w in warnings or []:
+        s = str(w)
+        if "CRITICAL" in s and "block" in s.lower():
+            return ("critical", s)
+    return (None, None)
+
+
+def _emit_deny(reason):
+    out = {
+        "hookSpecificOutput": {
+            "hookEventName":         "PreToolUse",
+            "permissionDecision":    "deny",
+            "permissionDecisionReason": reason,
+        },
+    }
+    json.dump(out, sys.stdout)
+
+
+def _emit_context(block):
+    out = {
+        "hookSpecificOutput": {
+            "hookEventName":     "PreToolUse",
+            "additionalContext": block,
+        },
+    }
+    json.dump(out, sys.stdout)
+
+
+def _format_guidance(info):
     lines = []
     lease = info.get("lease_id")
     if lease:
         lines.append(f"projmem lease {lease[:8]}… open (expires "
                      f"{int(info.get('expires_at', 0) - info.get('opened_at', 0))}s)")
     for w in info.get("warnings") or []:
-        # Cap each warning at 500 chars to keep tool result lean.
         lines.append("⚠ " + str(w)[:500])
     guidance = info.get("guidance") or []
     if guidance:
@@ -117,18 +179,64 @@ def main() -> int:
             if len(body) > 240:
                 body = body[:237] + "..."
             lines.append(f"  • [{tag}] {note.get('target')}: {body}")
+    return "\n".join(lines)
 
-    if not lines:
+
+def main() -> int:
+    try:
+        payload = json.load(sys.stdin)
+    except (json.JSONDecodeError, ValueError):
         return 0
 
-    block = "\n".join(lines)
-    out = {
-        "hookSpecificOutput": {
-            "hookEventName":     "PreToolUse",
-            "additionalContext": block,
-        },
-    }
-    json.dump(out, sys.stdout)
+    tool = payload.get("tool_name") or payload.get("tool")
+    tool_input = payload.get("tool_input") or payload.get("tool_args") or {}
+    cwd = payload.get("cwd") or os.getcwd()
+
+    # Collect (path, intent) pairs that should be projmem-checked.
+    targets = []
+    if tool in FILE_TOUCH_TOOLS or tool in FILE_READ_TOOLS:
+        p = tool_input.get("file_path") or tool_input.get("path")
+        if isinstance(p, str) and p:
+            targets.append((p, tool.lower()))
+    elif tool == "Bash":
+        cmd_str = tool_input.get("command")
+        if isinstance(cmd_str, str):
+            targets.extend(_extract_bash_paths(cmd_str))
+
+    if not targets:
+        return 0
+
+    # Walk every target. First exclusion or blocking-critical denies
+    # the whole tool call; otherwise we aggregate context.
+    blocks = []
+    contexts = []
+    for path, intent in targets:
+        info = _projmem_editing(cwd, path, tool, intent)
+        if info is None:
+            continue
+        kind, reason = _summarize_warnings(info.get("warnings"))
+        if kind:
+            blocks.append(f"[{path}] {reason}")
+        else:
+            ctx = _format_guidance(info)
+            if ctx:
+                contexts.append(f"--- {path} ---\n{ctx}")
+
+    if blocks:
+        # Surface ALL blocked paths so the agent can address them at
+        # once — single-shot deny avoids back-and-forth.
+        body = "\n\n".join(blocks)
+        prefix = (
+            "projmem refuses this tool call. "
+            "Resolve the warnings below before retrying — "
+            "remove the exclusion in the projmem UI, mark the critical "
+            "note as approved, or pick a different path.\n\n"
+        )
+        _emit_deny(prefix + body)
+        return 0
+
+    if contexts:
+        _emit_context("\n\n".join(contexts))
     return 0
 
 
@@ -253,7 +361,7 @@ Add (or merge) the following into .claude/settings.json:
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Edit|Write|Read|NotebookEdit",
+        "matcher": "Edit|Write|Read|NotebookEdit|Bash",
         "hooks": [
           {"type": "command", "command": ".claude/hooks/pre-tool-use.py"}
         ]

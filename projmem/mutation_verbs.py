@@ -464,7 +464,13 @@ def _exclusion_ancestors(conn: sqlite3.Connection, path: str) -> List[Dict[str, 
     out of scope."
     """
     import os as _os
-    targets: List[str] = ["@project"]
+    # Three target classes: the file itself, every ancestor directory
+    # (trailing-slash convention), and `@project`. Earlier versions
+    # walked only ancestors — that silently swallowed file-level
+    # exclusions, so `projmem note add path.py --kind exclude` looked
+    # like it took effect but never fired during editing. Now both
+    # `path.py` and any parent `path/` will match.
+    targets: List[str] = ["@project", path]
     cur = path
     while True:
         d = _os.path.dirname(cur)

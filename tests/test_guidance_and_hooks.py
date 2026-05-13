@@ -260,3 +260,145 @@ class TestHookShellSafety:
         # The literal payload string should be visible as guidance — that
         # proves we treated it as data, not as code.
         assert payload in ctx or payload[:40] in ctx
+
+
+# ---------------------------------------------------------------------------
+# PreToolUse enforcement — Bash detection + permissionDecision="deny"
+# This is the load-bearing fix for "agent ignores CLAUDE.md and rm -rf's
+# a file that has a critical note attached". The hook now BLOCKS, not
+# just nudges.
+# ---------------------------------------------------------------------------
+
+class TestPreToolUseEnforcement:
+    def _setup_repo(self, tmp_path):
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        (repo / "a.py").write_text("def foo():\n    return 1\n")
+        (repo / "b.py").write_text("def bar():\n    return 2\n")
+        rc = _run_cli(["index"], cwd=repo)
+        assert rc.returncode == 0, rc.stderr
+        _run_cli(["hook", "install", "--claude-code", "--json"], cwd=repo)
+        return repo
+
+    def _invoke_hook(self, repo, payload):
+        hook_path = repo / ".claude" / "hooks" / "pre-tool-use.py"
+        return subprocess.run(
+            [sys.executable, str(hook_path)],
+            input=json.dumps(payload),
+            capture_output=True, text=True, timeout=15,
+        )
+
+    def test_bash_rm_on_excluded_path_is_denied(self, tmp_path):
+        # The user's exact case: agent runs `rm -rf a.py`, projmem has
+        # an exclusion on the dir/file → hook must DENY before the rm
+        # actually happens.
+        repo = self._setup_repo(tmp_path)
+        rc = _run_cli([
+            "note", "add", "a.py", "--kind", "exclude",
+            "do not touch — load-bearing reducer",
+        ], cwd=repo)
+        assert rc.returncode == 0, rc.stderr
+
+        result = self._invoke_hook(repo, {
+            "tool_name": "Bash",
+            "tool_input": {"command": "rm -rf a.py"},
+            "cwd": str(repo),
+        })
+        assert result.returncode == 0
+        blob = json.loads(result.stdout)
+        out = blob["hookSpecificOutput"]
+        assert out["hookEventName"] == "PreToolUse"
+        assert out["permissionDecision"] == "deny", out
+        reason = out["permissionDecisionReason"]
+        assert "OUT OF SCOPE" in reason
+        assert "a.py" in reason
+
+    def test_bash_rm_on_unguarded_path_passes_through(self, tmp_path):
+        # The hook must NOT block routine operations on files that
+        # have no critical/exclusion guard — otherwise it'd be useless.
+        repo = self._setup_repo(tmp_path)
+        result = self._invoke_hook(repo, {
+            "tool_name": "Bash",
+            "tool_input": {"command": "rm b.py"},
+            "cwd": str(repo),
+        })
+        assert result.returncode == 0
+        # No deny — either no output, or context-only output without
+        # a permissionDecision key.
+        if result.stdout.strip():
+            blob = json.loads(result.stdout)
+            out = blob.get("hookSpecificOutput") or {}
+            assert out.get("permissionDecision") != "deny"
+
+    def test_edit_on_critical_blocked_file_is_denied(self, tmp_path):
+        # Same enforcement on the Edit tool. Agents that hallucinate
+        # past CLAUDE.md and call Edit anyway hit the same deny.
+        repo = self._setup_repo(tmp_path)
+        long_reason = (
+            "load-bearing reducer — never modify without first reading "
+            "the docstring; multiple downstream consumers depend on "
+            "the exact output shape and an incident in 2025 cost us a "
+            "week of work."
+        )
+        rc = _run_cli([
+            "critical", "add", "a.py",
+            "--reason", long_reason,
+            "--category", "data_integrity",
+            "--self-cosign",
+        ], cwd=repo)
+        assert rc.returncode == 0, rc.stderr
+
+        result = self._invoke_hook(repo, {
+            "tool_name": "Edit",
+            "tool_input": {"file_path": "a.py"},
+            "cwd": str(repo),
+        })
+        assert result.returncode == 0
+        blob = json.loads(result.stdout)
+        out = blob["hookSpecificOutput"]
+        assert out["permissionDecision"] == "deny"
+        assert "CRITICAL" in out["permissionDecisionReason"]
+
+    def test_bash_mv_picks_up_source_path(self, tmp_path):
+        # `mv a.py renamed.py` should check a.py since that's the
+        # source the user wants to move/remove.
+        repo = self._setup_repo(tmp_path)
+        _run_cli([
+            "note", "add", "a.py", "--kind", "exclude",
+            "frozen — depends on exact bytes",
+        ], cwd=repo)
+        result = self._invoke_hook(repo, {
+            "tool_name": "Bash",
+            "tool_input": {"command": "mv a.py renamed.py"},
+            "cwd": str(repo),
+        })
+        assert result.returncode == 0
+        blob = json.loads(result.stdout)
+        assert blob["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+    def test_unknown_bash_command_is_a_noop(self, tmp_path):
+        # `ls`, `grep`, etc. should not trigger projmem at all — no
+        # point opening leases for read-only navigation.
+        repo = self._setup_repo(tmp_path)
+        result = self._invoke_hook(repo, {
+            "tool_name": "Bash",
+            "tool_input": {"command": "ls -la"},
+            "cwd": str(repo),
+        })
+        assert result.returncode == 0
+        assert result.stdout.strip() == ""
+
+    def test_shell_injection_in_bash_command_is_inert(self, tmp_path):
+        # Defense check — even if a malicious user crafts a bash
+        # command with substitutions, shlex parses it as literal tokens.
+        repo = self._setup_repo(tmp_path)
+        canary = tmp_path / "canary.touched"
+        result = self._invoke_hook(repo, {
+            "tool_name": "Bash",
+            "tool_input": {"command": f"rm $(touch {canary})"},
+            "cwd": str(repo),
+        })
+        assert result.returncode == 0
+        assert not canary.exists(), (
+            "shell expansion ran inside the hook — critical CVE"
+        )

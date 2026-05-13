@@ -4,6 +4,18 @@ This repo has persistent memory at `.projmem/`. It survives session
 boundaries, verifies beliefs against current code, and catches wrong
 claims before you ship them.
 
+## The `pj:` convention
+
+When the user prefixes a message with `pj:` (e.g. `pj: delete
+src/foo.py`), that is an explicit instruction to consult projmem first.
+Before any other tool call:
+
+1. For each file/symbol mentioned, run `projmem context <path>` (or
+   `projmem editing <path> --reason "<why>"` if modifying).
+2. Read every entry in `warnings[]`. If any contains `OUT OF SCOPE`
+   or `CRITICAL`, halt and surface it to the user.
+3. Only then plan and execute.
+
 ## The three calls that matter most
 
 ```bash
