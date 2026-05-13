@@ -2,9 +2,7 @@
 
 # `projmem`
 
-### Drift-aware code memory for AI agents — when the code changes, your saved beliefs are flagged refuted *before* you ship.
-
-Persistent, machine-verified memory for AI coding agents. Saved facts flip to `refuted` the moment the cited code drifts; tool calls against user-guarded paths are refused at the boundary, not the prompt.
+### Drift-aware code memory for AI agents
 
 [![license: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20NC-blue.svg)](./LICENSE)
 [![tests: 752 passing](https://img.shields.io/badge/tests-752%20passing-brightgreen.svg)](./tests)
