@@ -102,6 +102,38 @@ class TestHttpEndpoints:
         # The daemon's in-memory buffer recorded the event.
         assert any(ev["kind"] == "note_added" for ev in state.events)
 
+    def test_inspector_critical_categories_match_backend(self):
+        # The /critical endpoint rejects categories outside
+        # projmem.critical.CATEGORIES with a 400 + CategoryError envelope.
+        # The inspector form has a hard-coded list — if the two drift
+        # again the add-critical button looks broken, so pin the
+        # canonical set here. Anyone adding a category must update both.
+        from projmem.critical import CATEGORIES
+        ui_inspector = (
+            "projmem/ui/src/components/Inspector.tsx"
+        )
+        with open(ui_inspector, encoding="utf-8") as f:
+            src = f.read()
+        for c in CATEGORIES:
+            assert f'"{c}"' in src, (
+                f"category {c!r} from projmem.critical.CATEGORIES "
+                "missing from AddCriticalForm — UI 400s will result"
+            )
+
+    def test_critical_400_envelope_has_message_field(self, client):
+        # The UI surfaces the error envelope's `message` to the user;
+        # this pins the daemon's shape so a refactor can't strip it.
+        c, _ = client
+        r = c.post("/critical", json={
+            "target":      "src/a.py",
+            "reason":      "too short",
+            "category":    "security",
+            "self_cosign": True,
+        })
+        assert r.status_code == 400
+        body = r.json()
+        assert isinstance(body.get("message"), str) and body["message"]
+
     def test_patch_note_updates_body_and_broadcasts(self, client):
         c, state = client
         post = c.post("/notes", json={

@@ -17,13 +17,33 @@ async function getJSON<T>(path: string): Promise<T> {
   return r.json() as Promise<T>;
 }
 
+// Pull a useful message out of a non-OK response. The daemon shapes
+// errors two ways:
+//   FastAPI default validation → { "detail": "…" }
+//   CriticalError envelope     → { "error": "<code>", "message": "…" }
+// Surfacing either beats showing the bare HTTP status — the user's
+// last 400 looked like a UI bug because they couldn't see the
+// "category must be one of …" reason behind it.
+async function readError(r: Response, path: string): Promise<string> {
+  try {
+    const body = await r.json();
+    const msg =
+      typeof body?.message === "string" ? body.message :
+      typeof body?.detail === "string"  ? body.detail  :
+      typeof body?.error === "string"   ? body.error   :
+      null;
+    if (msg) return `${path}: ${r.status} — ${msg}`;
+  } catch { /* fall through */ }
+  return `${path}: ${r.status}`;
+}
+
 async function postJSON<T>(path: string, body?: unknown): Promise<T> {
   const r = await fetch(`${HTTP_BASE}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: body ? JSON.stringify(body) : undefined,
   });
-  if (!r.ok) throw new Error(`${path}: ${r.status}`);
+  if (!r.ok) throw new Error(await readError(r, path));
   return r.json() as Promise<T>;
 }
 
@@ -54,7 +74,7 @@ export const api = {
     postJSON<{id: number}>("/notes", payload),
   deleteNote: async (id: number) => {
     const r = await fetch(`${HTTP_BASE}/notes/${id}`, { method: "DELETE" });
-    if (!r.ok) throw new Error(`delete /notes/${id}: ${r.status}`);
+    if (!r.ok) throw new Error(await readError(r, `delete /notes/${id}`));
     return r.json() as Promise<{ id: number; deleted: boolean }>;
   },
   patchNote: async (id: number, payload: { body: string; severity?: string }) => {
@@ -63,7 +83,7 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    if (!r.ok) throw new Error(`patch /notes/${id}: ${r.status}`);
+    if (!r.ok) throw new Error(await readError(r, `patch /notes/${id}`));
     return r.json() as Promise<{ id: number; updated: boolean }>;
   },
   addCritical: (payload: {
@@ -76,7 +96,7 @@ export const api = {
   resolvePath: async (path: string) => {
     const r = await fetch(`${HTTP_BASE}/resolve-path?path=${encodeURIComponent(path)}`);
     if (r.status === 404) return null;
-    if (!r.ok) throw new Error(`resolve-path ${path}: ${r.status}`);
+    if (!r.ok) throw new Error(await readError(r, `resolve-path ${path}`));
     return r.json() as Promise<{ lifeline_id: string; current_path: string }>;
   },
   refsList: () => getJSON<{refs: {path: string; size: number; mtime: number}[]; root_exists: boolean; root?: string}>("/refs-list"),

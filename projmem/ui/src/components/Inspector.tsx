@@ -593,9 +593,18 @@ function AddCriticalForm({ target, onSaved }: {
   target: string;
   onSaved: () => void;
 }) {
+  // Categories mirror projmem.critical.CATEGORIES exactly — any
+  // mismatch surfaces as a 400 from /critical with a CategoryError
+  // envelope, which is exactly what bit the operator last session.
+  const CRITICAL_CATEGORIES = [
+    "security", "compliance", "performance",
+    "business_logic", "data_integrity", "other",
+  ] as const;
+  type CriticalCategory = typeof CRITICAL_CATEGORIES[number];
+
   const [open, setOpen]         = useState(false);
   const [reason, setReason]     = useState("");
-  const [category, setCategory] = useState<"security" | "perf" | "correctness" | "other">("security");
+  const [category, setCategory] = useState<CriticalCategory>("security");
   const [blastHops, setBlastHops] = useState(1);
   const [saving, setSaving]     = useState(false);
   const [err, setErr]           = useState<string | null>(null);
@@ -645,7 +654,7 @@ function AddCriticalForm({ target, onSaved }: {
       />
       <div className="flex items-center gap-2 text-[11px] flex-wrap">
         <span className="text-muted">category:</span>
-        {(["security", "perf", "correctness", "other"] as const).map((c) => (
+        {CRITICAL_CATEGORIES.map((c) => (
           <button
             key={c}
             onClick={() => setCategory(c)}
