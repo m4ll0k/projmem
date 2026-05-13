@@ -4,11 +4,11 @@
 
 ### drift-aware code memory for AI agents
 
-> **grep tells you what's in the code.
-> projmem tells you whether what you believed about the code is still true.**
+> grep tells you what's in the code.
+> projmem tells you whether what you (or your agent) **believed** about the code is still true — and refuses tool calls that would violate it.
 
 [![license: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20NC-blue.svg)](./LICENSE)
-[![tests: 629 passing](https://img.shields.io/badge/tests-629%20passing-brightgreen.svg)](./tests)
+[![tests: 752 passing](https://img.shields.io/badge/tests-752%20passing-brightgreen.svg)](./tests)
 [![python: 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](#install)
 [![bench: 38% tokens saved](https://img.shields.io/badge/bench-%E2%88%9238%25%20tokens-orange.svg)](./bench/multisession/REAL_RESULTS.md)
 
@@ -16,18 +16,24 @@
 
 ---
 
-## 60-second elevator pitch
+## Why this exists
 
 Every AI coding tool today has the same failure mode:
 
 1. The agent investigates code, builds beliefs, ships an answer.
-2. The code drifts. (Teammate renames a function. Refactor moves a class. You delete a file.)
-3. The agent's saved memory still says the OLD thing.
+2. The code drifts — a teammate renames a function, a refactor moves a class, you delete a file.
+3. The agent's saved memory still says the **old** thing.
 4. Next session, the agent reads the stale belief, treats it as ground truth, and ships a wrong answer on top of a refuted premise.
 
-**`projmem` is the missing layer.** Every belief you save (or your agent saves) is a structured, machine-checkable claim — `defined-at(setupmethod, src/foo.py:42)`, `exported-from(handler, lib/bar.ts)`, `env-read-at(DATABASE_URL, src/config.py:15)`. On every read, projmem re-validates each claim against the current index. If `setupmethod` moved or got renamed, the claim flips to `REFUTED` and the project's `contradicted_count` increments — your CI gate fires, your agent reads the blocker signal, and the wrong answer is stopped at the door.
+Worse: even when you write down `do not delete this file` or `this directory is out of scope`, the agent ignores your CLAUDE.md / AGENTS.md and `rm -rf`'s the file anyway. Prompts don't enforce.
 
-**The differentiator vs every other "agent memory" tool**: nothing else verifies. They store text. projmem stores claims and re-checks them.
+**`projmem` is the missing layer.** It does three things:
+
+| | What you get |
+|---|---|
+| **Verifier** | Every belief you (or the agent) save is a machine-checkable claim. On every read, projmem re-validates it against the live index. Stale claims flip to `contradicted`. |
+| **Lifelines** | Files keep one stable id across renames/moves/deletes, so your notes don't fall off. Deleted files become ghost lifelines whose history you can still query. |
+| **Enforcement** | A Claude Code `PreToolUse` hook actually **refuses** tool calls (Edit / Write / `rm` / `cat` / `projmem symbol --file …`) against paths the user marked critical or out-of-scope. Hallucination can't bypass it. |
 
 ---
 
@@ -36,125 +42,23 @@ Every AI coding tool today has the same failure mode:
 ```mermaid
 flowchart LR
     subgraph S1["Session 1"]
-        A1[Agent investigates code] --> A2["projmem note add a.py<br/>'`setupmethod` is defined at a.py:42'"]
-        A2 -->|auto-extracts| C1["FACT claim:<br/>defined-at(setupmethod, a.py:42)"]
-        C1 -->|verifies against index| ST1[("staleness: <b>fresh</b>")]
+        A1[Agent investigates] --> A2["projmem note add a.py<br/>'setupmethod at a.py:42'"]
+        A2 -->|auto-extract| C1["FACT claim"]
+        C1 -->|verifier| ST1[("staleness: fresh")]
     end
-
     subgraph DRIFT["Between sessions"]
-        D1[Teammate renames<br/>setupmethod → _setup_decorator]
+        D1[Teammate renames<br/>setupmethod → _setup]
     end
-
-    subgraph S2["Session 2 — fresh process, no carried context"]
-        ST1 -.->|persisted in .projmem/| RV[projmem refresh]
-        RV -->|re-runs verifier| ST2[("staleness:<br/><b>contradicted</b>")]
+    subgraph S2["Session 2 — fresh process"]
+        ST1 -.->|persisted| RV[projmem refresh]
+        RV --> ST2[("staleness: contradicted")]
         ST2 --> SIG["repo_memory.contradicted_count: 1"]
-        SIG --> AGENT[Agent reads STOP signal<br/>before acting on stale belief]
+        SIG --> AGENT[Agent reads STOP signal]
     end
-
     style ST1 fill:#9f9,stroke:#0a0
     style ST2 fill:#f99,stroke:#a00
     style SIG fill:#fa0,stroke:#a40,color:#000
 ```
-
-Every saved belief survives the session boundary AND gets automatically re-checked. The `contradicted` flag is the entire product.
-
----
-
-## Real benchmark numbers (not vibes)
-
-Two independent test results across **57 agent runs** with `claude-sonnet-4-6`. Methodology + raw transcripts in [`bench/multisession/REAL_RESULTS.md`](./bench/multisession/REAL_RESULTS.md).
-
-### Test 1 — controlled benchmark (N=7 reps × 3 arms, ysoserial)
-
-| | Baseline (no memory) | **`projmem`** | Free-form `notes.md` |
-|---|---:|---:|---:|
-| Correctness (session-2)             | 0/7 (truthful NO_RECORD) | **7/7** | 7/7 |
-| Mean tokens / session-2             | 1330 | **1051** | 1688 |
-| **Token cost vs `notes.md`**        | — | **−38%** | baseline |
-| Variance across reps                 | wide | **tight (1039–1065)** | wide (1548–1894) |
-
-projmem ties scratchpad on **correctness** but uses **38% fewer tokens** — the agent reads pre-computed `staleness: contradicted` from `projmem notes` once, instead of re-investigating each finding manually.
-
-### Test 2 — in-the-wild (Codex builds, Claude audits a fresh codebase)
-
-A different LLM (Codex) built a fresh FastAPI/SQLAlchemy app (`tasktrak`, ~1100 LOC) — no chance of training-data leakage to the auditor. Then Claude Sonnet audited it across two sessions: identified 5 specific symbols, then re-verified after the operator renamed two functions, deleted one file, and moved a third symbol.
-
-| | Baseline (no memory) | **`projmem`** |
-|---|---:|---:|
-| Session-2 verdicts correct | 0/5 (truthful NO_RECORD) | **5/5** ✓ |
-| Verifiable answers / dollar | 0 | **30** |
-
-The decisive transcript (projmem session 2):
-
-> *"The five session-1 findings (notes 6-10) map directly. Based on staleness:*
-> *— Note 6: `complete_task` @ task_service.py:42 — **contradicted***
-> *— Note 7: `verify_password` @ auth_service.py:16 — **contradicted***
-> *— Note 8: `Task` @ task.py:17 — fresh*
-> *— Note 9: `TaskStatus` @ task.py:10 — fresh*
-> *— Note 10: `legacy_list_tasks` @ legacy.py:17 — **contradicted**"*
-
-The agent ran `projmem notes` once, READ the per-note staleness, and answered. **No file investigation.** That's what the verifier buys.
-
----
-
-## Why projmem exists
-
-Every other "agent memory" approach hits one of three walls:
-
-| Failure mode | What today's tools do | What projmem does |
-|---|---|---|
-| **Agent forgets across sessions** | Each new session starts cold, re-investigates everything (wastes tokens) or fabricates confidently (ships wrong answers) | `.projmem/` survives across sessions; `task resume` shows what session N-1 was doing |
-| **Notes go stale invisibly** | Free-form `notes.md` / Cursor / Continue / IDE memory all store TEXT; nothing re-validates that text against current code | Every saved claim has a structured shape; verifier re-checks against the live index on every read |
-| **No blocker signal when prior beliefs become wrong** | Agents read stale text as ground truth and build the next decision on a refuted premise | `contradicted_count > 0` is a hard STOP signal; CI gates and agent prompts both respect it |
-
-Indexers (SCIP, LSIF, ctags) give you *symbols*. Analyzers (Semgrep, CodeQL) give you *patterns*. LLM scratchpads give you *text*. **None of them give you "the thing I saved last week is no longer true and here's what changed."** That sentence is the entire product.
-
----
-
-## How it works (architecture)
-
-```mermaid
-flowchart TB
-    subgraph CODE["Your codebase (any language)"]
-        SRC[("src/**<br/>tests/**<br/>...")]
-    end
-
-    subgraph PM["projmem (local, single-binary CLI)"]
-        IDX[Indexer<br/>tree-sitter + regex fallback]
-        STORE[(SQLite<br/>.projmem/index.db)]
-        EXTRACT[Auto-extract<br/>prose → structured claims]
-        VERIFIER[Verifier<br/>VERIFIED / MOVED / REFUTED / UNCHECKABLE]
-        IDX --> STORE
-        EXTRACT --> STORE
-        STORE <--> VERIFIER
-    end
-
-    subgraph CONSUMERS["Consumers"]
-        AGENT[AI agents<br/>Claude Code / Codex /<br/>Cursor / Continue]
-        CLI[Human via CLI]
-        MCP[MCP server]
-        HOOK[Git pre-commit hook]
-        CI[CI / GitHub Actions]
-    end
-
-    SRC --> IDX
-    AGENT -->|note add 'prose'| EXTRACT
-    AGENT -->|notes / fact-check| VERIFIER
-    CLI --> VERIFIER
-    MCP --> VERIFIER
-    HOOK --> VERIFIER
-    CI --> VERIFIER
-
-    VERIFIER -->|"contradicted_count > 0<br/>= STOP"| AGENT
-
-    style STORE fill:#fdf,stroke:#a0a
-    style VERIFIER fill:#fa0,stroke:#a40,color:#000
-```
-
-- **Local-first**: SQLite + tree-sitter, no daemon, no cloud, no LLM in the verifier hot path.
-- **Polyglot**: Python (stdlib AST), JS/TS (tree-sitter), Go/Rust/Java/C/C++/Ruby/Kotlin/Swift/PHP/Scala via tree-sitter; everything else via regex fallback.
-- **Surfaces every consumer needs**: CLI for humans + scripts, MCP server for agent runtimes, pre-commit hook generator, JSON output for CI gates.
 
 ---
 
@@ -163,217 +67,243 @@ flowchart TB
 ```bash
 git clone https://github.com/m4ll0k/projmem.git
 cd projmem
-pip install -e '.[treesitter]'    # treesitter extra is strongly recommended
+pip install -e '.[treesitter,daemon]'
 ```
-
-Verify:
-
-```bash
-python3 -m pytest tests/ -q       # 629 tests should pass
-projmem --help
-```
-
-Optional extras:
 
 | Extra | What it adds | When you need it |
 |---|---|---|
 | `[treesitter]` | Multi-language AST indexing | Always — without it only Python is AST-grounded |
-| `[mcp]`        | MCP server (`projmem mcp-server`) | Cursor / Claude Desktop / Continue integrations |
-| `[yaml]`       | YAML config support | If you use `.projmem/config.yaml` |
-| `[test]`       | pytest + dev deps | Contributors |
+| `[daemon]`     | FastAPI daemon + live UI | If you want `projmem ui` |
+| `[mcp]`        | MCP server (`projmem mcp-server`) | Cursor / Claude Desktop / Continue |
+
+Verify:
+
+```bash
+python3 -m pytest -q          # 752 tests should pass
+projmem --help
+```
 
 ---
 
-## Quickstart — 5 minutes from clone to verified claim
+## Quick start — choose your agent
+
+projmem ships instruction files for every major coding assistant. Pick the flag for yours:
 
 ```bash
-cd /path/to/your/repo
-projmem init claude     # one-shot: index + drop CLAUDE.md/AGENTS.md
+cd path/to/your/repo
+
+# Fresh project ─────────────────────────────────────────────
+projmem init claude        # or: codex / gemini / cursor / copilot / aider / opencode / all / auto
+projmem index
+projmem ui --port 7777     # opens the live UI in your browser
+
+# Existing project ──────────────────────────────────────────
+projmem init claude --reindex
+projmem ui --port 7777
+
+# Switching / multi-agent ───────────────────────────────────
+projmem init all --force   # drops CLAUDE.md + AGENTS.md + GEMINI.md + .cursorrules + …
 ```
 
-**Save a finding as PROSE.** projmem auto-extracts a structured FACT claim — no JSON syntax, no `@predicate(...)` notation, just write a sentence with backticks around the symbol name and `file:line` after "defined at":
+| `init` flag | drops | for |
+|---|---|---|
+| `claude` | `CLAUDE.md` | Claude Code · Anthropic API · MCP |
+| `codex` | `AGENTS.md` | OpenAI Codex CLI |
+| `gemini` | `GEMINI.md` | Gemini CLI · Code Assist |
+| `cursor` | `.cursorrules` | Cursor editor |
+| `copilot` | `.github/copilot-instructions.md` | GitHub Copilot |
+| `aider` | `AGENTS.md` | aider · droid · trae · hermes · openclaw |
+| `opencode` | `opencode.md` | OpenCode |
+| `antigravity` | `antigravity.md` | Antigravity |
+| `kiro` | `.kiro/steering/` | Kiro |
+| `all` | every file above | multi-agent setup |
+| `auto` | picks from env vars | default if you omit the flag |
 
-```bash
-projmem note add src/compiler/sys.ts --kind note \
-  "\`TSC_WATCHFILE\` is defined at src/compiler/sys.ts:1516"
-```
-
-projmem's response confirms the auto-extracted claim:
-
-```json
-{
-  "id": 1,
-  "auto_extracted_claims": [{
-    "subject": "TSC_WATCHFILE",
-    "predicate": "defined-at",
-    "object": "src/compiler/sys.ts:1516",
-    "truth_class": "FACT",
-    "status": "VERIFIED"
-  }],
-  "staleness": "fresh"
-}
-```
-
-**Now break the claim** — rename the symbol:
-
-```bash
-sed -i '' 's/TSC_WATCHFILE/TSC_WATCH_FILE/' src/compiler/sys.ts
-projmem refresh    # incremental reindex; auto-applies by default
-projmem notes
-```
-
-projmem now reports:
-
-```json
-{
-  "totals": {
-    "total_notes": 1,
-    "by_staleness": { "contradicted": 1 }
-  },
-  "repo_memory": {
-    "contradicted_count": 1,
-    "hint": "1 note(s) currently contradicted — prior FACT claims refuted. STOP."
-  }
-}
-```
-
-The saved note's `staleness` flipped from `fresh` → `contradicted`. Your CI gate (`projmem complete || exit 2`), your agent's session-start check, your editor's status bar — all see this signal.
-
-That's the entire workflow.
+Then tell your agent something like: `pj: add a /healthz endpoint`. The `pj:` prefix is the conversational protocol baked into every instruction file — the agent's first tool call must be `projmem context` or `projmem editing`, not Edit/Read/Bash.
 
 ---
 
-## The seven verbs that matter
+## How it works
 
-`projmem` ships with 60+ subcommands (`projmem usage` for the full catalog), but **real benchmark data showed an LLM agent only ever uses seven of them**. Real, measurable usage across 36 multi-session benchmark runs:
+```mermaid
+flowchart TB
+    subgraph CODE["Your codebase (any language)"]
+        SRC[("src/**<br/>tests/**")]
+    end
+    subgraph PM["projmem · single-binary CLI"]
+        IDX[Indexer<br/>tree-sitter + regex fallback]
+        STORE[(SQLite<br/>.projmem/index.db)]
+        VERIFIER[Verifier<br/>FACT claims · staleness]
+        MUT[Mutation verbs<br/>editing · creating · moving · deleting]
+        LIFE[Lifelines<br/>stable file id across renames]
+        SWEEP[Filesystem sweeper<br/>auto-reindex every 5s]
+        IDX --> STORE
+        SWEEP --> IDX
+        STORE <--> VERIFIER
+        STORE <--> MUT
+        STORE <--> LIFE
+    end
+    subgraph SURFACES["Surfaces"]
+        UI[Live UI<br/>graph · tree · schema · code]
+        HOOK[Claude Code<br/>PreToolUse hook<br/>BLOCKS denials]
+        AGENT[Any AI agent<br/>CLAUDE.md · AGENTS.md · GEMINI.md]
+        MCP[MCP server]
+        CI[CI · pre-commit]
+    end
+    SRC --> IDX
+    PM <--> UI
+    PM <--> HOOK
+    PM <--> AGENT
+    PM <--> MCP
+    PM <--> CI
+    HOOK -->|deny on critical / exclude| AGENT
+    style STORE fill:#fdf,stroke:#a0a
+    style VERIFIER fill:#fa0,stroke:#a40,color:#000
+    style HOOK fill:#f99,stroke:#a00,color:#000
+```
 
-| Verb | Calls | What it does |
+- **Local-first**: SQLite + tree-sitter. No cloud, no LLM in the verifier hot path.
+- **Polyglot**: Python (stdlib AST), JS/TS (tree-sitter), Go / Rust / Java / C / C++ / Ruby / Kotlin / Swift / PHP / Scala via tree-sitter; everything else via regex fallback.
+- **Concurrent-safe**: SQLite WAL + busy_timeout; the daemon serves the UI while CLI commands write.
+
+---
+
+## Schema
+
+The five tables that carry the v2 semantics:
+
+| Table | Purpose |
+|---|---|
+| `files` | Every indexed path with its hash, language, mtime, and current `lifeline_id`. |
+| `file_lifeline` | One row per logical file across its whole life — created at, current path (NULL when tombstoned). |
+| `file_event` | Append-only history per lifeline: `created · leased · edited · released · abandoned · moved · deleted`, plus the reason from each mutation verb. |
+| `edit_lease` | Open and historical leases. State machine: `open → pending_approval → open → done | abandoned`. |
+| `annotations` | Every note, guidance, constraint, preference, critical, exclude, skill — including `cited_line`, `severity`, `category`, `blast_radius_hops`, and `staleness` from the verifier. |
+
+Schema migrations live in `projmem/migrations/m00*.py` and run on first connect.
+
+---
+
+## The seven verbs that matter (v1)
+
+projmem ships 60+ subcommands, but real benchmark data showed agents only ever use seven:
+
+| Verb | Calls (36 runs) | What it does |
 |---|---:|---|
-| `projmem note add <target> "<prose>"` | 47× | Save a finding (auto-extracts FACT claims from prose) |
-| `projmem notes`                       | 43× | Project-wide summary, surfaces `contradicted_count` blocker |
-| `projmem session <target>`            | 12× | Per-target bootstrap (notes + neighbors + freshness) |
-| `projmem conclude "<text>"`           | 10× | Save a one-line conclusion (parses inline `@predicate(...)`) |
-| `projmem fact-check "<draft>"`        |  7× | Verify claims in your draft text BEFORE shipping (exit 2 on REFUTED) |
-| `projmem task`                        |  2× | Session-continuity (start / step / blocked / resume / close) |
-| `projmem refresh`                     |  2× | Incremental reindex after edits (auto-applies) |
-
-Run bare `projmem` to see this list at any time. The 60+ "expert" verbs (graph rendering, contract diffs, snapshot management, MCP server, hook installer, etc.) are still there for power users — `projmem usage --json` is the full machine-readable catalog.
+| `projmem note add <target> "<prose>"` | 47× | Save a finding. Auto-extracts FACT claims from prose. |
+| `projmem notes` | 43× | Project-wide summary; surfaces `contradicted_count`. |
+| `projmem session <target>` | 12× | Per-target bootstrap: notes + neighbors + freshness. |
+| `projmem conclude "<text>"` | 10× | One-line conclusion; parses inline `@predicate(...)`. |
+| `projmem fact-check "<draft>"` | 7× | Verify claims in your draft before shipping. |
+| `projmem task` | 2× | Session continuity (start / step / blocked / resume / close). |
+| `projmem refresh` | 2× | Incremental reindex. |
 
 ---
 
-## Four claim verdicts (the verifier's vocabulary)
+## The five mutation verbs (v2 — what the hook enforces)
 
-| Verdict | Meaning | Exit code |
-|---|---|---:|
-| **VERIFIED**    | Claim matches the indexed code at the cited location.        | 0 |
-| **MOVED**       | Symbol still in the cited file, but at a different line. (Soft warning; carries `moved_to` so you can re-cite without re-investigating.) | 0 |
-| **REFUTED**     | Symbol absent or in a different file. Wrong claim. **Note flips to `staleness: contradicted`.** | 2 |
-| **UNCHECKABLE** | Predicate isn't in the catalog (`projmem predicates`).        | 0 |
+```bash
+projmem editing  <path> --reason "..."         # before Edit / Write / Read
+projmem creating <path> --reason "..."         # before creating a new file
+projmem moving   <old> <new> --reason "..."    # before rename / move
+projmem deleting <path> --reason "..."         # before delete
+projmem done     <lease_id>                    # after successful change
+```
 
-Strict CI gate: `refuted_count == 0 AND moved_count == 0`. Loose gate (the default): `refuted_count == 0`.
-
-Six predicates currently supported (extensible): `defined-at`, `exported-from`, `env-read-at`, `flag-read-at`, `reexported-via`, `reverse-dependency-of`.
+Every call appends to `file_event`. Reasons must be ≥ 20 chars and contain a verb + object.
 
 ---
 
-## Real-world use cases
+## Enforcement — three stacked layers
 
-### 1. Pre-commit hook (catch staleness before you commit)
+Prompts don't enforce, so projmem doesn't rely on them.
 
-```bash
-projmem hook install      # writes .git/hooks/pre-commit
-git commit -m "refactor"
-# → hook runs `projmem refresh && projmem complete`
-# → if any saved FACT claim is now REFUTED, commit is BLOCKED
-```
+**Layer 1 — the `pj:` convention** (in every instruction template): when the user begins a message with `pj:`, the agent's **first tool call must be `projmem context` or `projmem editing`**, not Edit / Read / Bash. Warnings (OUT OF SCOPE, CRITICAL) halt the agent at the planning stage.
 
-### 2. CI gate (catch staleness before the PR merges)
-
-```yaml
-# .github/workflows/projmem.yml
-- name: Verify saved beliefs against current code
-  run: |
-    pip install -e '.[treesitter]' projmem
-    projmem index
-    projmem complete || exit 2     # exit 2 on any HIGH finding
-```
-
-### 3. MCP integration (every agent that supports MCP gets projmem for free)
-
-Add to your client's MCP config (Claude Desktop / Cursor / Continue):
-
-```json
-{
-  "projmem": {
-    "command": "projmem",
-    "args": ["mcp-server", "--path", "/abs/path/to/your/repo"]
-  }
-}
-```
-
-Tools exposed: `session`, `search`, `symbol`, `reverse`, `forward`, `fact-check`, `notes`, `note_add`. The agent picks them up automatically — no CLI subprocess overhead.
-
-### 4. Multi-session investigation
+**Layer 2 — Claude Code PreToolUse hook** (install once):
 
 ```bash
-# Day 1 — start a long task
-projmem task start "audit auth flow for token-leak"
-projmem note add src/auth/jwt.py "\`verify_token\` is defined at src/auth/jwt.py:42"
-projmem note add src/auth/middleware.py "\`require_user\` is defined at src/auth/middleware.py:18"
-
-# Day 2 (or next agent session) — pick up where you left off
-projmem task resume    # shows your open task + steps + saved notes
-projmem notes          # shows what you found, AND whether any belief is now contradicted
+projmem hook install --claude-code
 ```
+
+The hook intercepts every Edit / Write / Read / Bash tool call. On `rm`/`mv` against a critical or excluded path, or `cat`/`grep`/`projmem symbol --file …` against an excluded path, it returns `permissionDecision: "deny"` with the user's reason surfaced verbatim. The agent can't bypass it.
+
+**Layer 3 — CLI advisory** (for agents without hooks — Codex / Gemini / plain API): `projmem symbol`, `projmem at`, `projmem pack`, `projmem reverse` all emit `exclusion_warnings[]` in their JSON output when the target is under an exclusion.
+
+---
+
+## Live UI
+
+```bash
+projmem ui --port 7777
+```
+
+Three panes:
+
+- **Activity feed** (left) — every file event in real time. Click any path to hop.
+- **Tree · Graph · Schema** (center) — three lenses on the same index, cross-view selection sync.
+- **Inspector** (right) — notes, guidance, critical, code with line-precise annotation menu (click a gutter line number to add note/guidance/critical scoped to that line).
+
+The daemon auto-syncs disk every 5s — files written by `projmem init`, your agent's write_file tool, or anything else outside `projmem creating` are indexed and broadcast as live events. Disable with `--no-watch`.
+
+UI is also where you approve pending-approval leases (a critical rule blocked an edit; click Approve to unblock).
+
+---
+
+## Real benchmark numbers
+
+57 agent runs with `claude-sonnet-4-6`. Full methodology + raw transcripts in [`bench/multisession/REAL_RESULTS.md`](./bench/multisession/REAL_RESULTS.md).
+
+| | Baseline | **`projmem`** | Free-form `notes.md` |
+|---|---:|---:|---:|
+| Correctness (session-2) | 0/7 (truthful NO_RECORD) | **7/7** | 7/7 |
+| Mean tokens / session-2 | 1330 | **1051** | 1688 |
+| **Token cost vs `notes.md`** | — | **−38%** | baseline |
+| Variance | wide | **tight (1039–1065)** | wide (1548–1894) |
+
+projmem ties scratchpad on correctness but uses **38% fewer tokens** — the agent reads pre-computed `staleness: contradicted` once, instead of re-investigating manually.
+
+---
+
+## Limits — known and intentional
+
+- **Local only.** No cloud sync. Two operators on the same repo work from separate `.projmem/` dirs unless they commit them (and the indexer is deterministic enough that committing the DB is sometimes useful).
+- **Indexer is best-effort on regex fallback languages.** AST-grounded for Python, JS/TS, Go, Rust, Java, C/C++; everything else is regex. Surfaces this honestly in the `coverage` field.
+- **Hook enforcement is Claude-Code-specific.** Codex / Gemini / plain API agents only get the advisory CLI warnings + the `pj:` convention. The `permissionDecision: "deny"` mechanism only exists in Claude Code's hook protocol.
+- **Daemon listens on `127.0.0.1` only.** Refuses non-loopback binds. No remote access; tunnel through SSH if you want it.
+- **Filesystem sweeper runs the indexer on a 5s timer.** Big repos (>50k files) may want `--watch-interval 30` to dial it down.
+- **No conflict resolution if two operators edit annotations at once.** Last-write-wins on the SQLite row.
+- **No PyPI package yet.** Editable install from clone (`pip install -e .`) is the only path today; PyPI publish is planned.
 
 ---
 
 ## Comparison vs alternatives
 
-| | `notes.md` / scratchpad | Cursor / Continue memory | LSP servers (gopls, pyright) | **`projmem`** |
+| | scratchpad / `notes.md` | Cursor / Continue memory | LSP servers | **`projmem`** |
 |---|:---:|:---:|:---:|:---:|
-| Survives across sessions             | ✓ | ✓ | — | ✓ |
-| Verifies saved beliefs against code  | ✗ | ✗ | partial (live only) | **✓** |
-| Drift detection (REFUTED signal)     | ✗ | ✗ | — | **✓** |
-| Local, single-binary CLI             | ✓ | ✗ | — | ✓ |
-| Works with any LLM agent             | ✓ | per-IDE | per-IDE | ✓ |
-| Structured claim catalog             | ✗ | ✗ | — | ✓ |
-| MCP server included                  | — | — | — | ✓ |
-| CI / pre-commit gate                 | — | — | — | ✓ |
-| **Token cost on multi-session work** | baseline | n/a | n/a | **−38%** |
-
-`projmem` is the only entry in this matrix that combines persistent memory + automatic re-validation + cross-agent / cross-IDE portability + a CI-gateable signal.
+| Survives across sessions | ✓ | ✓ | — | ✓ |
+| Verifies beliefs against code | ✗ | ✗ | partial (live only) | **✓** |
+| Drift detection (REFUTED signal) | ✗ | ✗ | — | **✓** |
+| Refuses tool calls on guarded paths | ✗ | ✗ | — | **✓** |
+| Local, single-binary CLI | ✓ | ✗ | — | ✓ |
+| Works with any LLM agent | ✓ | per-IDE | per-IDE | ✓ |
+| MCP server included | — | — | — | ✓ |
+| CI / pre-commit gate | — | — | — | ✓ |
+| Token cost on multi-session work | baseline | n/a | n/a | **−38%** |
 
 ---
 
 ## Status
 
-- ✓ **629 tests passing**
-- ✓ **Two real-LLM benchmarks** (controlled + in-the-wild — see `bench/multisession/REAL_RESULTS.md`)
-- ✓ **MCP server** (`projmem mcp-server`) for Cursor / Claude Desktop / Continue / any MCP-aware client
-- ✓ **Trace-replay primitive** — re-grade old benchmark runs with new judges for $0
-- ✓ **60+ commands** beyond the seven core ones; see `projmem usage --json` for the full catalog
-- 🚧 LSP shim (publishes `contradicted` notes as editor diagnostics — red squiggles in VSCode/Zed/Cursor) — planned
-- 🚧 Live blast-radius graph (browser tab, agent edits → graph flashes red on the affected nodes) — planned
-
----
-
-## Roadmap
-
-| Item | Status | Notes |
-|---|---|---|
-| Auto-extract claims from prose       | ✅ shipped | Write `\`X\` is defined at file:line`; structured FACT claim is created automatically |
-| `note add` immediate verdict preview | ✅ shipped | Response carries `auto_extracted_claims[i].status` so you see VERIFIED/MOVED/REFUTED at write time |
-| MCP server                            | ✅ shipped | `projmem mcp-server`; works with Cursor / Claude Desktop / Continue |
-| LSP server (editor diagnostics)       | planned   | Tiny shim publishes `contradicted` notes as red squiggles in VSCode / Zed / Cursor |
-| Continuous file-watcher daemon        | planned   | `projmem watch` exists; making it default for always-current state |
-| Live blast-radius graph (browser)     | planned   | File-watch + websocket → graph flashes red on affected importers |
-| PyPI package                          | planned   | Today: `pip install -e .` from clone. Soon: `pip install projmem` |
-| Codex driver in benchmark harness     | planned   | Currently Claude-only on the bench; Codex driver wired but unrun |
-| `note_add` MCP tool with prose form   | planned   | MCP currently exposes `note_add` with structured args; should accept prose too |
-| Skills (v2.1)                         | designed  | Path-scoped cognitive instructions — teach projmem how you think, and it'll remind your AI agent to think that way every time it touches the right code. Spec in `docs/v2-design.md` Pillar 3.5. |
-
-> **Coming in v2.1: skills — path-scoped cognitive instructions.** Teach projmem how you think, and it'll remind your AI agent to think that way every time it touches the right code.
+- ✓ **752 tests passing**
+- ✓ Live UI (`projmem ui`) with graph · tree · schema · code · activity feed
+- ✓ Claude Code PreToolUse hook with hard-deny on critical / exclude
+- ✓ Filesystem auto-sweeper (default on)
+- ✓ Lifelines + tombstones across renames/deletes
+- ✓ MCP server for Cursor / Claude Desktop / Continue
+- ✓ Two real-LLM benchmarks (controlled + in-the-wild)
+- 🚧 PyPI publish — planned
+- 🚧 LSP shim (editor diagnostics) — planned
 
 ---
 
@@ -381,28 +311,25 @@ projmem notes          # shows what you found, AND whether any belief is now con
 
 | File | What's in it |
 |---|---|
-| [`docs/USAGE.md`](./docs/USAGE.md)              | Full command catalog, every flag explained |
-| [`docs/DESIGN.md`](./docs/DESIGN.md)            | The MVP design note — what we built and why |
-| [`docs/claims.md`](./docs/claims.md)            | The verifier deep-dive — predicates, truth classes, staleness model |
-| [`docs/agent-integration.md`](./docs/agent-integration.md) | How to wire projmem into Claude Code / Codex / Cursor / any LLM |
-| [`docs/ECOSYSTEM.md`](./docs/ECOSYSTEM.md)      | How projmem differs from SCIP / LSIF / Semgrep / CodeQL |
-| [`bench/multisession/REAL_RESULTS.md`](./bench/multisession/REAL_RESULTS.md) | Full benchmark methodology + raw numbers |
+| [`USAGE.md`](./USAGE.md) | Full command reference, every flag, every workflow |
+| [`docs/DESIGN.md`](./docs/DESIGN.md) | MVP design note — what we built and why |
+| [`docs/v2-design.md`](./docs/v2-design.md) | v2 lifelines, leases, mutation verbs, UI, hooks |
+| [`docs/claims.md`](./docs/claims.md) | Verifier deep-dive — predicates, truth classes, staleness |
+| [`docs/agent-integration.md`](./docs/agent-integration.md) | Wiring projmem into specific agents |
+| [`docs/ECOSYSTEM.md`](./docs/ECOSYSTEM.md) | How projmem differs from SCIP / LSIF / Semgrep / CodeQL |
+| [`bench/multisession/REAL_RESULTS.md`](./bench/multisession/REAL_RESULTS.md) | Benchmark methodology + raw numbers |
 
 ---
 
 ## License
 
-[**PolyForm Noncommercial 1.0.0**](./LICENSE) — free for personal, research, educational, and other noncommercial use. **Commercial use requires a separate license from the author.** Open an issue or contact via the address in [`CITATION.cff`](./CITATION.cff) for commercial inquiries.
+[**PolyForm Noncommercial 1.0.0**](./LICENSE) — free for personal, research, educational, and other noncommercial use. **Commercial use requires a separate license from the author.**
 
-Plain-English version: do whatever you want with it for personal projects, research, study, hobby work, or inside a charity / school / public agency. If you want to use it for a commercial product, SaaS, paid consulting, or a paid developer tool — talk to me first.
+Plain-English: do whatever you want with it for personal projects, research, study, hobby work, or inside a charity / school / public agency. For a commercial product, SaaS, paid consulting, or paid developer tool — talk to me first ([`CITATION.cff`](./CITATION.cff)).
 
 ## Contributing
 
-See [`CONTRIBUTING.md`](./CONTRIBUTING.md). Issues + PRs welcome. The codebase is small and opinionated; please read through before opening a PR.
-
-## Citation
-
-If you use projmem in research, see [`CITATION.cff`](./CITATION.cff).
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md). Issues + PRs welcome.
 
 ## Security
 
