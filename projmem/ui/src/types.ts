@@ -106,6 +106,11 @@ export interface Annotation {
   created_at?:  number | null;
   truth_class?: string | null;
   confidence?:  number | null;
+  // Set by mutation_verbs._annotation_summary when the body cites a
+  // line and by the editing-lease bundle for every row. UI uses both
+  // to badge line-scoped notes and to surface them on the gutter.
+  cited_line?:  number | null;
+  scope?:       "line" | "symbol" | "file" | "dir" | "project" | "dep" | null;
 }
 
 export interface LifelineDetail {

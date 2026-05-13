@@ -125,6 +125,41 @@ class TestEditing:
         result = mv.open_editing_lease(store, "src/a.py", reason=GOOD_REASON)
         assert any("contradicted" in w for w in result["warnings"])
 
+    def test_line_scoped_notes_rank_above_project_notes(self, store):
+        # The whole point of the inline line-annotation feature is that
+        # `path:5 — be careful` should rise to the top of the editing
+        # lease response. An agent skimming the first three notes must
+        # see line context before project trivia.
+        _seed_file(store, "src/a.py")
+        _add_note(store, "@project", "project-wide convention: snake_case")
+        _add_note(store, "src/a.py", "src/a.py:5 — invariant: status is always set")
+        result = mv.open_editing_lease(store, "src/a.py", reason=GOOD_REASON)
+        first = result["guidance"][0]
+        assert first["scope"] == "line", first
+        assert first["cited_line"] == 5
+        # Project-wide note is still there, just demoted.
+        scopes = [g["scope"] for g in result["guidance"]]
+        assert scopes.index("line") < scopes.index("project")
+
+    def test_line_scoped_notes_surfaced_in_warnings(self, store):
+        # First-glance warnings array must point the agent at L5 so it
+        # doesn't have to scan `guidance[]` to discover relevant lines.
+        _seed_file(store, "src/a.py")
+        _add_note(store, "src/a.py", "src/a.py:5 — invariant: status is always set")
+        _add_note(store, "src/a.py", "src/a.py:17 — branch is hot, profile first")
+        result = mv.open_editing_lease(store, "src/a.py", reason=GOOD_REASON)
+        assert any("L5" in w and "L17" in w for w in result["warnings"]), result["warnings"]
+
+    def test_notes_by_line_indexes_cited_lines(self, store):
+        # Index helps the UI/CLI jump-to-line — every annotation with
+        # a `:N` citation must show up under `notes_by_line[N]`.
+        _seed_file(store, "src/a.py")
+        _add_note(store, "src/a.py", "src/a.py:5 — invariant: status is always set")
+        result = mv.open_editing_lease(store, "src/a.py", reason=GOOD_REASON)
+        nbl = result["notes_by_line"]
+        assert 5 in nbl
+        assert any("invariant" in n["body"] for n in nbl[5])
+
     def test_inherits_1hop_dep_annotations(self, store):
         _seed_file(store, "src/a.py")
         _seed_file(store, "src/b.py")

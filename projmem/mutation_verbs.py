@@ -153,16 +153,65 @@ def _ensure_lifeline_for_path(
 # Guidance + history computation (called by editing)
 # ---------------------------------------------------------------------------
 
+import re as _re
+
+# Citation regex — accepts both `path:line` (canonical, written by the
+# inline line-form) and bare `:line` for backwards-compat with notes
+# authored before the inline form existed.
+_CITED_LINE_RE = _re.compile(r":(\d+)\b")
+
+
+def _extract_cited_line(body: str | None) -> int | None:
+    if not body:
+        return None
+    m = _CITED_LINE_RE.search(body)
+    if not m:
+        return None
+    try:
+        ln = int(m.group(1))
+    except ValueError:
+        return None
+    return ln if ln > 0 else None
+
+
 def _annotation_summary(row: sqlite3.Row) -> Dict[str, Any]:
+    body = row["body"]
     return {
         "id":          row["id"],
         "target":      row["target"],
         "kind":        row["kind"],
-        "body":        row["body"],
+        "body":        body,
         "staleness":   row["staleness"],
         "confidence":  row["confidence"],
         "truth_class": row["truth_class"],
+        "cited_line":  _extract_cited_line(body),
+        # scope is set by the caller (file / dir / project / symbol /
+        # dep) — leaving it here so consumers can rely on the field
+        # always existing on every annotation in the response.
+        "scope":       None,
     }
+
+
+# Sort priority for the editing-lease guidance bundle. Smaller wins.
+# The reason this matters: when an agent opens a file for edit, the
+# line-scoped note on THIS file is the highest-leverage context.
+# Project-wide notes that mention some other file are noise relative
+# to "here's exactly what you should know about line 5 of this file."
+_SCOPE_PRIORITY = {
+    "line":    0,
+    "symbol":  1,
+    "file":    2,
+    "dir":     3,
+    "project": 4,
+    "dep":     5,
+}
+
+
+def _sort_guidance_by_scope(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Stable-sort by scope priority, then by recency (caller already
+    ordered by created_at DESC, so we preserve that within a scope
+    bucket via stable sort)."""
+    return sorted(items, key=lambda g: _SCOPE_PRIORITY.get(g.get("scope") or "", 99))
 
 
 def _annotations_for_path(conn: sqlite3.Connection, path: str) -> List[Dict[str, Any]]:
@@ -173,7 +222,19 @@ def _annotations_for_path(conn: sqlite3.Connection, path: str) -> List[Dict[str,
         "ORDER BY created_at DESC LIMIT 50",
         (path, path),
     ).fetchall()
-    return [_annotation_summary(r) for r in rows]
+    out: List[Dict[str, Any]] = []
+    for r in rows:
+        a = _annotation_summary(r)
+        # Symbol-scoped if the target encodes a symbol path; line-scoped
+        # if the body carries a `:N` citation; otherwise plain file.
+        if "#" in (a["target"] or ""):
+            a["scope"] = "symbol"
+        elif a["cited_line"] is not None:
+            a["scope"] = "line"
+        else:
+            a["scope"] = "file"
+        out.append(a)
+    return out
 
 
 def _parent_dir_annotations(conn: sqlite3.Connection, path: str) -> List[Dict[str, Any]]:
@@ -199,7 +260,12 @@ def _parent_dir_annotations(conn: sqlite3.Connection, path: str) -> List[Dict[st
         "ORDER BY created_at DESC LIMIT 50",
         tuple(parents),
     ).fetchall()
-    return [_annotation_summary(r) for r in rows]
+    out: List[Dict[str, Any]] = []
+    for r in rows:
+        a = _annotation_summary(r)
+        a["scope"] = "project" if a["target"] == "@project" else "dir"
+        out.append(a)
+    return out
 
 
 def _onehop_dep_annotations(
@@ -220,9 +286,13 @@ def _onehop_dep_annotations(
         "ORDER BY created_at DESC LIMIT 50",
         tuple(neighbors),
     ).fetchall()
-    return [
-        {**_annotation_summary(r), "via": "1-hop dep"} for r in arows
-    ]
+    out: List[Dict[str, Any]] = []
+    for r in arows:
+        a = _annotation_summary(r)
+        a["scope"] = "dep"
+        a["via"] = "1-hop dep"
+        out.append(a)
+    return out
 
 
 def context_for_path(
@@ -241,7 +311,7 @@ def context_for_path(
     ``stale_excluded`` so the human can still find them.
     """
     conn = store.conn
-    merged = (
+    merged = _sort_guidance_by_scope(
         _annotations_for_path(conn, path)
         + _parent_dir_annotations(conn, path)
         + _onehop_dep_annotations(conn, path)
@@ -255,9 +325,15 @@ def context_for_path(
             stale_excluded.append(note)
         else:
             kept.append(note)
+    notes_by_line: Dict[int, List[Dict[str, Any]]] = {}
+    for g in kept:
+        ln = g.get("cited_line")
+        if isinstance(ln, int) and g.get("scope") in ("line", "symbol", "file"):
+            notes_by_line.setdefault(ln, []).append(g)
     return {
         "path":           path,
         "guidance":       kept,
+        "notes_by_line":  notes_by_line,
         "stale_excluded": stale_excluded,
         "history":        _history_for_lifeline_by_path(conn, path),
     }
@@ -458,7 +534,7 @@ def open_editing_lease(
     _emit_file_event(conn, lifeline_id, kind="leased", reason=reason)
     conn.commit()
 
-    guidance = (
+    guidance = _sort_guidance_by_scope(
         _annotations_for_path(conn, path)
         + _parent_dir_annotations(conn, path)
         + _onehop_dep_annotations(conn, path)
@@ -470,6 +546,32 @@ def open_editing_lease(
             f"{len(contradicted)} note(s) on this scope are contradicted — "
             "resolve before editing."
         )
+    # Line-scoped notes on this exact file are the highest-leverage
+    # context — surface them in the warnings array so the agent's first
+    # glance catches the line numbers it needs to read before editing.
+    # Bounded at three lines to avoid a wall-of-text warning block; the
+    # rest are still in `guidance[]` and `notes_by_line` for browsing.
+    line_notes = [g for g in guidance if g.get("scope") == "line"]
+    if line_notes:
+        cited_lines = sorted({
+            g["cited_line"] for g in line_notes if g.get("cited_line")
+        })
+        if cited_lines:
+            preview = ", ".join(f"L{n}" for n in cited_lines[:3])
+            more = f" (+{len(cited_lines) - 3} more)" if len(cited_lines) > 3 else ""
+            warnings.append(
+                f"📍 line-scoped notes on this file at {preview}{more} — "
+                "read them before touching those lines."
+            )
+
+    # Pre-index notes by their cited line so callers (the inline form
+    # in the UI, the agent's editing flow) can jump straight to the
+    # advisories relevant to a given line without re-parsing bodies.
+    notes_by_line: Dict[int, List[Dict[str, Any]]] = {}
+    for g in guidance:
+        ln = g.get("cited_line")
+        if isinstance(ln, int) and g.get("scope") in ("line", "symbol", "file"):
+            notes_by_line.setdefault(ln, []).append(g)
 
     # v2.1 skills — path-scoped cognitive instructions. Surfaced
     # alongside guidance with a distinct prelude format.
@@ -487,18 +589,19 @@ def open_editing_lease(
         )
 
     out = {
-        "lease_id":     lease["lease_id"],
-        "expires_at":   lease["expires_at"],
-        "opened_at":    lease["opened_at"],
-        "path":         path,
-        "symbol":       symbol,
-        "lifeline_id":  lifeline_id,
-        "lease_state":  "pending_approval" if blocks else "open",
-        "guidance":     guidance,
-        "skills":       skills_active,
-        "exclusions":   exclusions,
-        "history":      _history_for_lifeline(conn, lifeline_id),
-        "warnings":     warnings,
+        "lease_id":      lease["lease_id"],
+        "expires_at":    lease["expires_at"],
+        "opened_at":     lease["opened_at"],
+        "path":          path,
+        "symbol":        symbol,
+        "lifeline_id":   lifeline_id,
+        "lease_state":   "pending_approval" if blocks else "open",
+        "guidance":      guidance,
+        "notes_by_line": notes_by_line,
+        "skills":        skills_active,
+        "exclusions":    exclusions,
+        "history":       _history_for_lifeline(conn, lifeline_id),
+        "warnings":      warnings,
     }
     if skills_active:
         out["skill_prelude"] = _skills.build_skill_prelude(skills_active)

@@ -328,6 +328,16 @@ function NoteRow({ note, onShowCode, isFresh, onDeleted, onEdited }: {
               {note.truth_class}
             </span>
           )}
+          {/* Pin a "@ line N" badge so line-scoped notes pop visually
+              in the same scan as truth-class — they're the highest-
+              leverage annotations the operator can have on a file,
+              and the daemon already returned the parsed line. */}
+          {note.cited_line && (
+            <span className="text-[9px] font-mono uppercase tracking-wider
+                              px-1 rounded bg-warn/15 text-warn border border-warn/30">
+              @ line {note.cited_line}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {linkCount > 0 && (
