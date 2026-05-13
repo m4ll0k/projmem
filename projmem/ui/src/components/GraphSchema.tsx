@@ -415,6 +415,41 @@ export function GraphSchema() {
     });
   }, [liveLeasedPaths, selectedLifeline, selectedDirectory, hoveredPath, zoomLevel, root]);
 
+  // Pan to the selected node in schema view — same fix shape as the
+  // force-directed graph. Scrolls the selected leaf or directory
+  // into the visible area when the operator clicks something in
+  // tree, then switches to schema.
+  useEffect(() => {
+    if (!svgRef.current || !zoomBehaviorRef.current) return;
+    const inner = innerGRef.current;
+    if (!inner) return;
+    // Find the rendered <g.node> for the current selection (lifeline
+    // OR directory). We don't have node coords in JS state — they
+    // live on the SVG attribute — so we parse them out of the
+    // node's transform string.
+    const allNodes = Array.from(inner.querySelectorAll<SVGGElement>("g.node"));
+    const target = allNodes.find((g) => {
+      const datum = (g as any).__data__?.data;
+      if (!datum) return false;
+      if (selectedLifeline && datum.node?.id === selectedLifeline) return true;
+      if (selectedDirectory) {
+        if (datum.kind === "dir" && datum.path + "/" === selectedDirectory) return true;
+        if (datum.kind === "root" && selectedDirectory === "@project") return true;
+      }
+      return false;
+    });
+    if (!target) return;
+    const transform = target.getAttribute("transform") || "";
+    const m = transform.match(/translate\(([-\d.]+),\s*([-\d.]+)\)/);
+    if (!m) return;
+    const x = parseFloat(m[1]), y = parseFloat(m[2]);
+    const targetT = zoomIdentity.scale(1.4).translate(-x, -y);
+    select(svgRef.current).call(
+      zoomBehaviorRef.current.transform, targetT,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedLifeline, selectedDirectory, rawNodes]);
+
   return (
     <div className="relative h-full w-full bg-bg overflow-hidden">
       <svg ref={svgRef} className="absolute inset-0 w-full h-full text-ink">

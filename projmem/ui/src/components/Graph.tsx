@@ -570,25 +570,32 @@ export function GraphView() {
     );
   };
 
-  // When the operator selects a node from the tree (or any other
-  // source), pan + zoom the graph to center it. Read selectedLifeline
-  // from the store and animate the existing zoom transform.
+  // Pan + zoom to the selected node — wires "click in tree/schema →
+  // switch to graph → focus that file" end to end. Must depend on
+  // `nodes` too, otherwise switching views from another pane mounts
+  // a fresh GraphView with empty simNodesRef.current; the effect
+  // fires once, finds nothing, and never re-runs when the data
+  // eventually arrives. Including `nodes.length` re-fires the effect
+  // after the simulation-build effect has populated simNodesRef.
   useEffect(() => {
     if (!selectedLifeline) return;
     if (!svgRef.current || !zoomBehaviorRef.current) return;
-    // Wait a frame for the sim to settle if it's still moving things.
+    if (simNodesRef.current.length === 0) return;
     const t = setTimeout(() => {
       const node = simNodesRef.current.find((n) => n.id === selectedLifeline);
       if (!node || node.x == null || node.y == null) return;
       const targetT = zoomIdentity.scale(2).translate(-node.x, -node.y);
-      // No transition — d3-transition adds 30+ KB and a hard pan reads
-      // as "snap to focus" which is what the user expects.
       select(svgRef.current!).call(
         zoomBehaviorRef.current!.transform, targetT,
       );
-    }, 100);
+      // Also pin the node so the simulation can't drift it away from
+      // under the operator's cursor mid-investigation.
+      node.fx = node.x; node.fy = node.y;
+      setPinnedCount(simNodesRef.current.filter((n) => n.fx != null).length);
+    }, 120);
     return () => clearTimeout(t);
-  }, [selectedLifeline]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedLifeline, nodes]);
 
   return (
     <div className="relative h-full w-full bg-bg overflow-hidden">

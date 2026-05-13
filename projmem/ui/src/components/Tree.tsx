@@ -107,11 +107,12 @@ function FileRow({ n, live, selected, onClick }: {
   const base = (n.path || "").split("/").pop() || "—";
   return (
     <div
+      data-tree-lifeline={n.id}
       onClick={onClick}
       className={`flex items-center px-2 py-1 text-xs cursor-pointer
         rounded-sm transition-colors
         ${selected
-          ? "bg-accent/10 text-accent"
+          ? "bg-accent/15 text-accent border-l-2 border-accent pl-[6px]"
           : live
             ? "bg-accent/5 text-ink"
             : "text-ink hover:bg-sunken"}`}
@@ -166,10 +167,11 @@ function DirSection({ dir, depth, liveSet, selectedLifeline,
     <div className="select-none">
       {dir.fullPath !== "" && (
         <div
+          data-tree-dir={dir.fullPath + "/"}
           style={{ paddingLeft: `${depth * 12 + 6}px` }}
           className={`flex items-center px-2 py-1 text-[11px] rounded-sm
                      ${isSelectedDir
-                        ? "bg-accent/10 text-accent"
+                        ? "bg-accent/15 text-accent border-l-2 border-accent"
                         : "text-ink hover:bg-sunken"}`}
         >
           {/* Triangle = collapse/expand; separate click target from
@@ -313,6 +315,39 @@ export function TreeView() {
 
   const totalFiles = payload?.nodes?.length ?? 0;
   const liveCount  = liveLeasedPaths.length;
+
+  // When selection changes (from any source), auto-expand the
+  // selected file/dir's ancestor directories AND scroll the
+  // corresponding row into view. Wire up: selecting a file in graph
+  // → switch to tree → the row is already on screen and highlighted.
+  useEffect(() => {
+    const lifelinePath = payload?.nodes?.find(
+      (n) => n.id === selectedLifeline)?.path;
+    const target = selectedDirectory
+                ?? (lifelinePath ? lifelinePath : null);
+    if (!target) return;
+    // Expand every ancestor directory that's currently collapsed.
+    const parts = target.replace(/\/$/, "").split("/").filter(Boolean);
+    let accum = "";
+    setCollapsed((s) => {
+      const next = new Set(s);
+      for (let i = 0; i < parts.length - 1; i++) {
+        accum = accum ? accum + "/" + parts[i] : parts[i];
+        next.delete(accum);
+      }
+      return next;
+    });
+    // Scroll into view after the DOM has had a tick to render the
+    // expanded rows.
+    const id = setTimeout(() => {
+      const sel = selectedDirectory
+        ? `[data-tree-dir="${selectedDirectory}"]`
+        : `[data-tree-lifeline="${selectedLifeline}"]`;
+      const el = document.querySelector<HTMLElement>(sel);
+      el?.scrollIntoView({ block: "center", behavior: "smooth" });
+    }, 50);
+    return () => clearTimeout(id);
+  }, [selectedLifeline, selectedDirectory, payload?.nodes]);
 
   return (
     <div className="h-full w-full flex flex-col bg-bg">
