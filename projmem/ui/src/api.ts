@@ -37,7 +37,13 @@ export const api = {
     ),
   lifeline: (id: string) => getJSON<LifelineDetail>(`/lifeline/${id}`),
   notesByTarget: (target: string) =>
-    getJSON<{target: string; notes: any[]; critical: any[]}>(
+    getJSON<{
+      target: string;
+      notes: any[];
+      critical: any[];
+      scope_files: { id: string; current_path: string }[];
+      scope_count: number;
+    }>(
       `/notes-by-target?target=${encodeURIComponent(target)}`,
     ),
   file:     (path: string) =>

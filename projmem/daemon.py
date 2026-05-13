@@ -439,6 +439,12 @@ def build_app(state: DaemonState, *, serve_ui: bool = True):
         in the schema/tree view loads its dir-scoped annotations
         (target ends in `/` per the v1 convention) without going
         through the lifeline machinery, which is file-only.
+
+        Also returns `scope_files` — every active lifeline under that
+        directory (or every lifeline at all for `@project`). The UI
+        uses this to render "applies to N files" + an expandable
+        scope preview, so adding a dir-scoped guidance note isn't a
+        leap-of-faith action.
         """
         store = state.store()
         try:
@@ -449,10 +455,30 @@ def build_app(state: DaemonState, *, serve_ui: bool = True):
             ).fetchall()
             notes = [dict(r) for r in rows]
             critical = [n for n in notes if n.get("kind") == "critical"]
+
+            # Resolve scope to a list of active lifelines.
+            scope_files: List[Dict[str, Any]] = []
+            if target == "@project":
+                scope_files = [dict(r) for r in store.conn.execute(
+                    "SELECT id, current_path FROM file_lifeline "
+                    "WHERE tombstoned_at IS NULL "
+                    "ORDER BY current_path ASC LIMIT 5000"
+                )]
+            elif target.endswith("/"):
+                prefix = target  # trailing slash is part of the prefix
+                scope_files = [dict(r) for r in store.conn.execute(
+                    "SELECT id, current_path FROM file_lifeline "
+                    "WHERE tombstoned_at IS NULL "
+                    "AND current_path LIKE ? || '%' "
+                    "ORDER BY current_path ASC LIMIT 5000",
+                    (prefix,),
+                )]
             return {
                 "target":   target,
                 "notes":    notes,
                 "critical": critical,
+                "scope_files": scope_files,
+                "scope_count": len(scope_files),
             }
         finally:
             store.close()

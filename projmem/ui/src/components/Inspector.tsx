@@ -658,7 +658,13 @@ export function Inspector() {
 
   const [tab, setTab]               = useState<Tab>("notes");
   const [detail, setDetail]         = useState<LifelineDetail | null>(null);
-  const [dirDetail, setDirDetail]   = useState<{notes: Annotation[]; critical: Annotation[]} | null>(null);
+  const [dirDetail, setDirDetail]   = useState<{
+    notes: Annotation[];
+    critical: Annotation[];
+    scope_files: { id: string; current_path: string }[];
+    scope_count: number;
+  } | null>(null);
+  const [showScope, setShowScope]   = useState(false);
   const [loading, setLoading]       = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
   const [codeLine, setCodeLine]     = useState<number | undefined>(undefined);
@@ -690,6 +696,8 @@ export function Inspector() {
       .then((d) => !cancelled && setDirDetail({
         notes: d.notes as Annotation[],
         critical: d.critical as Annotation[],
+        scope_files: d.scope_files,
+        scope_count: d.scope_count,
       }))
       .catch(()  => !cancelled && setDirDetail(null))
       .finally(()=> !cancelled && setLoading(false));
@@ -768,6 +776,40 @@ export function Inspector() {
                       <span className="text-muted italic">(tombstoned — no current path)</span>
                     )}
                   </div>
+
+                  {/* Scope hopper — every ancestor directory of this
+                      file + @project, as one-click chips. Lets the
+                      operator add notes at any scope (this file → its
+                      parent dir → its grandparent → the whole project)
+                      without leaving the inspector. */}
+                  {detail.lifeline.current_path && (
+                    <div className="mb-1.5">
+                      <div className="text-[10px] text-muted mb-0.5">
+                        add note at scope:
+                      </div>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {(() => {
+                          const parts = detail.lifeline.current_path!.split("/").filter(Boolean);
+                          const chips: { label: string; target: string }[] = [];
+                          let accum = "";
+                          for (let i = 0; i < parts.length - 1; i++) {
+                            accum = accum ? accum + "/" + parts[i] : parts[i];
+                            chips.push({ label: parts[i] + "/", target: accum + "/" });
+                          }
+                          chips.push({ label: "@project", target: "@project" });
+                          return chips.map((c) => (
+                            <Button
+                              key={c.target}
+                              size="xs" variant="secondary"
+                              onClick={() => setSelectedDirectory(c.target)}
+                              title={`switch inspector to ${c.target} — applies to every file under that scope`}
+                            >{c.label}</Button>
+                          ));
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-1.5 flex-wrap">
                     {detail.lifeline.current_path && (
                       <Button
@@ -783,17 +825,14 @@ export function Inspector() {
                     <Button
                       size="xs" variant="secondary"
                       onClick={() => setCenterView("graph")}
-                      aria-label="show in graph"
                     >→ graph</Button>
                     <Button
                       size="xs" variant="secondary"
                       onClick={() => setCenterView("schema")}
-                      aria-label="show in schema"
                     >→ schema</Button>
                     <Button
                       size="xs" variant="secondary"
                       onClick={() => setCenterView("tree")}
-                      aria-label="show in tree"
                     >→ tree</Button>
                     <span className="ml-auto text-[10px] font-mono text-muted">
                       lifeline {detail.lifeline.id.slice(0, 8)}…
@@ -887,13 +926,48 @@ export function Inspector() {
             </div>
             <div className="rounded-md border border-line bg-elev px-2.5 py-2 mb-2">
               <div className="text-xs font-mono break-all leading-snug text-ink mb-1">
-                📁 {selectedDirectory}
+                {selectedDirectory === "@project" ? "🏠 " : "📁 "}{selectedDirectory}
               </div>
-              <div className="text-[10px] text-muted">
-                directory-scoped annotations. Use this to record WHY
-                this subtree exists, what convention rules apply, what
-                resources / papers justify its design.
+              <div className="text-[10px] text-muted mb-1.5">
+                Notes added here apply to <span className="text-ink font-semibold">
+                {selectedDirectory === "@project"
+                  ? "the entire project — every file the agent edits"
+                  : "every file in this subtree, recursively"}
+                </span>.
+                {" "}Claude reads them when it runs `projmem editing` on any matching file.
               </div>
+              {/* Scope chip + expandable file list */}
+              {dirDetail && dirDetail.scope_count > 0 && (
+                <div>
+                  <button
+                    onClick={() => setShowScope((s) => !s)}
+                    className="text-[10px] text-accent hover:underline inline-flex items-center gap-1"
+                    title="show the files this note would apply to"
+                  >
+                    {showScope ? "▼" : "▶"} applies to {dirDetail.scope_count} file{dirDetail.scope_count !== 1 ? "s" : ""}
+                  </button>
+                  {showScope && (
+                    <div className="mt-1.5 max-h-32 overflow-y-auto rounded
+                                    border border-line bg-bg text-[10px]
+                                    font-mono">
+                      {dirDetail.scope_files.slice(0, 100).map((f) => (
+                        <button
+                          key={f.id}
+                          onClick={() => setSelectedLifeline(f.id)}
+                          className="block w-full text-left px-1.5 py-0.5
+                                      hover:bg-sunken text-ink truncate"
+                          title={f.current_path}
+                        >{f.current_path}</button>
+                      ))}
+                      {dirDetail.scope_files.length > 100 && (
+                        <div className="px-1.5 py-0.5 text-muted">
+                          + {dirDetail.scope_files.length - 100} more
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
             {loading && <div className="text-xs text-muted">loading…</div>}
             {dirDetail && (
