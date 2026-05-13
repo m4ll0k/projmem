@@ -138,12 +138,35 @@ export function GraphSchema() {
     })(root);
 
     const width  = Math.max(800, totalNodes * 14);
-    const height = Math.max(400, maxDepth * 80);
+    const height = Math.max(400, maxDepth * 90);
 
     const h = hierarchy<TreeDatum>(root);
     const layout = tree<TreeDatum>().size([width, height])
       .separation((a, b) => a.parent === b.parent ? 1 : 1.3);
     const positioned = layout(h);
+
+    // Set the SVG viewBox to the actual content extent + padding so
+    // the rendered tree fits the container regardless of node count.
+    // Previously the SVG had no viewBox at all → d3's pixel-space
+    // coords spilled off the top-left and the initial pan made it
+    // worse. The new viewBox + xMidYMin preserveAspectRatio fits the
+    // root at top-center, tree extending down.
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    positioned.each((n) => {
+      if (n.x < minX) minX = n.x;
+      if (n.x > maxX) maxX = n.x;
+      if (n.y < minY) minY = n.y;
+      if (n.y > maxY) maxY = n.y;
+    });
+    const pad = 60;
+    const vbX = minX - pad;
+    const vbY = minY - pad;
+    const vbW = (maxX - minX) + pad * 2;
+    const vbH = (maxY - minY) + pad * 2;
+    svgRef.current.setAttribute(
+      "viewBox", `${vbX} ${vbY} ${vbW} ${vbH}`,
+    );
+    svgRef.current.setAttribute("preserveAspectRatio", "xMidYMin meet");
 
     const inner = select(innerGRef.current);
     inner.selectAll("*").remove();
@@ -215,7 +238,8 @@ export function GraphSchema() {
 
     nodeSel.append("title").text((d) => d.data.path || "/");
 
-    // Zoom + pan.
+    // Zoom + pan. The viewBox already fits the content; the user can
+    // scroll-zoom in to read labels on dense subtrees.
     const z: ZoomBehavior<SVGSVGElement, unknown> =
       zoom<SVGSVGElement, unknown>().scaleExtent([0.2, 8])
         .on("zoom", (ev) => {
@@ -225,87 +249,94 @@ export function GraphSchema() {
     zoomBehaviorRef.current = z;
     const svg = select(svgRef.current);
     svg.call(z);
-    // Center on initial render: translate so the root is at the top
-    // of the visible area.
-    svg.call(z.transform, zoomIdentity.translate(width / 2, 40));
+    // Start at identity — the viewBox is already framing the content.
+    svg.call(z.transform, zoomIdentity);
   }, [root, theme, setSelectedLifeline]);
 
-  // Live-leased highlight: pulse the leaf node + bold its
-  // root-to-leaf path. Implemented as a DOM-pass effect so the layout
-  // doesn't rebuild when leases come and go.
+  // Live-leased OR selected highlight: light the leaf + every
+  // directory on the path back to root, dim everything else. Live
+  // takes priority over selection when both are active.
   useEffect(() => {
     const root_ = innerGRef.current;
     if (!root_) return;
     const liveSet = new Set(liveLeasedPaths);
-    const focusActive = liveSet.size > 0;
+    const liveFocus = liveSet.size > 0;
 
-    // Build the set of ancestor directory paths for every live path.
-    const litPathSet = new Set<string>();
-    if (focusActive) {
-      for (const p of liveSet) {
-        const parts = p.split("/").filter(Boolean);
-        let accum = "";
-        litPathSet.add("");           // root
-        for (let i = 0; i < parts.length; i++) {
-          accum = accum ? accum + "/" + parts[i] : parts[i];
-          litPathSet.add(accum);
+    // Look up the path for the selected lifeline by walking the data.
+    let selectedPath: string | null = null;
+    if (selectedLifeline) {
+      root_.querySelectorAll<SVGGElement>("g.node").forEach((g) => {
+        const datum = (g as any).__data__?.data?.node;
+        if (datum?.id === selectedLifeline) {
+          selectedPath = g.getAttribute("data-path") || null;
         }
+      });
+    }
+    const selectionFocus = !liveFocus && selectedPath != null;
+
+    // Build the lit-path set (every ancestor directory of every
+    // focal path, including the root and the file itself).
+    const litPathSet = new Set<string>();
+    const focalPaths: string[] = [];
+    if (liveFocus)      for (const p of liveSet) focalPaths.push(p);
+    if (selectionFocus) focalPaths.push(selectedPath!);
+    if (focalPaths.length > 0) litPathSet.add("");      // root
+    for (const p of focalPaths) {
+      const parts = p.split("/").filter(Boolean);
+      let accum = "";
+      for (let i = 0; i < parts.length; i++) {
+        accum = accum ? accum + "/" + parts[i] : parts[i];
+        litPathSet.add(accum);
       }
     }
+    const anyFocus = liveFocus || selectionFocus;
 
     root_.querySelectorAll<SVGGElement>("g.node").forEach((g) => {
       const p = g.getAttribute("data-path") || "";
+      const datum = (g as any).__data__?.data?.node;
       const isLive = liveSet.has(p);
-      const isLit  = litPathSet.has(p);
-      if (focusActive) {
-        g.style.opacity = isLive ? "1" : (isLit ? "0.95" : "0.06");
+      const isSelected = selectionFocus && datum?.id === selectedLifeline;
+      const isFocal = isLive || isSelected;
+      const isLit   = litPathSet.has(p);
+
+      if (anyFocus) {
+        g.style.opacity = isFocal ? "1" : (isLit ? "0.95" : "0.06");
       } else {
         g.style.opacity = "1";
       }
+
       const circle = g.querySelector<SVGCircleElement>("circle");
-      if (circle && isLive) {
-        circle.setAttribute("r", "6");
+      if (!circle) return;
+      if (isLive) {
+        circle.setAttribute("r", "7");
         circle.setAttribute("stroke", "#2563eb");
-        circle.setAttribute("stroke-width", "2.5");
-      } else if (circle) {
-        // Restore default radius based on kind.
-        const tag = g.querySelector<SVGTextElement>("text")?.textContent ?? "";
-        circle.setAttribute("r", p === ""
-          ? "5"
-          : (g.querySelector("text")?.getAttribute("x") === "0" ? "4" : "3.5"));
+        circle.setAttribute("stroke-width", "3");
+      } else if (isSelected) {
+        circle.setAttribute("r", "7");
+        circle.setAttribute("stroke", "#2563eb");
+        circle.setAttribute("stroke-width", "3");
+      } else {
+        // Default radius based on whether the node has children
+        // (root/dir) vs is a leaf (file).
+        const isLeaf = g.querySelector("text")?.getAttribute("x") !== "0";
+        circle.setAttribute("r", p === "" ? "5" : (isLeaf ? "3.5" : "4"));
+        circle.setAttribute("stroke", "#e5e5e5");
+        circle.setAttribute("stroke-width", "1");
       }
     });
 
     root_.querySelectorAll<SVGPathElement>("g.edges path").forEach((l) => {
       const s = l.getAttribute("data-source-path") || "";
       const t = l.getAttribute("data-target-path") || "";
-      const onLit = focusActive && (litPathSet.has(s) && litPathSet.has(t));
-      l.style.opacity = focusActive ? (onLit ? "0.9" : "0.05") : "0.4";
-      l.setAttribute("stroke-width", onLit ? "2" : "1");
+      const onLit = anyFocus && litPathSet.has(s) && litPathSet.has(t);
+      l.style.opacity = anyFocus ? (onLit ? "0.9" : "0.04") : "0.4";
+      l.setAttribute("stroke-width", onLit ? "2.5" : "1");
     });
-
-    // Highlight the selected node ring even when no live lease.
-    if (selectedLifeline) {
-      root_.querySelectorAll<SVGGElement>("g.node").forEach((g) => {
-        const p = g.getAttribute("data-path") || "";
-        // We can't look up the lifeline_id directly here, so we
-        // approximate: the file whose node==selectedLifeline.
-        const datum = (g as any).__data__?.data?.node;
-        if (datum?.id === selectedLifeline) {
-          const c = g.querySelector<SVGCircleElement>("circle");
-          if (c) {
-            c.setAttribute("stroke", "#2563eb");
-            c.setAttribute("stroke-width", "3");
-          }
-        }
-      });
-    }
   }, [liveLeasedPaths, selectedLifeline, root]);
 
   return (
     <div className="relative h-full w-full bg-bg overflow-hidden">
-      <svg ref={svgRef} className="absolute inset-0 w-full h-full text-ink"
-           preserveAspectRatio="xMidYMid meet">
+      <svg ref={svgRef} className="absolute inset-0 w-full h-full text-ink">
         <g ref={innerGRef} />
       </svg>
       <div className="absolute top-2 right-2 flex items-center gap-2 rounded-md bg-elev/95 border border-line px-2 py-1 text-xs shadow-soft">

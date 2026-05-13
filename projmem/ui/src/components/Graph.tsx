@@ -288,12 +288,21 @@ export function GraphView() {
       .on("mouseenter", (_e, d) => setHoveredId(d.id))
       .on("mouseleave", () => setHoveredId(null))
       .on("click", (_event, d) => {
+        let targetId = d.id;
         if (d.symbol && d.path) {
           const parent = simNodes.find((m) => !m.symbol && m.path === d.path);
-          if (parent) setSelectedLifeline(parent.id);
-        } else {
-          setSelectedLifeline(d.id);
+          if (parent) targetId = parent.id;
         }
+        // Auto-pin the clicked node so it stays where the click
+        // landed — the user shouldn't have to drag-and-hold to keep
+        // their "show me this one" stable.
+        const target = simNodes.find((m) => m.id === targetId);
+        if (target && target.x != null && target.y != null) {
+          target.fx = target.x;
+          target.fy = target.y;
+          setPinnedCount(simNodes.filter((n) => n.fx != null).length);
+        }
+        setSelectedLifeline(targetId);
       })
       .on("dblclick", (event, d) => {
         event.stopPropagation();
@@ -427,22 +436,31 @@ export function GraphView() {
       });
     }
 
-    // Spotlight: when focus mode is active, also keep every file in
-    // the SAME DIRECTORY SUBTREE as a leased file lit (at 0.4). Adds
-    // the "lit branch" effect on top of the 1-hop import neighborhood.
+    // Spotlight: keep every file in the SAME DIRECTORY SUBTREE as a
+    // focal file (lease OR selection) visible. The "lit branch"
+    // walks root → file for every focal path so the user sees the
+    // ancestry, not just the leaf.
     const litDirPrefixes = new Set<string>();
+    const focalPaths: string[] = [];
     if (focusActive) {
-      for (const p of liveSet) {
-        const i = p.lastIndexOf("/");
-        if (i >= 0) litDirPrefixes.add(p.slice(0, i + 1));
-        // Also any directory above this one — the lit branch goes all
-        // the way down to the root of the codebase.
-        let parent = p.slice(0, i);
-        while (parent) {
-          litDirPrefixes.add(parent + "/");
-          const j = parent.lastIndexOf("/");
-          parent = j >= 0 ? parent.slice(0, j) : "";
-        }
+      for (const p of liveSet) focalPaths.push(p);
+    }
+    if (selectionFocus) {
+      // Look up the selected lifeline's path from the rendered nodes.
+      root.querySelectorAll<SVGGElement>("g.node").forEach((g) => {
+        const id = g.getAttribute("data-id") || "";
+        const p  = g.getAttribute("data-path");
+        if (id === selectedLifeline && p) focalPaths.push(p);
+      });
+    }
+    for (const p of focalPaths) {
+      const i = p.lastIndexOf("/");
+      if (i >= 0) litDirPrefixes.add(p.slice(0, i + 1));
+      let parent = p.slice(0, i);
+      while (parent) {
+        litDirPrefixes.add(parent + "/");
+        const j = parent.lastIndexOf("/");
+        parent = j >= 0 ? parent.slice(0, j) : "";
       }
     }
     const inLitBranch = (path: string | null): boolean => {
@@ -491,7 +509,9 @@ export function GraphView() {
         }
       }
 
-      // Opacity — live-lease spotlight is stronger than selection.
+      // Opacity — selection focus is now nearly as aggressive as
+      // live-lease focus. Operator wanted: "show me JUST the one I
+      // clicked plus its branch; hide everything else."
       let opacity = "1";
       if (focusActive) {
         if (isFocal)         opacity = "1";
@@ -500,8 +520,9 @@ export function GraphView() {
         else                 opacity = "0.04";
       } else if (selectionFocus) {
         if (isFocal)         opacity = "1";
-        else if (isNeighbor) opacity = "0.65";
-        else                 opacity = "0.15";
+        else if (isNeighbor) opacity = "0.5";
+        else if (inBranch)   opacity = "0.3";
+        else                 opacity = "0.05";
       }
       g.style.opacity = opacity;
 
@@ -527,9 +548,9 @@ export function GraphView() {
         neighborIds.has(s) || neighborIds.has(t)
       );
       if (focusActive) {
-        l.style.opacity = involves ? "0.85" : "0.08";
+        l.style.opacity = involves ? "0.85" : "0.06";
       } else if (selectionFocus) {
-        l.style.opacity = involves ? "0.85" : "0.18";
+        l.style.opacity = involves ? "0.85" : "0.08";
       } else {
         l.style.opacity = "0.45";
       }
