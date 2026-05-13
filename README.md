@@ -42,12 +42,13 @@ Every AI coding tool today has the same failure mode:
 
 Worse: even when you write down `do not delete this file` or `this directory is out of scope`, the agent ignores your CLAUDE.md / AGENTS.md and `rm -rf`'s the file anyway. Prompts don't enforce.
 
-**`projmem` is the missing layer.** It does three things:
+**`projmem` is the missing layer.** It does four things:
 
 | | What you get |
 |---|---|
 | **Verifier** | Every belief you (or the agent) save is a machine-checkable claim. On every read, projmem re-validates it against the live index. Stale claims flip to `contradicted`. |
-| **Lifelines** | Files keep one stable id across renames/moves/deletes, so your notes don't fall off. Deleted files become ghost lifelines whose history you can still query. |
+| **Refs & history** | Attach PDFs, papers, design docs, advisories, plain-text rationale — to any file, directory, or graph node. The agent reads them as part of its planning context. **Even when a file is deleted, its lifeline keeps every event, every note, every attached ref** — so "what did this module do, and why did we remove it?" is always answerable. |
+| **Lifelines** | Files keep one stable id across renames / moves / deletes, so your notes don't fall off. Deleted files become ghost lifelines whose history you can still query. |
 | **Enforcement** | A Claude Code `PreToolUse` hook actually **refuses** tool calls (Edit / Write / `rm` / `cat` / `projmem symbol --file …`) against paths the user marked critical or out-of-scope. Hallucination can't bypass it. |
 
 ---
@@ -74,6 +75,28 @@ Concretely, here's the experience after running `projmem init claude` (or `codex
 4. When you start a new session next week, it remembers everything: your notes, the critical rules, the directories you said are out of scope, the line-scoped advisories you pinned to specific functions.
 
 You don't have to memorize any commands. You install once, pick your agent, and from then on the protocol is two characters: **start your prompt with `pj:`**. The agent does the rest.
+
+---
+
+## Attach the docs the AI is missing (the second superpower)
+
+Half of agent hallucinations are *information* gaps, not reasoning gaps. The model would have been right if it had read the RFC, the security advisory, the paper, the internal design doc, the migration runbook. With `projmem` you drop those files into `.projmem/refs/` and **attach them to the exact node they belong to** — a specific file, a directory, a graph node, even a single line.
+
+What you can attach:
+
+- **PDFs** — papers, RFCs, security advisories, vendor whitepapers, compliance docs.
+- **Plain text & markdown** — design notes, migration runbooks, post-mortems, ticket links.
+- **External URLs** — your own ADRs, Notion pages, internal wiki, GitHub issues.
+
+How it shows up:
+
+1. Drop a file in `.projmem/refs/` (e.g. `.projmem/refs/auth-token-incident-2025.pdf`).
+2. In the live UI, click the file / directory / node → **📎 attach** → pick the ref → write a note that links to it.
+3. From then on, every time the agent runs `projmem editing` on a path that scope, **the ref appears in the response** with a clickable link. The agent reads the rationale before touching code.
+
+Combined with lifelines: **deleted files don't lose their attached refs.** A ghost lifeline keeps every event, every note, every link to its supporting docs — so six months later you can still answer "why did we remove this module, and what advisory drove the decision?".
+
+This is the layer SCIP, LSIF, ctags, and every prior "agent memory" tool skip. They store symbols and text. `projmem` stores **the supporting evidence behind every decision**, attached to the exact part of the codebase it justifies, and re-validated on every read.
 
 ---
 
