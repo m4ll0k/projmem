@@ -3,6 +3,7 @@ import { TopBar } from "./components/TopBar";
 import { ActivityFeed } from "./components/ActivityFeed";
 import { Inspector } from "./components/Inspector";
 import { GraphView } from "./components/Graph";
+import { TreeView } from "./components/Tree";
 import { api, connectEvents } from "./api";
 import { useStore } from "./store";
 
@@ -81,11 +82,42 @@ export function App() {
           </div>
           <ActivityFeed />
         </section>
-        <section className="bg-bg min-h-0 min-w-0 relative">
-          <GraphView />
-        </section>
+        <CenterPane />
         <Inspector />
       </main>
     </div>
+  );
+}
+
+
+function CenterPane() {
+  const centerView    = useStore((s) => s.centerView);
+  const setCenterView = useStore((s) => s.setCenterView);
+  return (
+    <section className="bg-bg min-h-0 min-w-0 relative flex flex-col">
+      <div className="border-b border-line px-3 py-1.5 flex items-center gap-2 bg-bg">
+        <div className="inline-flex rounded border border-line overflow-hidden">
+          {(["tree", "graph"] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => setCenterView(v)}
+              className={`px-2.5 py-0.5 text-xs ${
+                centerView === v
+                  ? "bg-accent text-accent-fg"
+                  : "text-muted hover:bg-sunken"
+              }`}
+            >{v}</button>
+          ))}
+        </div>
+        <span className="text-[11px] text-muted">
+          {centerView === "tree"
+            ? "stable, sortable, searchable"
+            : "force-directed; positions may shift on refetch"}
+        </span>
+      </div>
+      <div className="flex-1 min-h-0">
+        {centerView === "tree" ? <TreeView /> : <GraphView />}
+      </div>
+    </section>
   );
 }
