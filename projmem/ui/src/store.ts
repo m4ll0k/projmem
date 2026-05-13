@@ -51,6 +51,9 @@ interface UIState {
   toggleTheme:         () => void;
   setTheme:            (t: "light" | "dark") => void;
   setCenterView:       (v: "tree" | "graph" | "schema") => void;
+  /** Monotonic counter that components watch to force re-fetches. */
+  dataVersion:         number;
+  bumpDataVersion:     () => void;
 }
 
 
@@ -148,4 +151,6 @@ export const useStore = create<UIState>((set) => ({
     try { localStorage.setItem("projmem.centerView", v); } catch { /* ignore */ }
     return { centerView: v };
   }),
+  dataVersion:         0,
+  bumpDataVersion:     () => set((st) => ({ dataVersion: st.dataVersion + 1 })),
 }));

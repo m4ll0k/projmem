@@ -556,6 +556,69 @@ def build_app(state: DaemonState, *, serve_ui: bool = True):
         finally:
             store.close()
 
+    @app.patch("/notes/{ann_id}")
+    async def patch_note(ann_id: int, payload: Dict[str, Any]):
+        """Edit an annotation in place. The body field is required;
+        severity is optional and only meaningful for guidance.
+        Critical-kind rows reuse the same row id but cannot be promoted
+        out of `critical` here — that takes a fresh `POST /critical`
+        cosigner workflow."""
+        body = payload.get("body")
+        if not isinstance(body, str) or not body.strip():
+            raise HTTPException(400, "body required")
+        store = state.store()
+        try:
+            row = store.conn.execute(
+                "SELECT target, kind FROM annotations WHERE id=?", (ann_id,),
+            ).fetchone()
+            if row is None:
+                return JSONResponse(
+                    {"error": "not-found", "id": ann_id}, status_code=404,
+                )
+            severity = payload.get("severity")
+            if severity is not None:
+                store.conn.execute(
+                    "UPDATE annotations SET body=?, severity=? WHERE id=?",
+                    (body.strip(), severity, ann_id),
+                )
+            else:
+                store.conn.execute(
+                    "UPDATE annotations SET body=? WHERE id=?",
+                    (body.strip(), ann_id),
+                )
+            store.conn.commit()
+        finally:
+            store.close()
+        event = state.record({
+            "kind":   "note_edited",
+            "id":     ann_id,
+            "target": row["target"],
+            "note_kind": row["kind"],
+        })
+        await state.broadcast(event)
+        return {"id": ann_id, "updated": True}
+
+    @app.get("/resolve-path")
+    async def resolve_path(path: str):
+        """Used by the activity feed: turn a `current_path` string back
+        into a `lifeline_id` so a click on `projmem/watch.py` can hop
+        to the inspector + pan the graph. 404 if no lifeline currently
+        owns that path (tombstones excluded)."""
+        store = state.store()
+        try:
+            row = store.conn.execute(
+                "SELECT id, current_path FROM file_lifeline "
+                "WHERE current_path = ? LIMIT 1",
+                (path,),
+            ).fetchone()
+        finally:
+            store.close()
+        if row is None:
+            return JSONResponse(
+                {"error": "no-lifeline", "path": path}, status_code=404,
+            )
+        return {"lifeline_id": row["id"], "current_path": row["current_path"]}
+
     @app.delete("/notes/{ann_id}")
     async def delete_note(ann_id: int):
         """Remove an annotation by id. Used by every UI delete button

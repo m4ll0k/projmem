@@ -47,6 +47,7 @@ export function App() {
   const resetLiveLeases = useStore((s) => s.resetLiveLeases);
 
   const setExclusions    = useStore((s) => s.setExclusions);
+  const bumpDataVersion  = useStore((s) => s.bumpDataVersion);
 
   useEffect(() => {
     let cancelled = false;
@@ -85,6 +86,23 @@ export function App() {
         else if (ev.kind === "abandoned")         markReleased(path);
         else if (ev.kind === "deleted")           markReleased(path);
       }
+      // Any annotation-table mutation triggers a global refresh — the
+      // inspector and any view holding stale note/critical/exclusion
+      // data re-fetches on the next tick. Catches deletes from this UI,
+      // deletes from the CLI (`projmem critical remove`), and edits
+      // from another tab. Exclusions refresh runs through the same
+      // path because they live in the annotations table.
+      if (ev.kind === "note_added"   || ev.kind === "note_deleted" ||
+          ev.kind === "note_edited"  || ev.kind === "critical_added") {
+        bumpDataVersion();
+        if (ev.note_kind === "exclude" || ev.kind === "critical_added") {
+          api.exclusions()
+             .then((r) => setExclusions(r.exclusions.map((e) => ({
+                 id: e.id, target: e.target, body: e.body,
+             }))))
+             .catch(() => { /* refresh-loop will retry */ });
+        }
+      }
     };
 
     const disconnect = connectEvents(
@@ -104,7 +122,7 @@ export function App() {
       disconnect();
     };
   }, [setStatus, pushEvent, setPaused, setOpenLeases, setProjectRoot,
-      markLeased, markReleased, resetLiveLeases]);
+      markLeased, markReleased, resetLiveLeases, setExclusions, bumpDataVersion]);
 
   return (
     <div className="h-full flex flex-col bg-bg text-ink overflow-hidden">

@@ -102,6 +102,47 @@ class TestHttpEndpoints:
         # The daemon's in-memory buffer recorded the event.
         assert any(ev["kind"] == "note_added" for ev in state.events)
 
+    def test_patch_note_updates_body_and_broadcasts(self, client):
+        c, state = client
+        post = c.post("/notes", json={
+            "target": "src/a.py", "kind": "guidance", "body": "v1",
+            "severity": "info",
+        })
+        ann_id = post.json()["id"]
+
+        r = c.patch(f"/notes/{ann_id}", json={"body": "v2", "severity": "warn"})
+        assert r.status_code == 200, r.text
+        assert r.json()["updated"] is True
+        assert any(ev["kind"] == "note_edited" and ev["id"] == ann_id
+                   for ev in state.events)
+
+    def test_patch_note_404_on_unknown(self, client):
+        c, _ = client
+        r = c.patch("/notes/99999", json={"body": "x"})
+        assert r.status_code == 404
+
+    def test_patch_note_rejects_empty_body(self, client):
+        c, _ = client
+        post = c.post("/notes", json={
+            "target": "src/a.py", "kind": "note", "body": "v1",
+        })
+        ann_id = post.json()["id"]
+        r = c.patch(f"/notes/{ann_id}", json={"body": "   "})
+        assert r.status_code == 400
+
+    def test_resolve_path_returns_lifeline_id(self, client):
+        c, _ = client
+        r = c.get("/resolve-path", params={"path": "src/a.py"})
+        assert r.status_code == 200
+        body = r.json()
+        assert body["current_path"] == "src/a.py"
+        assert body["lifeline_id"]
+
+    def test_resolve_path_404_for_unknown(self, client):
+        c, _ = client
+        r = c.get("/resolve-path", params={"path": "no/such/file.py"})
+        assert r.status_code == 404
+
     def test_delete_note_removes_row_and_broadcasts(self, client):
         # Regression for the v2 UI delete-button — every note kind
         # (note / guidance / exclude / critical) is one row in the

@@ -57,6 +57,28 @@ export const api = {
     if (!r.ok) throw new Error(`delete /notes/${id}: ${r.status}`);
     return r.json() as Promise<{ id: number; deleted: boolean }>;
   },
+  patchNote: async (id: number, payload: { body: string; severity?: string }) => {
+    const r = await fetch(`${HTTP_BASE}/notes/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok) throw new Error(`patch /notes/${id}: ${r.status}`);
+    return r.json() as Promise<{ id: number; updated: boolean }>;
+  },
+  addCritical: (payload: {
+    target: string; reason: string; category: string;
+    self_cosign?: boolean; approved_by?: string[];
+    blast_radius_hops?: number; blocks_edits?: boolean;
+  }) => postJSON<{ id: number; category: string; approved_by: string[] }>(
+    "/critical", payload,
+  ),
+  resolvePath: async (path: string) => {
+    const r = await fetch(`${HTTP_BASE}/resolve-path?path=${encodeURIComponent(path)}`);
+    if (r.status === 404) return null;
+    if (!r.ok) throw new Error(`resolve-path ${path}: ${r.status}`);
+    return r.json() as Promise<{ lifeline_id: string; current_path: string }>;
+  },
   refsList: () => getJSON<{refs: {path: string; size: number; mtime: number}[]; root_exists: boolean; root?: string}>("/refs-list"),
   exclusions: () => getJSON<{exclusions: {id: number; target: string; body: string; created_at: number}[]}>("/exclusions"),
   refUrl:   (relPath: string) => `${HTTP_BASE}/refs/${relPath.split("/").map(encodeURIComponent).join("/")}`,

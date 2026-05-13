@@ -189,11 +189,12 @@ function isExternalUrl(url: string): boolean {
   return url.startsWith("http://") || url.startsWith("https://");
 }
 
-function NoteRow({ note, onShowCode, isFresh, onDeleted }: {
+function NoteRow({ note, onShowCode, isFresh, onDeleted, onEdited }: {
   note: Annotation;
   onShowCode?: (line?: number) => void;
   isFresh?: boolean;          // pulse a moment when the row is newly saved
   onDeleted?: () => void;
+  onEdited?: () => void;
 }) {
   const sev = note.severity || note.kind;
   const stalenessColor = (
@@ -208,12 +209,27 @@ function NoteRow({ note, onShowCode, isFresh, onDeleted }: {
   const linkCount = bodyParts.filter((p) => p.type === "link").length;
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting]     = useState(false);
+  const [editing, setEditing]       = useState(false);
+  const [draft, setDraft]           = useState(note.body || "");
+  const [editSeverity, setEditSeverity] = useState<string | undefined>(
+    note.severity ?? undefined,
+  );
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editErr, setEditErr]       = useState<string | null>(null);
   // Auto-revert the confirm state if the user wanders away.
   useEffect(() => {
     if (!confirming) return;
     const t = setTimeout(() => setConfirming(false), 5000);
     return () => clearTimeout(t);
   }, [confirming]);
+  // Re-sync the edit draft if the underlying note changes (refetch
+  // landed while edit-mode was open).
+  useEffect(() => {
+    if (!editing) setDraft(note.body || "");
+  }, [note.body, editing]);
+
+  const isGuidance = ["guidance", "constraint", "preference"].includes(note.kind);
+  const canEditSeverity = isGuidance;
 
   const handleDelete = async () => {
     if (!confirming) { setConfirming(true); return; }
@@ -230,6 +246,73 @@ function NoteRow({ note, onShowCode, isFresh, onDeleted }: {
       setDeleting(false);
     }
   };
+
+  const handleSaveEdit = async () => {
+    if (!draft.trim()) return;
+    setSavingEdit(true); setEditErr(null);
+    try {
+      await api.patchNote(note.id, {
+        body: draft.trim(),
+        ...(canEditSeverity && editSeverity ? { severity: editSeverity } : {}),
+      });
+      setEditing(false);
+      onEdited?.();
+    } catch (e: any) {
+      setEditErr(String(e?.message ?? e));
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  if (editing) {
+    return (
+      <div className={`rounded-md border border-accent/60 bg-accent/5 px-2.5 py-2 space-y-1.5`}>
+        <div className="text-[10px] font-mono uppercase tracking-wider text-accent">
+          editing [{sev}] #{note.id}
+        </div>
+        <textarea
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          rows={Math.max(3, Math.min(10, draft.split("\n").length + 1))}
+          className="w-full text-xs font-mono bg-bg border border-line rounded p-1.5 text-ink"
+          autoFocus
+        />
+        {canEditSeverity && (
+          <div className="flex items-center gap-1 text-[11px]">
+            <span className="text-muted">severity:</span>
+            {(["info", "warn", "critical"] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => setEditSeverity(s)}
+                className={`px-1.5 py-0.5 rounded border ${
+                  editSeverity === s
+                    ? "border-accent text-accent bg-accent/10"
+                    : "border-line text-muted hover:bg-sunken"
+                }`}
+              >{s}</button>
+            ))}
+          </div>
+        )}
+        {editErr && (
+          <div className="text-[11px] text-bad bg-bad/5 border border-bad/20 rounded px-1.5 py-1">
+            {editErr}
+          </div>
+        )}
+        <div className="flex gap-1.5 justify-end">
+          <Button variant="primary" size="sm"
+                  loading={savingEdit}
+                  onClick={handleSaveEdit}
+                  disabled={!draft.trim()}>save</Button>
+          <Button variant="secondary" size="sm"
+                  onClick={() => {
+                    setEditing(false);
+                    setDraft(note.body || "");
+                    setEditErr(null);
+                  }}>cancel</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`rounded-md border bg-elev px-2.5 py-2 transition-colors ${
@@ -262,6 +345,10 @@ function NoteRow({ note, onShowCode, isFresh, onDeleted }: {
           <span className={`${stalenessColor} text-[10px] uppercase tracking-wider`}>
             {note.staleness || "—"}
           </span>
+          <Button size="xs" variant="ghost"
+                  onClick={() => { setEditing(true); setDraft(note.body || ""); }}
+                  aria-label="edit this note"
+                  title="edit this note">✎</Button>
           {/* Delete — two-stage so an accidental click can't lose the
               note. First click → button flips to red "confirm?"; second
               click within ~5s commits. confirming auto-resets after
@@ -489,6 +576,119 @@ function AddNoteForm({ target, kind, onSaved }: {
             variant="secondary" size="sm"
             onClick={() => { setOpen(false); setBody(""); setLine(""); setErr(null); setSavedMsg(null); }}
           >cancel</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Add-critical inline form ──────────────────────────────────────────────
+// Critical notes are the "this rule blocks future edits" tier — they
+// need a category, a long-form reason (≥40 chars enforced server-side),
+// and a cosigner. The UI here uses the self-cosign shortcut so a solo
+// operator can author one in the inspector; multi-person teams will
+// still flip to `projmem critical add` and route through review.
+
+function AddCriticalForm({ target, onSaved }: {
+  target: string;
+  onSaved: () => void;
+}) {
+  const [open, setOpen]         = useState(false);
+  const [reason, setReason]     = useState("");
+  const [category, setCategory] = useState<"security" | "perf" | "correctness" | "other">("security");
+  const [blastHops, setBlastHops] = useState(1);
+  const [saving, setSaving]     = useState(false);
+  const [err, setErr]           = useState<string | null>(null);
+
+  const tooShort = reason.trim().length < 40;
+
+  const save = async () => {
+    if (tooShort) return;
+    setSaving(true); setErr(null);
+    try {
+      await api.addCritical({
+        target,
+        reason: reason.trim(),
+        category,
+        self_cosign: true,
+        blast_radius_hops: blastHops,
+        blocks_edits: true,
+      });
+      setReason(""); setOpen(false);
+      onSaved();
+    } catch (e: any) {
+      setErr(String(e?.message ?? e));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!open) {
+    return (
+      <Button
+        variant="danger" size="xs"
+        onClick={() => setOpen(true)}
+      >+ add critical rule</Button>
+    );
+  }
+  return (
+    <div className="rounded-md border border-bad/40 bg-bad/5 p-2 space-y-1.5">
+      <div className="text-[10px] font-mono uppercase tracking-wider text-bad">
+        ⚠ critical — blocks edits until reviewer approves
+      </div>
+      <textarea
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        rows={4}
+        placeholder="Long-form reason ≥40 chars: the constraint, the incident, the consequence. Example: 'session tokens must never be logged — incident #234 exposed credentials; legal flagged for compliance'."
+        className="w-full text-xs font-mono bg-bg border border-line rounded p-1.5 text-ink"
+      />
+      <div className="flex items-center gap-2 text-[11px] flex-wrap">
+        <span className="text-muted">category:</span>
+        {(["security", "perf", "correctness", "other"] as const).map((c) => (
+          <button
+            key={c}
+            onClick={() => setCategory(c)}
+            className={`px-1.5 py-0.5 rounded border ${
+              category === c
+                ? "border-bad text-bad bg-bad/10"
+                : "border-line text-muted hover:bg-sunken"
+            }`}
+          >{c}</button>
+        ))}
+        <span className="text-muted ml-2">blast hops:</span>
+        <input
+          value={blastHops}
+          onChange={(e) => setBlastHops(
+            Math.max(0, Math.min(5, parseInt(e.target.value || "0", 10) || 0)),
+          )}
+          type="number" min={0} max={5}
+          className="w-12 bg-bg border border-line rounded px-1 py-0.5 text-ink font-mono"
+        />
+      </div>
+      {tooShort && reason.length > 0 && (
+        <div className="text-[10px] text-warn">
+          {40 - reason.trim().length} more characters needed
+        </div>
+      )}
+      {err && (
+        <div className="text-[11px] text-bad bg-bad/5 border border-bad/20 rounded px-1.5 py-1">
+          {err}
+        </div>
+      )}
+      <div className="flex items-center justify-between gap-1.5">
+        <div className="text-[10px] font-mono text-muted truncate flex-1 min-w-0" title={target}>
+          locks: <span className="text-ink">{target}</span> · self-cosigned
+        </div>
+        <div className="flex gap-1.5 flex-shrink-0">
+          <Button variant="danger" size="sm"
+                  loading={saving}
+                  onClick={save}
+                  disabled={tooShort}>add critical</Button>
+          <Button variant="secondary" size="sm"
+                  onClick={() => { setOpen(false); setReason(""); setErr(null); }}>
+            cancel
+          </Button>
         </div>
       </div>
     </div>
@@ -870,6 +1070,8 @@ export function Inspector() {
   const selectedLifeline   = useStore((s) => s.selectedLifeline);
   const selectedDirectory  = useStore((s) => s.selectedDirectory);
   const liveLeasedPaths    = useStore((s) => s.liveLeasedPaths);
+  const dataVersion        = useStore((s) => s.dataVersion);
+  const bumpDataVersion    = useStore((s) => s.bumpDataVersion);
 
   const [tab, setTab]               = useState<Tab>("notes");
   const [detail, setDetail]         = useState<LifelineDetail | null>(null);
@@ -898,7 +1100,7 @@ export function Inspector() {
       .catch(()  => !cancelled && setDetail(null))
       .finally(()=> !cancelled && setLoading(false));
     return () => { cancelled = true; };
-  }, [selectedLifeline, refreshTick]);
+  }, [selectedLifeline, refreshTick, dataVersion]);
 
   // Directory mode — pulls annotations for the dir-scoped target
   // (trailing-slash convention) or `@project`. No lifeline lookup
@@ -917,7 +1119,7 @@ export function Inspector() {
       .catch(()  => !cancelled && setDirDetail(null))
       .finally(()=> !cancelled && setLoading(false));
     return () => { cancelled = true; };
-  }, [selectedDirectory, refreshTick]);
+  }, [selectedDirectory, refreshTick, dataVersion]);
 
   const guidance = (detail?.notes ?? []).filter((n) =>
     ["guidance", "constraint", "preference"].includes(n.kind));
@@ -938,8 +1140,20 @@ export function Inspector() {
 
   return (
     <aside className="lg:h-full w-full lg:w-auto border-t lg:border-t-0 lg:border-l border-line bg-bg flex flex-col min-h-0 max-h-[40vh] lg:max-h-none">
-      <div className="border-b border-line px-3 py-2 text-xs font-semibold tracking-tight">
-        Inspector
+      <div className="border-b border-line px-3 py-2 flex items-center justify-between gap-2">
+        <span className="text-xs font-semibold tracking-tight">Inspector</span>
+        <Button
+          size="xs" variant="ghost"
+          onClick={() => {
+            // Refresh both: bumpDataVersion re-runs the lifeline + dir
+            // fetches, and refreshTick is the legacy hook some local
+            // forms still poke. Cheap to do both.
+            bumpDataVersion();
+            setRefreshTick((t) => t + 1);
+          }}
+          title="re-fetch notes, guidance, critical from the daemon (also runs automatically on note add / delete / edit broadcasts)"
+          aria-label="sync notes from daemon"
+        >↻ sync</Button>
       </div>
       <div className="flex-1 overflow-y-auto p-3 space-y-4">
         <section>
@@ -1081,7 +1295,8 @@ export function Inspector() {
                       <NoteRow key={n.id} note={n}
                                onShowCode={jumpToCode}
                                isFresh={n.id === freshNoteId}
-                               onDeleted={() => setRefreshTick((t) => t + 1)} />
+                               onDeleted={() => setRefreshTick((t) => t + 1)}
+                               onEdited={() => setRefreshTick((t) => t + 1)} />
                     ))}
                   </div>
                 )}
@@ -1100,18 +1315,26 @@ export function Inspector() {
                       <NoteRow key={n.id} note={n}
                                onShowCode={jumpToCode}
                                isFresh={n.id === freshNoteId}
-                               onDeleted={() => setRefreshTick((t) => t + 1)} />
+                               onDeleted={() => setRefreshTick((t) => t + 1)}
+                               onEdited={() => setRefreshTick((t) => t + 1)} />
                     ))}
                   </div>
                 )}
-                {tab === "critical" && (
+                {tab === "critical" && selectedPath && (
                   <div className="space-y-1.5">
-                    {detail.critical.length === 0 && <div className="text-xs text-muted">(no critical notes — author via `projmem critical add`)</div>}
+                    <AddCriticalForm
+                      target={selectedPath}
+                      onSaved={() => {
+                        setRefreshTick((n) => n + 1);
+                      }}
+                    />
+                    {detail.critical.length === 0 && <div className="text-xs text-muted">(no critical notes yet)</div>}
                     {detail.critical.map((n) => (
                       <NoteRow key={n.id} note={n}
                                onShowCode={jumpToCode}
                                isFresh={n.id === freshNoteId}
-                               onDeleted={() => setRefreshTick((t) => t + 1)} />
+                               onDeleted={() => setRefreshTick((t) => t + 1)}
+                               onEdited={() => setRefreshTick((t) => t + 1)} />
                     ))}
                   </div>
                 )}
@@ -1232,7 +1455,8 @@ export function Inspector() {
                       .map((n) => (
                         <NoteRow key={n.id} note={n}
                                  isFresh={n.id === freshNoteId}
-                                 onDeleted={() => setRefreshTick((t) => t + 1)} />
+                                 onDeleted={() => setRefreshTick((t) => t + 1)}
+                                 onEdited={() => setRefreshTick((t) => t + 1)} />
                       ))}
                   </div>
                 )}
@@ -1258,21 +1482,27 @@ export function Inspector() {
                       .map((n) => (
                         <NoteRow key={n.id} note={n}
                                  isFresh={n.id === freshNoteId}
-                                 onDeleted={() => setRefreshTick((t) => t + 1)} />
+                                 onDeleted={() => setRefreshTick((t) => t + 1)}
+                                 onEdited={() => setRefreshTick((t) => t + 1)} />
                       ))}
                   </div>
                 )}
                 {tab === "critical" && (
                   <div className="space-y-1.5">
+                    <AddCriticalForm
+                      target={selectedDirectory}
+                      onSaved={() => setRefreshTick((n) => n + 1)}
+                    />
                     {dirDetail.critical.length === 0 && (
                       <div className="text-xs text-muted">
-                        (no critical notes — author via `projmem critical add '{selectedDirectory}' …`)
+                        (no critical notes yet — these block edits until a reviewer approves)
                       </div>
                     )}
                     {dirDetail.critical.map((n) => (
                       <NoteRow key={n.id} note={n}
                                isFresh={n.id === freshNoteId}
-                               onDeleted={() => setRefreshTick((t) => t + 1)} />
+                               onDeleted={() => setRefreshTick((t) => t + 1)}
+                               onEdited={() => setRefreshTick((t) => t + 1)} />
                     ))}
                   </div>
                 )}

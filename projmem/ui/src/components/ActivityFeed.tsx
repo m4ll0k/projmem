@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useStore } from "../store";
+import { api } from "../api";
 import type { DaemonEvent } from "../types";
 
 function styleForKind(kind: string): { glyph: string; color: string } {
@@ -41,10 +42,49 @@ function shortPath(ev: DaemonEvent): string | null {
 }
 
 export function ActivityFeed() {
-  const events      = useStore((s) => s.events);
-  const selected    = useStore((s) => s.selectedEvent);
-  const setSelected = useStore((s) => s.setSelectedEvent);
-  const bottomRef   = useRef<HTMLDivElement | null>(null);
+  const events             = useStore((s) => s.events);
+  const selected           = useStore((s) => s.selectedEvent);
+  const setSelected        = useStore((s) => s.setSelectedEvent);
+  const setSelectedLifeline  = useStore((s) => s.setSelectedLifeline);
+  const setSelectedDirectory = useStore((s) => s.setSelectedDirectory);
+  const bottomRef          = useRef<HTMLDivElement | null>(null);
+
+  // Activity-row navigation. Picks the right slice of state to flip
+  // based on the path shape:
+  //   trailing `/` or `@project` — directory mode
+  //   file path — resolves the current_path against the lifeline
+  //               table via the daemon; falls back to dir-mode on
+  //               the parent directory if no lifeline owns it (e.g.
+  //               a deleted file whose only trace is in events).
+  // Cross-view selection sync (tree, schema, graph) is already wired
+  // to these store slices, so the visual hop happens automatically.
+  const navigateToPath = async (ev: DaemonEvent, path: string) => {
+    setSelected(ev);                     // also drive selectedEvent
+    if (path === "@project" || path.endsWith("/")) {
+      setSelectedDirectory(path);
+      return;
+    }
+    // Event-resident lifeline_id shortcut — leased/edited/released
+    // events carry it, no round-trip needed.
+    const inlineId = (ev as { lifeline_id?: string }).lifeline_id;
+    if (typeof inlineId === "string" && inlineId.length > 0) {
+      setSelectedLifeline(inlineId);
+      return;
+    }
+    try {
+      const r = await api.resolvePath(path);
+      if (r) {
+        setSelectedLifeline(r.lifeline_id);
+        return;
+      }
+    } catch { /* fall through to dir-mode */ }
+    // No lifeline owns this path (tombstoned or never-indexed) —
+    // open the parent directory so the operator still gets context.
+    const parent = path.includes("/")
+      ? path.slice(0, path.lastIndexOf("/") + 1)
+      : "@project";
+    setSelectedDirectory(parent);
+  };
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
@@ -81,7 +121,14 @@ export function ActivityFeed() {
               <span className="flex-1 break-words">
                 <span className="font-medium">{ev.kind}</span>
                 {path && (
-                  <span className="ml-2 font-mono text-muted">{path}</span>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); navigateToPath(ev, path); }}
+                    className="ml-2 font-mono text-muted hover:text-accent
+                                hover:underline decoration-dotted underline-offset-2
+                                cursor-pointer text-left break-all"
+                    title={`navigate to ${path}`}
+                  >{path}</button>
                 )}
               </span>
             </li>
