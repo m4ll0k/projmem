@@ -2674,12 +2674,25 @@ def cmd_audit_trail(args):
                       "limit": args.limit}}, args.json)
 
 
+# Kept in sync with `projmem/note_kinds.py` — that module is the
+# canonical inventory, but the CLI carries its own copy for fast
+# argparse-time validation without an extra import.
 _KNOWN_NOTE_KINDS = {
     # v1 kinds
     "note", "refute", "verified-safe", "documented-footgun",
     "todo", "link", "risk",
     # v2 kinds — injected at edit time by `projmem editing`
     "guidance", "constraint", "preference", "critical",
+    # `exclude` — directory-level scope block for the agent (the
+    # token-savings feature). When attached to a dir target (trailing
+    # slash) or @project, the editing-lease response carries an
+    # 🚫 OUT OF SCOPE warning at warnings[0].
+    "exclude",
+    # `skill` — path-scoped cognitive instruction (v2.1 promoted).
+    # Authored via `projmem skill add`, not `note add`, but accepting
+    # the kind here means `note add --kind skill "…"` no longer
+    # warns the operator.
+    "skill",
 }
 
 _GUIDANCE_KINDS = {"guidance", "constraint", "preference", "critical"}
