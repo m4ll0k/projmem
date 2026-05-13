@@ -479,6 +479,27 @@ export function GraphView() {
     );
   };
 
+  // When the operator selects a node from the tree (or any other
+  // source), pan + zoom the graph to center it. Read selectedLifeline
+  // from the store and animate the existing zoom transform.
+  const selectedLifeline = useStore((s) => s.selectedLifeline);
+  useEffect(() => {
+    if (!selectedLifeline) return;
+    if (!svgRef.current || !zoomBehaviorRef.current) return;
+    // Wait a frame for the sim to settle if it's still moving things.
+    const t = setTimeout(() => {
+      const node = simNodesRef.current.find((n) => n.id === selectedLifeline);
+      if (!node || node.x == null || node.y == null) return;
+      const targetT = zoomIdentity.scale(2).translate(-node.x, -node.y);
+      // No transition — d3-transition adds 30+ KB and a hard pan reads
+      // as "snap to focus" which is what the user expects.
+      select(svgRef.current!).call(
+        zoomBehaviorRef.current!.transform, targetT,
+      );
+    }, 100);
+    return () => clearTimeout(t);
+  }, [selectedLifeline]);
+
   return (
     <div className="relative h-full w-full bg-bg overflow-hidden">
       <svg ref={svgRef} className="absolute inset-0 w-full h-full"
@@ -494,10 +515,11 @@ export function GraphView() {
                    onChange={(e) => setShowSymbols(e.target.checked)} />
             <span>symbols</span>
           </label>
-          <label className="flex items-center gap-1 cursor-pointer">
+          <label className="flex items-center gap-1 cursor-pointer"
+                 title="Tombstoned lifelines — files that were deleted via `projmem deleting`. The lifeline + all its history survives forever; with this toggle on, they appear as faded ghost nodes connected to their replacement files via dashed edges. Use this to spot recreations of files you deliberately killed.">
             <input type="checkbox" checked={showGhosts}
                    onChange={(e) => setShowGhosts(e.target.checked)} />
-            <span>ghosts</span>
+            <span>ghosts ⓘ</span>
           </label>
         </div>
         <div className="flex items-center gap-2 rounded-md bg-elev/95 border border-line px-2 py-1 text-xs shadow-soft">

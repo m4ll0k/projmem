@@ -284,10 +284,11 @@ export function TreeView() {
           className="flex-1 text-xs bg-bg border border-line rounded px-2 py-1
                      text-ink focus:outline-none focus:border-accent"
         />
-        <label className="flex items-center gap-1 text-xs text-muted cursor-pointer">
+        <label className="flex items-center gap-1 text-xs text-muted cursor-pointer"
+               title="Tombstoned lifelines — files deleted via `projmem deleting`. Their identity + every saved note + every history event is kept forever; toggling this on surfaces them as faded entries with a `replaced_by` link to their successor. Lets you see recreations of files you deliberately killed.">
           <input type="checkbox" checked={showGhosts}
                  onChange={(e) => setShowGhosts(e.target.checked)} />
-          ghosts
+          ghosts ⓘ
         </label>
         <span className="text-[10px] font-mono text-muted tabular-nums">
           {totalFiles} files{liveCount > 0 && (

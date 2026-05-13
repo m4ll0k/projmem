@@ -6,6 +6,8 @@ import type {
   OpenLease, LifelineDetail, Annotation, FileEvent,
 } from "../types";
 
+// ─── utilities ─────────────────────────────────────────────────────────────
+
 function fmtDuration(s: number): string {
   if (s < 60)   return `${Math.round(s)}s`;
   if (s < 3600) return `${Math.round(s / 60)}m`;
@@ -17,15 +19,24 @@ function fmtTime(t?: number | null): string {
   return new Date(t * 1000).toLocaleString();
 }
 
-// ── Lease card — "Open leases — for what reason?" ──────────────────────────
+function fmtRelative(t?: number | null): string {
+  if (!t) return "—";
+  const dt = Math.floor(Date.now() / 1000 - t);
+  if (dt < 60)        return `${dt}s ago`;
+  if (dt < 3600)      return `${Math.floor(dt / 60)}m ago`;
+  if (dt < 86400)     return `${Math.floor(dt / 3600)}h ago`;
+  return `${Math.floor(dt / 86400)}d ago`;
+}
+
+// ─── Open-leases card ──────────────────────────────────────────────────────
 
 function leaseOrigin(intent: string | null | undefined): {
   label: string; tone: string;
 } {
   if (!intent) return { label: "—",         tone: "text-muted" };
-  if (intent.startsWith("implicit"))   return { label: "implicit",   tone: "text-warn" };
-  if (intent.startsWith("claude-code"))return { label: "Claude Code",tone: "text-accent" };
-  if (intent.startsWith("inferred"))   return { label: "inferred",   tone: "text-muted" };
+  if (intent.startsWith("implicit"))    return { label: "implicit",    tone: "text-warn" };
+  if (intent.startsWith("claude-code")) return { label: "Claude Code", tone: "text-accent" };
+  if (intent.startsWith("inferred"))    return { label: "inferred",    tone: "text-muted" };
   return { label: "manual", tone: "text-ink" };
 }
 
@@ -33,27 +44,81 @@ function LeaseCard({ lease, dimmed }: { lease: OpenLease; dimmed: boolean }) {
   const remaining = lease.expires_at - Date.now() / 1000;
   const isPending = lease.state === "pending_approval";
   const origin    = leaseOrigin(lease.intent);
+  const setSelectedLifeline = useStore((s) => s.setSelectedLifeline);
+
+  // Fetch lifeline detail to surface attached notes / critical count
+  // INSIDE the lease card — answers "what's pinned to this file?"
+  // at a glance without expanding the inspector tabs.
+  const [detail, setDetail] = useState<LifelineDetail | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    api.lifeline(lease.lifeline_id)
+      .then((d) => !cancelled && setDetail(d))
+      .catch(() => { /* ignore */ });
+    return () => { cancelled = true; };
+  }, [lease.lifeline_id]);
+
+  const noteCount = (detail?.notes ?? []).filter((n) =>
+    !["guidance", "constraint", "preference", "critical"].includes(n.kind),
+  ).length;
+  const guidanceCount = (detail?.notes ?? []).filter((n) =>
+    ["guidance", "constraint", "preference"].includes(n.kind),
+  ).length;
+  const criticalCount = (detail?.critical ?? []).length;
 
   return (
     <div
-      className={`rounded-md border px-2.5 py-2 transition-opacity ${
+      onClick={() => setSelectedLifeline(lease.lifeline_id)}
+      className={`rounded-md border px-2.5 py-2 transition cursor-pointer ${
         dimmed ? "opacity-50" : "opacity-100"
       } ${isPending
         ? "border-bad/40 bg-bad/5"
-        : "border-line bg-elev hover:border-accent/40"}`}
+        : "border-line bg-elev hover:border-accent/50"}`}
     >
       <div className="flex items-center justify-between gap-2 mb-1.5">
         <span className={`text-[10px] font-mono uppercase tracking-wider ${origin.tone}`}>
           {origin.label}
         </span>
-        <span className={isPending ? "text-bad text-[11px] font-medium" : "text-muted text-[10px] font-mono"}>
+        <span className={isPending
+          ? "text-bad text-[11px] font-medium"
+          : "text-muted text-[10px] font-mono"}>
           {isPending ? "PENDING APPROVAL" : lease.state}
         </span>
       </div>
-      {/* Reason — promoted to the headline per user feedback */}
+
+      {/* Path — clickable to focus the inspector + (in graph view) pan */}
+      {detail?.lifeline?.current_path && (
+        <div className="text-[11px] font-mono mb-1 break-all text-ink">
+          {detail.lifeline.current_path}
+        </div>
+      )}
+
+      {/* Reason — headline */}
       <div className="text-xs leading-snug mb-1.5">
         {lease.intent || <span className="text-muted">(no reason given)</span>}
       </div>
+
+      {/* Linked notes summary */}
+      {detail && (noteCount + guidanceCount + criticalCount > 0) && (
+        <div className="flex items-center gap-1.5 mb-1.5 text-[10px]">
+          {criticalCount > 0 && (
+            <span className="px-1 py-px rounded bg-bad/15 text-bad border border-bad/30">
+              ⚠ {criticalCount} critical
+            </span>
+          )}
+          {guidanceCount > 0 && (
+            <span className="px-1 py-px rounded bg-accent/15 text-accent border border-accent/30">
+              {guidanceCount} guidance
+            </span>
+          )}
+          {noteCount > 0 && (
+            <span className="px-1 py-px rounded bg-warn/10 text-warn border border-warn/20">
+              {noteCount} note{noteCount > 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
+      )}
+
       <div className="flex items-center gap-2 text-[10px] font-mono text-muted tabular-nums">
         <span title="lease id">{lease.id.slice(0, 8)}…</span>
         <span>·</span>
@@ -63,14 +128,15 @@ function LeaseCard({ lease, dimmed }: { lease: OpenLease; dimmed: boolean }) {
           <span>{lease.agent_id}</span>
         </>}
       </div>
+
       {isPending && (
         <div className="mt-2 flex gap-1">
           <button
-            onClick={() => api.approve(lease.id)}
+            onClick={(e) => { e.stopPropagation(); api.approve(lease.id); }}
             className="rounded bg-good text-white text-[11px] px-2 py-0.5 hover:opacity-90"
           >Approve</button>
           <button
-            onClick={() => api.deny(lease.id)}
+            onClick={(e) => { e.stopPropagation(); api.deny(lease.id); }}
             className="rounded bg-bad text-white text-[11px] px-2 py-0.5 hover:opacity-90"
           >Deny</button>
         </div>
@@ -79,9 +145,12 @@ function LeaseCard({ lease, dimmed }: { lease: OpenLease; dimmed: boolean }) {
   );
 }
 
-// ── Notes / Guidance / Critical rendering ──────────────────────────────────
+// ─── Notes / Guidance rendering ────────────────────────────────────────────
 
-function NoteRow({ note }: { note: Annotation }) {
+function NoteRow({ note, onShowCode }: {
+  note: Annotation;
+  onShowCode?: (line?: number) => void;
+}) {
   const sev = note.severity || note.kind;
   const stalenessColor = (
     note.staleness === "contradicted"   ? "text-bad font-medium" :
@@ -89,13 +158,27 @@ function NoteRow({ note }: { note: Annotation }) {
     note.staleness === "fresh"          ? "text-good"             :
                                           "text-muted"
   );
+  // Body may contain backtick-wrapped symbol references with file:line —
+  // the v1 auto-extracted FACT shape. Surface the first :line if present
+  // so the operator can jump straight to the relevant code.
+  const lineMatch = (note.body || "").match(/:(\d+)\b/);
+  const cited = lineMatch ? parseInt(lineMatch[1], 10) : undefined;
+
   return (
     <div className="rounded-md border border-line bg-elev px-2.5 py-2">
       <div className="flex items-center justify-between text-[11px] mb-1">
         <span className="font-medium">[{sev}]</span>
-        <span className={`${stalenessColor} text-[10px] uppercase tracking-wider`}>
-          {note.staleness || "—"}
-        </span>
+        <div className="flex items-center gap-2">
+          {onShowCode && cited && (
+            <button onClick={() => onShowCode(cited)}
+                    className="text-[10px] text-accent hover:underline">
+              code:{cited}
+            </button>
+          )}
+          <span className={`${stalenessColor} text-[10px] uppercase tracking-wider`}>
+            {note.staleness || "—"}
+          </span>
+        </div>
       </div>
       <div className="text-xs whitespace-pre-wrap break-words leading-snug">
         {note.body}
@@ -104,27 +187,77 @@ function NoteRow({ note }: { note: Annotation }) {
   );
 }
 
-function HistoryRow({ ev }: { ev: FileEvent }) {
+// ─── History as a vertical timeline ────────────────────────────────────────
+
+function HistoryEvent({ ev, last }: { ev: FileEvent; last: boolean }) {
+  const kindStyle: Record<string, { color: string; glyph: string; bg: string }> = {
+    created:   { color: "text-good",   glyph: "+", bg: "bg-good"   },
+    edited:    { color: "text-accent", glyph: "✎", bg: "bg-accent" },
+    leased:    { color: "text-accent", glyph: "◯", bg: "bg-accent" },
+    released:  { color: "text-good",   glyph: "✓", bg: "bg-good"   },
+    abandoned: { color: "text-warn",   glyph: "✗", bg: "bg-warn"   },
+    moved:     { color: "text-accent", glyph: "→", bg: "bg-accent" },
+    deleted:   { color: "text-bad",    glyph: "−", bg: "bg-bad"    },
+  };
+  const s = kindStyle[ev.kind] ?? { color: "text-muted", glyph: "·", bg: "bg-muted" };
+
   return (
-    <div className="border-l-2 border-line pl-2.5 py-1">
-      <div className="text-[10px] font-mono text-muted tabular-nums">{fmtTime(ev.at)}</div>
-      <div className="text-xs leading-snug">
-        <span className="font-medium">{ev.kind}</span>
-        {ev.reason && <span className="text-muted"> — {ev.reason}</span>}
+    <li className="relative pl-7 pb-3">
+      {/* timeline dot */}
+      <span className={`absolute left-[8px] top-1 inline-flex items-center
+                        justify-center w-4 h-4 rounded-full text-[10px]
+                        text-white ${s.bg}`}>
+        {s.glyph}
+      </span>
+      {/* vertical rail to the next event */}
+      {!last && (
+        <span className="absolute left-[15px] top-5 bottom-0 w-px bg-line" />
+      )}
+      <div className="text-[10px] font-mono text-muted tabular-nums leading-tight mb-0.5">
+        {fmtTime(ev.at)} · <span title={fmtTime(ev.at)}>{fmtRelative(ev.at)}</span>
       </div>
-    </div>
+      <div className="flex items-baseline gap-1.5">
+        <span className={`text-xs font-semibold ${s.color}`}>{ev.kind}</span>
+      </div>
+      {ev.reason && (
+        <div className="text-[11px] text-ink leading-snug mt-0.5 break-words">
+          {ev.reason}
+        </div>
+      )}
+      {ev.diff_summary && (
+        <div className="text-[10px] font-mono text-muted mt-1">
+          {ev.diff_summary}
+        </div>
+      )}
+    </li>
   );
 }
 
-// ── Inline AddNote / AddGuidance form ──────────────────────────────────────
+function HistoryTimeline({ events }: { events: FileEvent[] }) {
+  if (events.length === 0) {
+    return <div className="text-xs text-muted">(no events)</div>;
+  }
+  // Show newest at the bottom (chronological reading order).
+  return (
+    <ul className="list-none m-0 p-0">
+      {events.map((e, i) => (
+        <HistoryEvent key={e.id} ev={e} last={i === events.length - 1} />
+      ))}
+    </ul>
+  );
+}
 
-function AddNoteForm({ target, kind, onSaved }: {
+// ─── Add-note inline form ──────────────────────────────────────────────────
+
+function AddNoteForm({ target, kind, onSaved, onPickLine }: {
   target: string;
   kind: "note" | "guidance";
   onSaved: () => void;
+  onPickLine?: () => number | undefined;
 }) {
   const [open, setOpen]         = useState(false);
   const [body, setBody]         = useState("");
+  const [line, setLine]         = useState<string>("");
   const [severity, setSeverity] = useState<"info" | "warn" | "critical">("info");
   const [saving, setSaving]     = useState(false);
   const [err, setErr]           = useState<string | null>(null);
@@ -133,11 +266,18 @@ function AddNoteForm({ target, kind, onSaved }: {
     if (!body.trim()) return;
     setSaving(true); setErr(null);
     try {
+      let finalBody = body;
+      const ln = line.trim();
+      if (ln && /^\d+$/.test(ln)) {
+        // Prepend a file:line citation so the v1 auto-extractor picks
+        // up the FACT shape.
+        finalBody = `${target}:${ln} — ${body}`;
+      }
       await api.addNote({
-        target, body, kind,
+        target, body: finalBody, kind,
         ...(kind === "guidance" ? { severity } : {}),
       });
-      setBody(""); setOpen(false); onSaved();
+      setBody(""); setLine(""); setOpen(false); onSaved();
     } catch (e: any) {
       setErr(String(e?.message ?? e));
     } finally {
@@ -147,10 +287,10 @@ function AddNoteForm({ target, kind, onSaved }: {
 
   if (!open) {
     return (
-      <button
-        onClick={() => setOpen(true)}
-        className="text-[11px] text-accent hover:underline"
-      >+ add {kind}</button>
+      <button onClick={() => setOpen(true)}
+              className="text-[11px] text-accent hover:underline">
+        + add {kind}
+      </button>
     );
   }
   return (
@@ -160,48 +300,59 @@ function AddNoteForm({ target, kind, onSaved }: {
         onChange={(e) => setBody(e.target.value)}
         rows={3}
         placeholder={kind === "guidance"
-          ? "Advice for the agent. Inline `name` is defined at file:line auto-extracts a FACT claim."
+          ? "Advice for the agent. Backtick around symbol + file:line auto-extracts a FACT claim."
           : "Free-text note. Backtick-around-symbol-name + file:line auto-extracts a FACT claim."}
         className="w-full text-xs font-mono bg-bg border border-line rounded p-1.5 text-ink"
       />
-      {kind === "guidance" && (
-        <div className="flex items-center gap-1 text-[11px]">
-          <span className="text-muted">severity:</span>
-          {(["info", "warn", "critical"] as const).map((s) => (
-            <button
-              key={s}
-              onClick={() => setSeverity(s)}
-              className={`px-1.5 py-0.5 rounded border ${
-                severity === s
-                  ? "border-accent text-accent bg-accent/10"
-                  : "border-line text-muted hover:bg-sunken"
-              }`}
-            >{s}</button>
-          ))}
-        </div>
-      )}
+      <div className="flex items-center gap-2 text-[11px]">
+        <span className="text-muted">line:</span>
+        <input
+          value={line}
+          onChange={(e) => setLine(e.target.value.replace(/[^\d]/g, ""))}
+          placeholder="optional"
+          className="w-16 bg-bg border border-line rounded px-1 py-0.5 text-ink font-mono"
+        />
+        {kind === "guidance" && (
+          <>
+            <span className="text-muted ml-2">severity:</span>
+            {(["info", "warn", "critical"] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => setSeverity(s)}
+                className={`px-1.5 py-0.5 rounded border ${
+                  severity === s
+                    ? "border-accent text-accent bg-accent/10"
+                    : "border-line text-muted hover:bg-sunken"
+                }`}
+              >{s}</button>
+            ))}
+          </>
+        )}
+      </div>
       {err && <div className="text-[11px] text-bad">{err}</div>}
       <div className="flex gap-1">
         <button onClick={save} disabled={saving}
                 className="rounded bg-accent text-accent-fg text-[11px] px-2 py-0.5 disabled:opacity-50">
           {saving ? "saving…" : "save"}
         </button>
-        <button onClick={() => { setOpen(false); setBody(""); setErr(null); }}
-                className="rounded border border-line text-[11px] px-2 py-0.5 text-muted hover:bg-sunken">cancel</button>
+        <button onClick={() => { setOpen(false); setBody(""); setLine(""); setErr(null); }}
+                className="rounded border border-line text-[11px] px-2 py-0.5 text-muted hover:bg-sunken">
+          cancel
+        </button>
       </div>
     </div>
   );
 }
 
-// ── Code tab with line numbers + highlight.js ──────────────────────────────
+// ─── Code tab ──────────────────────────────────────────────────────────────
 
 function langFromPath(p: string): string | undefined {
   const ext = p.split(".").pop()?.toLowerCase();
   switch (ext) {
     case "py":   return "python";
-    case "ts":   return "typescript";
+    case "ts":
     case "tsx":  return "typescript";
-    case "js":   return "javascript";
+    case "js":
     case "jsx":  return "javascript";
     case "rs":   return "rust";
     case "go":   return "go";
@@ -225,7 +376,9 @@ function langFromPath(p: string): string | undefined {
   }
 }
 
-function CodeTab({ target }: { target: string }) {
+function CodeTab({ target, scrollToLine }: {
+  target: string; scrollToLine?: number;
+}) {
   const [content, setContent] = useState<{text?: string; binary?: boolean; truncated?: boolean; size?: number} | null>(null);
   const [err, setErr]         = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -238,6 +391,13 @@ function CodeTab({ target }: { target: string }) {
       .finally(() => !cancelled && setLoading(false));
     return () => { cancelled = true; };
   }, [target]);
+
+  useEffect(() => {
+    if (!scrollToLine) return;
+    const el = document.getElementById(`code-line-${scrollToLine}`);
+    el?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [scrollToLine, content]);
+
   if (loading) return <div className="text-xs text-muted">loading…</div>;
   if (err)     return <div className="text-xs text-bad">{err}</div>;
   if (!content) return <div className="text-xs text-muted">(no content)</div>;
@@ -257,7 +417,9 @@ function CodeTab({ target }: { target: string }) {
     highlighted = text.replace(/[&<>]/g,
       (c) => c === "&" ? "&amp;" : c === "<" ? "&lt;" : "&gt;");
   }
-  const lineCount = text.split("\n").length;
+  // Split into lines after highlighting; render each with its own
+  // gutter row so we can scroll-to-line on demand.
+  const lines = highlighted.split("\n");
   return (
     <div className="rounded-md border border-line bg-code-bg overflow-hidden">
       {content.truncated && (
@@ -267,8 +429,8 @@ function CodeTab({ target }: { target: string }) {
       )}
       <div className="flex max-h-[60vh] overflow-auto text-[11px] font-mono leading-[1.45]">
         <div className="select-none text-right text-muted px-2 py-2 tabular-nums border-r border-line-soft">
-          {Array.from({ length: lineCount }, (_, i) => i + 1).map((n) => (
-            <div key={n}>{n}</div>
+          {lines.map((_, i) => (
+            <div key={i + 1} id={`code-line-${i + 1}`}>{i + 1}</div>
           ))}
         </div>
         <pre className="px-3 py-2 flex-1 whitespace-pre overflow-x-auto">
@@ -280,7 +442,7 @@ function CodeTab({ target }: { target: string }) {
   );
 }
 
-// ── Inspector main ─────────────────────────────────────────────────────────
+// ─── Inspector main ────────────────────────────────────────────────────────
 
 type Tab = "notes" | "guidance" | "critical" | "history" | "code";
 
@@ -294,6 +456,7 @@ export function Inspector() {
   const [detail, setDetail]         = useState<LifelineDetail | null>(null);
   const [loading, setLoading]       = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
+  const [codeLine, setCodeLine]     = useState<number | undefined>(undefined);
 
   useEffect(() => {
     if (!selectedLifeline) { setDetail(null); return; }
@@ -306,20 +469,22 @@ export function Inspector() {
     return () => { cancelled = true; };
   }, [selectedLifeline, refreshTick]);
 
-  const guidance   = (detail?.notes ?? []).filter((n) =>
+  const guidance = (detail?.notes ?? []).filter((n) =>
     ["guidance", "constraint", "preference"].includes(n.kind));
   const plainNotes = (detail?.notes ?? []).filter((n) =>
     !["guidance", "constraint", "preference", "critical"].includes(n.kind));
 
-  // When a node is selected, prefer showing its own lease prominently +
-  // collapsing the others. When no selection, all leases are equally
-  // visible (helps the "what is going on?" overview).
   const selectedPath = detail?.lifeline?.current_path ?? null;
   const sortedLeases = [...openLeases].sort((a, b) => {
     const aOwn = a.lifeline_id === selectedLifeline ? 0 : 1;
     const bOwn = b.lifeline_id === selectedLifeline ? 0 : 1;
     return aOwn - bOwn || a.opened_at - b.opened_at;
   });
+
+  const jumpToCode = (line?: number) => {
+    setCodeLine(line);
+    setTab("code");
+  };
 
   return (
     <aside className="h-full w-80 border-l border-line bg-bg flex flex-col">
@@ -338,14 +503,16 @@ export function Inspector() {
               </div>
             )}
           </div>
-          {openLeases.length === 0 && <div className="text-xs text-muted">(none)</div>}
+          {openLeases.length === 0 && (
+            <div className="text-xs text-muted">(none — no agent is editing)</div>
+          )}
           <div className="space-y-1.5">
             {sortedLeases.map((l) => (
               <LeaseCard
                 key={l.id}
                 lease={l}
-                dimmed={selectedLifeline != null
-                         && l.lifeline_id !== selectedLifeline}
+                dimmed={selectedLifeline != null &&
+                         l.lifeline_id !== selectedLifeline}
               />
             ))}
           </div>
@@ -375,6 +542,7 @@ export function Inspector() {
                     >{t}</button>
                   ))}
                 </div>
+
                 {tab === "notes" && selectedPath && (
                   <div className="space-y-1.5">
                     <AddNoteForm
@@ -382,7 +550,9 @@ export function Inspector() {
                       onSaved={() => setRefreshTick((n) => n + 1)}
                     />
                     {plainNotes.length === 0 && <div className="text-xs text-muted">(no notes)</div>}
-                    {plainNotes.map((n) => <NoteRow key={n.id} note={n} />)}
+                    {plainNotes.map((n) => (
+                      <NoteRow key={n.id} note={n} onShowCode={jumpToCode} />
+                    ))}
                   </div>
                 )}
                 {tab === "guidance" && selectedPath && (
@@ -392,23 +562,24 @@ export function Inspector() {
                       onSaved={() => setRefreshTick((n) => n + 1)}
                     />
                     {guidance.length === 0 && <div className="text-xs text-muted">(no guidance)</div>}
-                    {guidance.map((n) => <NoteRow key={n.id} note={n} />)}
+                    {guidance.map((n) => (
+                      <NoteRow key={n.id} note={n} onShowCode={jumpToCode} />
+                    ))}
                   </div>
                 )}
                 {tab === "critical" && (
                   <div className="space-y-1.5">
                     {detail.critical.length === 0 && <div className="text-xs text-muted">(no critical notes)</div>}
-                    {detail.critical.map((n) => <NoteRow key={n.id} note={n} />)}
+                    {detail.critical.map((n) => (
+                      <NoteRow key={n.id} note={n} onShowCode={jumpToCode} />
+                    ))}
                   </div>
                 )}
                 {tab === "history" && (
-                  <div className="space-y-1">
-                    {detail.events.length === 0 && <div className="text-xs text-muted">(no events)</div>}
-                    {detail.events.map((e) => <HistoryRow key={e.id} ev={e} />)}
-                  </div>
+                  <HistoryTimeline events={detail.events} />
                 )}
                 {tab === "code" && selectedPath && (
-                  <CodeTab target={selectedPath} />
+                  <CodeTab target={selectedPath} scrollToLine={codeLine} />
                 )}
                 {tab === "code" && !selectedPath && (
                   <div className="text-xs text-muted">(tombstoned — no current file)</div>
