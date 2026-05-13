@@ -379,6 +379,35 @@ def _emit_file_event(
 # Public verbs
 # ---------------------------------------------------------------------------
 
+def _exclusion_ancestors(conn: sqlite3.Connection, path: str) -> List[Dict[str, Any]]:
+    """Return every `kind='exclude'` annotation whose target covers ``path``.
+
+    Walks the path's ancestor directories + `@project`. Surfaces as
+    ``exclusions[]`` on the editing response so the agent's first
+    read tells it "you're about to waste tokens — this subtree is
+    out of scope."
+    """
+    import os as _os
+    targets: List[str] = ["@project"]
+    cur = path
+    while True:
+        d = _os.path.dirname(cur)
+        if not d or d == cur:
+            break
+        targets.append(d + "/")
+        cur = d
+    if not targets:
+        return []
+    placeholders = ",".join("?" * len(targets))
+    rows = conn.execute(
+        f"SELECT * FROM annotations WHERE kind='exclude' "
+        f"AND target IN ({placeholders}) "
+        f"ORDER BY created_at DESC",
+        tuple(targets),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
 def open_editing_lease(
     store, path: str, *, symbol: Optional[str] = None,
     reason: str, agent_id: Optional[str] = None,
@@ -386,9 +415,9 @@ def open_editing_lease(
     """Announce intent to edit ``path``; return lease + guidance + history.
 
     Returns ``{lease_id, expires_at, guidance[], history{}, warnings[],
-    critical_prelude, lease_state}``. The ``editing`` verb is
-    double-duty: same call that opens the lease also bundles the
-    context the agent needs before touching the file.
+    critical_prelude, lease_state, exclusions[]}``. The ``editing``
+    verb is double-duty: same call that opens the lease also bundles
+    the context the agent needs before touching the file.
 
     When any critical note on the path (or 1-hop reverse-dep with
     blast_radius_hops >= 1) is blocking, the lease enters
@@ -396,6 +425,13 @@ def open_editing_lease(
     included. Step 5's daemon grants/denies; until then the lease
     grants immediately but the prelude is loud enough that the agent
     must engage.
+
+    When any ancestor directory has a ``kind='exclude'`` annotation,
+    those exclusions are surfaced in ``exclusions[]`` and a strong
+    warning is prepended — telling the agent the subtree is out of
+    scope. The lease is still granted (the operator may still want
+    to edit it), but the agent should treat the warning as a "stop
+    and confirm with the human before reading" signal.
     """
     reason = _validate_reason(reason)
     conn = store.conn
@@ -440,6 +476,16 @@ def open_editing_lease(
     from . import skills as _skills
     skills_active = _skills.skills_for_path(store, path, trigger="on_edit")
 
+    exclusions = _exclusion_ancestors(conn, path)
+    if exclusions:
+        first = exclusions[0]
+        warnings.insert(0,
+            f"🚫 OUT OF SCOPE — this path is under an exclusion at "
+            f"{first.get('target')!r}: {first.get('body') or '(no reason)'}. "
+            "Do not read or modify unless the human explicitly asks; you "
+            "will waste tokens on irrelevant code.",
+        )
+
     out = {
         "lease_id":     lease["lease_id"],
         "expires_at":   lease["expires_at"],
@@ -450,6 +496,7 @@ def open_editing_lease(
         "lease_state":  "pending_approval" if blocks else "open",
         "guidance":     guidance,
         "skills":       skills_active,
+        "exclusions":   exclusions,
         "history":      _history_for_lifeline(conn, lifeline_id),
         "warnings":     warnings,
     }

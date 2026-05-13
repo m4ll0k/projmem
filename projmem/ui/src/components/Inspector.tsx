@@ -453,6 +453,99 @@ function AddNoteForm({ target, kind, onSaved }: {
   );
 }
 
+// ─── Exclude-subtree toggle ────────────────────────────────────────────────
+// Tags a directory (or @project) with kind=exclude so the agent's
+// next `projmem editing` on any path inside surfaces the brief
+// 🚫 OUT OF SCOPE warning. The toggle reads from + writes to the
+// daemon's exclusions store, and the store's `exclusions` slice
+// also drives the tree/schema visual markers.
+
+function ExcludeToggle({ target, onChange }: {
+  target: string;
+  onChange?: () => void;
+}) {
+  const exclusions = useStore((s) => s.exclusions);
+  const setExclusions = useStore((s) => s.setExclusions);
+  const existing = exclusions.find((e) => e.target === target);
+  const [open, setOpen]   = useState(false);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy]   = useState(false);
+
+  const refresh = async () => {
+    try {
+      const r = await api.exclusions();
+      setExclusions(r.exclusions.map((e) => ({ target: e.target, body: e.body })));
+    } catch { /* ignore */ }
+    onChange?.();
+  };
+
+  const add = async () => {
+    if (!reason.trim()) return;
+    setBusy(true);
+    try {
+      await api.addNote({ target, body: reason.trim(), kind: "exclude" });
+      setReason(""); setOpen(false);
+      await refresh();
+    } catch { /* ignore */ } finally {
+      setBusy(false);
+    }
+  };
+
+  if (existing) {
+    return (
+      <div className="mt-1.5 rounded-md border border-bad/30 bg-bad/5 px-2 py-1.5 text-[11px]">
+        <div className="flex items-center gap-1 mb-0.5">
+          <span className="text-bad font-medium">🚫 Excluded from agent scope</span>
+        </div>
+        <div className="text-ink leading-snug mb-1">{existing.body}</div>
+        <div className="text-[10px] text-muted">
+          Agent calls to `projmem editing` on files in this subtree
+          surface an OUT OF SCOPE warning in their context.
+        </div>
+      </div>
+    );
+  }
+
+  if (!open) {
+    return (
+      <Button
+        size="xs" variant="secondary"
+        onClick={() => setOpen(true)}
+        title="mark this subtree as out-of-scope for the AI agent"
+      >🚫 exclude this subtree from agent scope</Button>
+    );
+  }
+  return (
+    <div className="mt-1.5 rounded-md border border-bad/30 bg-bad/5 p-1.5 space-y-1.5 text-[11px]">
+      <div className="text-bad font-medium text-[10px] uppercase tracking-wider">
+        🚫 mark out of scope
+      </div>
+      <textarea
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        rows={2}
+        placeholder="Why this is out of scope. e.g. 'Linux-only — operator is on macOS', 'vendored mem0 — re-cloneable, don't read', 'auto-generated, deprecated' …"
+        className="w-full text-xs font-mono bg-bg border border-line rounded p-1.5 text-ink"
+      />
+      <div className="flex items-center justify-between gap-1.5">
+        <div className="text-[10px] text-muted">
+          Saves agent tokens on irrelevant code.
+        </div>
+        <div className="flex gap-1">
+          <Button size="sm" variant="danger" loading={busy}
+                  onClick={add} disabled={!reason.trim()}>
+            exclude
+          </Button>
+          <Button size="sm" variant="secondary"
+                  onClick={() => { setOpen(false); setReason(""); }}>
+            cancel
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Attach-reference button ───────────────────────────────────────────────
 // Lets the operator insert a `[title](url-or-path)` markdown link into
 // the note body. Two flavors: external URL (paste the URL) or pick
@@ -936,6 +1029,15 @@ export function Inspector() {
                 </span>.
                 {" "}Claude reads them when it runs `projmem editing` on any matching file.
               </div>
+
+              {/* Exclude-this-subtree action. Adds a kind=exclude
+                  annotation that the editing-lease response surfaces
+                  as 🚫 OUT OF SCOPE. Saves tokens on subtrees that
+                  shouldn't be read at all (vendored copies, Linux-
+                  only, generated, deprecated). */}
+              <ExcludeToggle target={selectedDirectory!}
+                              onChange={() => setRefreshTick((n) => n + 1)} />
+
               {/* Scope chip + expandable file list */}
               {dirDetail && dirDetail.scope_count > 0 && (
                 <div>

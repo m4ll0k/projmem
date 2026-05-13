@@ -449,6 +449,52 @@ def test_cli_editing_then_done_round_trip(tmp_path):
     assert closed["closed_kind"] == "done"
 
 
+class TestExclusionAncestors:
+    """`kind=exclude` annotations on an ancestor directory surface in
+    the editing-lease response so the agent knows the path is out of
+    scope. The brief calls this the token-cost mitigation feature —
+    don't waste tokens reading Linux-only / vendored / generated
+    subtrees."""
+
+    def test_no_exclusions_returns_empty_list(self, store):
+        _seed_file(store, "src/a.py")
+        out = mv.open_editing_lease(store, "src/a.py", reason=GOOD_REASON)
+        assert out.get("exclusions") == []
+
+    def test_dir_exclusion_surfaces_in_editing(self, store):
+        _seed_file(store, "src/vendored/foo.py")
+        store.conn.execute(
+            "INSERT INTO annotations(target, kind, body, created_at) "
+            "VALUES('src/vendored/', 'exclude', "
+            "'vendored copy — out of scope on macOS', ?)",
+            (time.time(),),
+        )
+        store.conn.commit()
+        out = mv.open_editing_lease(
+            store, "src/vendored/foo.py", reason=GOOD_REASON,
+        )
+        assert len(out["exclusions"]) == 1
+        assert "vendored" in out["exclusions"][0]["body"]
+        # The warning is prepended at the front of warnings[] so the
+        # agent reads it first.
+        assert any("OUT OF SCOPE" in w for w in out["warnings"])
+
+    def test_project_exclusion_covers_every_file(self, store):
+        _seed_file(store, "anywhere/deep/nested.py")
+        store.conn.execute(
+            "INSERT INTO annotations(target, kind, body, created_at) "
+            "VALUES('@project', 'exclude', "
+            "'demo run — agent should not read source', ?)",
+            (time.time(),),
+        )
+        store.conn.commit()
+        out = mv.open_editing_lease(
+            store, "anywhere/deep/nested.py", reason=GOOD_REASON,
+        )
+        assert len(out["exclusions"]) == 1
+        assert out["exclusions"][0]["target"] == "@project"
+
+
 def test_cli_reason_gate_returns_structured_error(tmp_path):
     repo = tmp_path / "repo"
     repo.mkdir()

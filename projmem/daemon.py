@@ -431,6 +431,25 @@ def build_app(state: DaemonState, *, serve_ui: bool = True):
         return {"path": path, "size": size, "truncated": truncated,
                 "text": text}
 
+    @app.get("/exclusions")
+    async def list_exclusions():
+        """Every `kind='exclude'` annotation in the project.
+
+        The UI uses this to render excluded directories with a 🚫
+        prefix in tree/schema and to dim their subtree visually —
+        a glance-level "this part of the code is out of scope for
+        the agent" signal.
+        """
+        store = state.store()
+        try:
+            rows = store.conn.execute(
+                "SELECT id, target, body, created_at FROM annotations "
+                "WHERE kind='exclude' ORDER BY target ASC"
+            ).fetchall()
+            return {"exclusions": [dict(r) for r in rows]}
+        finally:
+            store.close()
+
     @app.get("/notes-by-target")
     async def notes_by_target(target: str):
         """All annotations pinned to a free-form target string.

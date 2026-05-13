@@ -53,6 +53,7 @@ export const api = {
   addNote:  (payload: {target: string; body: string; kind?: string; severity?: string}) =>
     postJSON<{id: number}>("/notes", payload),
   refsList: () => getJSON<{refs: {path: string; size: number; mtime: number}[]; root_exists: boolean; root?: string}>("/refs-list"),
+  exclusions: () => getJSON<{exclusions: {id: number; target: string; body: string; created_at: number}[]}>("/exclusions"),
   refUrl:   (relPath: string) => `${HTTP_BASE}/refs/${relPath.split("/").map(encodeURIComponent).join("/")}`,
   pause:    () => postJSON("/control/pause"),
   resume:   () => postJSON("/control/resume"),

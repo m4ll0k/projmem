@@ -35,6 +35,12 @@ KINDS_V2_GUIDANCE: Tuple[str, ...] = (
     "constraint",
     "preference",
     "critical",
+    # `exclude` — scope-out marker. When attached to a directory
+    # (target ends in `/`) or `@project`, every file in that subtree
+    # surfaces an "OUT OF SCOPE" warning on `projmem editing`. Use it
+    # to keep agents from wasting tokens on Linux-only / Windows-only
+    # / vendored / deprecated / generated subtrees.
+    "exclude",
 )
 
 # Reserved for v2.1 skills — path-scoped cognitive instructions

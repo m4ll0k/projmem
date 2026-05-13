@@ -27,6 +27,7 @@ interface UIState {
   showSymbols:      boolean;
   nodeLevel:        "all" | "dirs" | "files";
   liveLeasedPaths:  string[];        // paths with an open lease right now
+  exclusions:       { target: string; body: string }[];  // kind=exclude targets
   theme:            "light" | "dark";
   centerView:       "tree" | "graph" | "schema";
   projectRoot:      string;
@@ -46,6 +47,7 @@ interface UIState {
   markLeased:          (path: string) => void;
   markReleased:        (path: string) => void;
   resetLiveLeases:     (paths: string[]) => void;
+  setExclusions:       (e: { target: string; body: string }[]) => void;
   toggleTheme:         () => void;
   setTheme:            (t: "light" | "dark") => void;
   setCenterView:       (v: "tree" | "graph" | "schema") => void;
@@ -84,6 +86,7 @@ export const useStore = create<UIState>((set) => ({
     return "all";
   })(),
   liveLeasedPaths:  [],
+  exclusions:       [],
   theme:            initialTheme(),
   centerView:       ((): "tree" | "graph" | "schema" => {
     try {
@@ -131,6 +134,7 @@ export const useStore = create<UIState>((set) => ({
     liveLeasedPaths: st.liveLeasedPaths.filter((p) => p !== path),
   })),
   resetLiveLeases:     (paths) => set({ liveLeasedPaths: paths }),
+  setExclusions:       (e) => set({ exclusions: e }),
   toggleTheme:         () => set((st) => {
     const next: "light" | "dark" = st.theme === "dark" ? "light" : "dark";
     try { localStorage.setItem("projmem.theme", next); } catch { /* ignore */ }

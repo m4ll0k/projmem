@@ -46,6 +46,8 @@ export function App() {
   const markReleased    = useStore((s) => s.markReleased);
   const resetLiveLeases = useStore((s) => s.resetLiveLeases);
 
+  const setExclusions    = useStore((s) => s.setExclusions);
+
   useEffect(() => {
     let cancelled = false;
     const refresh = async () => {
@@ -57,6 +59,15 @@ export function App() {
         setProjectRoot(st.root);
       } catch {
         /* tolerate transient disconnects */
+      }
+      try {
+        const ex = await api.exclusions();
+        if (cancelled) return;
+        setExclusions(ex.exclusions.map((e) => ({
+          target: e.target, body: e.body,
+        })));
+      } catch {
+        /* exclusions are non-critical; tolerate */
       }
     };
     refresh();
