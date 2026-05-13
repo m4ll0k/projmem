@@ -102,7 +102,10 @@ export interface Annotation {
   staleness?:   string | null;
   category?:    string | null;
   approved_by?: string | null;
+  author?:      string | null;
   created_at?:  number | null;
+  truth_class?: string | null;
+  confidence?:  number | null;
 }
 
 export interface LifelineDetail {

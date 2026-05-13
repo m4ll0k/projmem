@@ -163,6 +163,7 @@ export function GraphView() {
   const setShowSymbols      = useStore((s) => s.setShowSymbols);
   const setSelectedLifeline = useStore((s) => s.setSelectedLifeline);
   const liveLeasedPaths     = useStore((s) => s.liveLeasedPaths);
+  const selectedLifeline    = useStore((s) => s.selectedLifeline);
 
   const [nodes, setNodes]   = useState<GraphNode[]>([]);
   const [edges, setEdges]   = useState<GraphEdge[]>([]);
@@ -399,19 +400,30 @@ export function GraphView() {
     const liveSet = new Set(liveLeasedPaths);
     const focusActive = liveSet.size > 0;
 
-    // Pre-compute 1-hop neighborhood by walking the rendered <line> elements.
+    // Selection focus — when a node is selected (via click in graph or
+    // tree) and no lease is live, we still dim the rest of the canvas
+    // so the click reads as a "show me just this" gesture. Live-lease
+    // focus is stronger (0.04 opacity); selection focus is milder
+    // (0.15 opacity) so context stays a glance away.
+    const selectionFocus = !focusActive && selectedLifeline != null;
+    const anyFocus = focusActive || selectionFocus;
+
+    // Pre-compute 1-hop neighborhood from EITHER lit set (live-leased
+    // paths OR the selected lifeline). Both paths feed the same map.
     const neighborIds = new Set<string>();
-    if (focusActive) {
-      const liveIds = new Set<string>();
+    const focalIds = new Set<string>();
+    if (anyFocus) {
       root.querySelectorAll<SVGGElement>("g.node").forEach((g) => {
         const p = g.getAttribute("data-path");
-        if (p && liveSet.has(p)) liveIds.add(g.getAttribute("data-id") || "");
+        const id = g.getAttribute("data-id") || "";
+        if (p && liveSet.has(p)) focalIds.add(id);
+        if (selectionFocus && id === selectedLifeline) focalIds.add(id);
       });
       root.querySelectorAll<SVGLineElement>("g.links line").forEach((l) => {
         const s = l.getAttribute("data-source") || "";
         const t = l.getAttribute("data-target") || "";
-        if (liveIds.has(s)) neighborIds.add(t);
-        if (liveIds.has(t)) neighborIds.add(s);
+        if (focalIds.has(s)) neighborIds.add(t);
+        if (focalIds.has(t)) neighborIds.add(s);
       });
     }
 
@@ -444,55 +456,85 @@ export function GraphView() {
     root.querySelectorAll<SVGGElement>("g.node").forEach((g) => {
       const d = (g as any).__data__ as GraphNode | undefined;
       const nid = d?.id ?? "";
-      const isLive = !!(d?.path && liveSet.has(d.path));
-      const isNeighbor = !isLive && neighborIds.has(nid);
-      const inBranch   = !isLive && !isNeighbor && inLitBranch(d?.path ?? null);
+      const isLive    = !!(d?.path && liveSet.has(d.path));
+      const isSelected = selectionFocus && nid === selectedLifeline;
+      const isFocal    = isLive || isSelected;
+      const isNeighbor = !isFocal && neighborIds.has(nid);
+      const inBranch   = !isFocal && !isNeighbor && inLitBranch(d?.path ?? null);
 
-      // Halo.
+      // Halo for live-leased; selected gets a static ring (drawn via
+      // the existing pin-ring element with a brighter stroke).
       const halo = g.querySelector<SVGGElement>("g.halo");
       const haloRing = g.querySelector<SVGCircleElement>("circle.halo-ring");
       if (halo) halo.style.display = isLive ? "" : "none";
       if (haloRing && d) {
         haloRing.setAttribute("r", String(nodeRadius(d) + 12));
       }
+      const pinRing = g.querySelector<SVGCircleElement>("circle.pin-ring");
+      if (pinRing && d) {
+        // Reuse the pin ring as a selection ring when the node is
+        // selected (focal but not live). Pin-state takes priority.
+        const dn = d as SimNode;
+        const isPinned = dn.fx != null || dn.fy != null;
+        if (isPinned) {
+          pinRing.style.display = "";
+          pinRing.setAttribute("stroke", palette.ink);
+          pinRing.setAttribute("stroke-dasharray", "1 2");
+          pinRing.setAttribute("r", String(nodeRadius(d) + 3));
+        } else if (isSelected) {
+          pinRing.style.display = "";
+          pinRing.setAttribute("stroke", palette.accent);
+          pinRing.setAttribute("stroke-dasharray", "0");
+          pinRing.setAttribute("r", String(nodeRadius(d) + 5));
+        } else {
+          pinRing.style.display = "none";
+        }
+      }
 
-      // Opacity — strong spotlight mode.
+      // Opacity — live-lease spotlight is stronger than selection.
       let opacity = "1";
       if (focusActive) {
-        if (isLive)         opacity = "1";
+        if (isFocal)         opacity = "1";
         else if (isNeighbor) opacity = "0.55";
         else if (inBranch)   opacity = "0.40";
-        else                 opacity = "0.04";   // practically invisible
+        else                 opacity = "0.04";
+      } else if (selectionFocus) {
+        if (isFocal)         opacity = "1";
+        else if (isNeighbor) opacity = "0.65";
+        else                 opacity = "0.15";
       }
       g.style.opacity = opacity;
 
       // Labels.
       const label = g.querySelector<SVGTextElement>("text.node-label");
       if (label) {
-        const alwaysShow = d?.critical || isLive;
+        const alwaysShow = d?.critical || isFocal;
         const isHovered  = hoveredId === nid;
         let show = showAll || alwaysShow || isHovered;
-        if (focusActive && !isLive && !isNeighbor && !isHovered) show = false;
+        if (anyFocus && !isFocal && !isNeighbor && !isHovered) show = false;
         label.style.display = show ? "" : "none";
       }
     });
 
-    // Edges connected to live-leased nodes brighten; everything else dims.
+    // Edges connected to focal (live or selected) nodes brighten;
+    // everything else dims. The opacity floor is gentler for
+    // selection focus than live-lease focus.
     root.querySelectorAll<SVGLineElement>("g.links line").forEach((l) => {
       const s = l.getAttribute("data-source") || "";
       const t = l.getAttribute("data-target") || "";
-      const involvesLive = focusActive &&
-        (neighborIds.has(s) || neighborIds.has(t) ||
-         [...root.querySelectorAll<SVGGElement>("g.node")].some((g) => {
-           const dl = (g as any).__data__ as GraphNode | undefined;
-           const isLive = !!(dl?.path && liveSet.has(dl.path));
-           return isLive && (dl?.id === s || dl?.id === t);
-         }));
-      l.style.opacity = focusActive
-        ? (involvesLive ? "0.85" : "0.08")
-        : "0.45";
+      const involves = anyFocus && (
+        focalIds.has(s) || focalIds.has(t) ||
+        neighborIds.has(s) || neighborIds.has(t)
+      );
+      if (focusActive) {
+        l.style.opacity = involves ? "0.85" : "0.08";
+      } else if (selectionFocus) {
+        l.style.opacity = involves ? "0.85" : "0.18";
+      } else {
+        l.style.opacity = "0.45";
+      }
     });
-  }, [zoomLevel, hoveredId, nodes, liveLeasedPaths]);
+  }, [zoomLevel, hoveredId, nodes, liveLeasedPaths, selectedLifeline]);
 
   const releasePins = () => {
     for (const n of simNodesRef.current) { n.fx = null; n.fy = null; }
@@ -510,7 +552,6 @@ export function GraphView() {
   // When the operator selects a node from the tree (or any other
   // source), pan + zoom the graph to center it. Read selectedLifeline
   // from the store and animate the existing zoom transform.
-  const selectedLifeline = useStore((s) => s.selectedLifeline);
   useEffect(() => {
     if (!selectedLifeline) return;
     if (!svgRef.current || !zoomBehaviorRef.current) return;

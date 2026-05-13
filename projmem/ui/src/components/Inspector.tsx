@@ -189,9 +189,10 @@ function isExternalUrl(url: string): boolean {
   return url.startsWith("http://") || url.startsWith("https://");
 }
 
-function NoteRow({ note, onShowCode }: {
+function NoteRow({ note, onShowCode, isFresh }: {
   note: Annotation;
   onShowCode?: (line?: number) => void;
+  isFresh?: boolean;          // pulse a moment when the row is newly saved
 }) {
   const sev = note.severity || note.kind;
   const stalenessColor = (
@@ -206,24 +207,40 @@ function NoteRow({ note, onShowCode }: {
   const linkCount = bodyParts.filter((p) => p.type === "link").length;
 
   return (
-    <div className="rounded-md border border-line bg-elev px-2.5 py-2">
-      <div className="flex items-center justify-between text-[11px] mb-1">
-        <span className="font-medium">[{sev}]</span>
-        <div className="flex items-center gap-2">
+    <div className={`rounded-md border bg-elev px-2.5 py-2 transition-colors ${
+      isFresh ? "border-accent shadow-soft" : "border-line"
+    }`}>
+      {/* Header — kind + claim metadata + staleness verdict */}
+      <div className="flex items-center justify-between text-[11px] mb-1 gap-2">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="font-medium">[{sev}]</span>
+          {note.truth_class && note.truth_class !== "INFERENCE" && (
+            <span className="text-[9px] font-mono uppercase tracking-wider
+                              px-1 rounded border border-line text-muted">
+              {note.truth_class}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
           {linkCount > 0 && (
-            <span className="text-[10px] text-muted">📎 {linkCount}</span>
+            <span className="text-[10px] text-muted" title={`${linkCount} attached refs`}>
+              📎 {linkCount}
+            </span>
           )}
           {onShowCode && cited && (
-            <button onClick={() => onShowCode(cited)}
-                    className="text-[10px] text-accent hover:underline">
+            <Button variant="subtle" size="xs"
+                    onClick={() => onShowCode(cited)}
+                    aria-label={`jump to line ${cited}`}>
               code:{cited}
-            </button>
+            </Button>
           )}
           <span className={`${stalenessColor} text-[10px] uppercase tracking-wider`}>
             {note.staleness || "—"}
           </span>
         </div>
       </div>
+
+      {/* Body — markdown links surfaced */}
       <div className="text-xs whitespace-pre-wrap break-words leading-snug">
         {bodyParts.map((p, i) =>
           p.type === "text"
@@ -232,10 +249,25 @@ function NoteRow({ note, onShowCode }: {
                  href={resolveRefUrl(p.url)}
                  target="_blank" rel="noopener noreferrer"
                  className="inline-flex items-center gap-0.5 text-accent
-                            hover:underline break-all"
+                            hover:underline break-all mx-0.5"
                  title={p.url}>
                 {isExternalUrl(p.url) ? "🌐" : "📄"} {p.title}
               </a>
+        )}
+      </div>
+
+      {/* Footer — file (truncated), author, time */}
+      <div className="flex items-center gap-2 mt-1.5 text-[10px] font-mono text-muted tabular-nums">
+        <span className="truncate flex-1 min-w-0" title={note.target}>
+          {note.target}
+        </span>
+        {note.author && (
+          <span title={`authored by ${note.author}`}>{note.author}</span>
+        )}
+        {note.created_at && (
+          <span title={fmtTime(note.created_at)}>
+            {fmtRelative(note.created_at)}
+          </span>
         )}
       </div>
     </div>
@@ -304,11 +336,10 @@ function HistoryTimeline({ events }: { events: FileEvent[] }) {
 
 // ─── Add-note inline form ──────────────────────────────────────────────────
 
-function AddNoteForm({ target, kind, onSaved, onPickLine }: {
+function AddNoteForm({ target, kind, onSaved }: {
   target: string;
   kind: "note" | "guidance";
-  onSaved: () => void;
-  onPickLine?: () => number | undefined;
+  onSaved: (newId: number) => void;
 }) {
   const [open, setOpen]         = useState(false);
   const [body, setBody]         = useState("");
@@ -316,6 +347,7 @@ function AddNoteForm({ target, kind, onSaved, onPickLine }: {
   const [severity, setSeverity] = useState<"info" | "warn" | "critical">("info");
   const [saving, setSaving]     = useState(false);
   const [err, setErr]           = useState<string | null>(null);
+  const [savedMsg, setSavedMsg] = useState<string | null>(null);
 
   const save = async () => {
     if (!body.trim()) return;
@@ -324,15 +356,16 @@ function AddNoteForm({ target, kind, onSaved, onPickLine }: {
       let finalBody = body;
       const ln = line.trim();
       if (ln && /^\d+$/.test(ln)) {
-        // Prepend a file:line citation so the v1 auto-extractor picks
-        // up the FACT shape.
         finalBody = `${target}:${ln} — ${body}`;
       }
-      await api.addNote({
+      const res = await api.addNote({
         target, body: finalBody, kind,
         ...(kind === "guidance" ? { severity } : {}),
       });
-      setBody(""); setLine(""); setOpen(false); onSaved();
+      setBody(""); setLine("");
+      setSavedMsg(`saved as #${res.id} — fetching…`);
+      onSaved(res.id);
+      setTimeout(() => { setOpen(false); setSavedMsg(null); }, 700);
     } catch (e: any) {
       setErr(String(e?.message ?? e));
     } finally {
@@ -393,21 +426,28 @@ function AddNoteForm({ target, kind, onSaved, onPickLine }: {
           {err}
         </div>
       )}
-      <div className="flex gap-1.5">
-        <Button
-          variant="primary" size="sm"
-          loading={saving}
-          onClick={save}
-          disabled={!body.trim()}
-        >
-          save
-        </Button>
-        <Button
-          variant="secondary" size="sm"
-          onClick={() => { setOpen(false); setBody(""); setLine(""); setErr(null); }}
-        >
-          cancel
-        </Button>
+      {savedMsg && (
+        <div className="text-[11px] text-good bg-good/5 border border-good/20 rounded px-1.5 py-1 flex items-center gap-1">
+          ✓ {savedMsg}
+        </div>
+      )}
+      <div className="flex items-center justify-between gap-1.5">
+        <div className="text-[10px] font-mono text-muted truncate flex-1 min-w-0"
+             title={target}>
+          will attach to: <span className="text-ink">{target}</span>
+        </div>
+        <div className="flex gap-1.5 flex-shrink-0">
+          <Button
+            variant="primary" size="sm"
+            loading={saving}
+            onClick={save}
+            disabled={!body.trim()}
+          >save</Button>
+          <Button
+            variant="secondary" size="sm"
+            onClick={() => { setOpen(false); setBody(""); setLine(""); setErr(null); setSavedMsg(null); }}
+          >cancel</Button>
+        </div>
       </div>
     </div>
   );
@@ -620,6 +660,10 @@ export function Inspector() {
   const [loading, setLoading]       = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
   const [codeLine, setCodeLine]     = useState<number | undefined>(undefined);
+  const [freshNoteId, setFreshNoteId] = useState<number | null>(null);
+
+  const setCenterView      = useStore((s) => s.setCenterView);
+  const setSelectedLifeline = useStore((s) => s.setSelectedLifeline);
 
   useEffect(() => {
     if (!selectedLifeline) { setDetail(null); return; }
@@ -683,15 +727,60 @@ export function Inspector() {
 
         {selectedLifeline && (
           <section>
-            <div className="text-[11px] uppercase tracking-wider text-muted mb-1">
-              Selected node
+            <div className="flex items-center justify-between mb-1">
+              <div className="text-[11px] uppercase tracking-wider text-muted">
+                Selected file
+              </div>
+              <Button
+                size="xs" variant="ghost"
+                onClick={() => setSelectedLifeline(null)}
+                title="clear selection (Esc)"
+                aria-label="clear selection"
+              >✕</Button>
             </div>
             {loading && <div className="text-xs text-muted">loading…</div>}
             {detail && (
               <>
-                <div className="text-xs font-mono mb-2 break-all">
-                  {detail.lifeline.current_path ?? "(tombstoned)"}
+                {/* Headline path card — copyable + jump-to-graph + jump-to-tree */}
+                <div className="rounded-md border border-line bg-elev px-2.5 py-2 mb-2">
+                  <div className="text-xs font-mono break-all leading-snug text-ink mb-1.5">
+                    {detail.lifeline.current_path ?? (
+                      <span className="text-muted italic">(tombstoned — no current path)</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {detail.lifeline.current_path && (
+                      <Button
+                        size="xs" variant="secondary"
+                        onClick={() => {
+                          navigator.clipboard
+                            ?.writeText(detail.lifeline.current_path!)
+                            .catch(() => { /* ignore */ });
+                        }}
+                        aria-label="copy path"
+                      >📋 copy</Button>
+                    )}
+                    <Button
+                      size="xs" variant="secondary"
+                      onClick={() => setCenterView("graph")}
+                      aria-label="show in graph"
+                    >→ graph</Button>
+                    <Button
+                      size="xs" variant="secondary"
+                      onClick={() => setCenterView("schema")}
+                      aria-label="show in schema"
+                    >→ schema</Button>
+                    <Button
+                      size="xs" variant="secondary"
+                      onClick={() => setCenterView("tree")}
+                      aria-label="show in tree"
+                    >→ tree</Button>
+                    <span className="ml-auto text-[10px] font-mono text-muted">
+                      lifeline {detail.lifeline.id.slice(0, 8)}…
+                    </span>
+                  </div>
                 </div>
+
                 <div className="flex gap-1 text-[11px] mb-2 flex-wrap">
                   {(["notes", "guidance", "critical", "history", "code"] as Tab[]).map((t) => (
                     <Button
@@ -707,11 +796,17 @@ export function Inspector() {
                   <div className="space-y-1.5">
                     <AddNoteForm
                       target={selectedPath} kind="note"
-                      onSaved={() => setRefreshTick((n) => n + 1)}
+                      onSaved={(id) => {
+                        setFreshNoteId(id);
+                        setRefreshTick((n) => n + 1);
+                        setTimeout(() => setFreshNoteId(null), 2000);
+                      }}
                     />
-                    {plainNotes.length === 0 && <div className="text-xs text-muted">(no notes)</div>}
+                    {plainNotes.length === 0 && <div className="text-xs text-muted">(no notes — use the form above)</div>}
                     {plainNotes.map((n) => (
-                      <NoteRow key={n.id} note={n} onShowCode={jumpToCode} />
+                      <NoteRow key={n.id} note={n}
+                               onShowCode={jumpToCode}
+                               isFresh={n.id === freshNoteId} />
                     ))}
                   </div>
                 )}
@@ -719,19 +814,27 @@ export function Inspector() {
                   <div className="space-y-1.5">
                     <AddNoteForm
                       target={selectedPath} kind="guidance"
-                      onSaved={() => setRefreshTick((n) => n + 1)}
+                      onSaved={(id) => {
+                        setFreshNoteId(id);
+                        setRefreshTick((n) => n + 1);
+                        setTimeout(() => setFreshNoteId(null), 2000);
+                      }}
                     />
-                    {guidance.length === 0 && <div className="text-xs text-muted">(no guidance)</div>}
+                    {guidance.length === 0 && <div className="text-xs text-muted">(no guidance — use the form above)</div>}
                     {guidance.map((n) => (
-                      <NoteRow key={n.id} note={n} onShowCode={jumpToCode} />
+                      <NoteRow key={n.id} note={n}
+                               onShowCode={jumpToCode}
+                               isFresh={n.id === freshNoteId} />
                     ))}
                   </div>
                 )}
                 {tab === "critical" && (
                   <div className="space-y-1.5">
-                    {detail.critical.length === 0 && <div className="text-xs text-muted">(no critical notes)</div>}
+                    {detail.critical.length === 0 && <div className="text-xs text-muted">(no critical notes — author via `projmem critical add`)</div>}
                     {detail.critical.map((n) => (
-                      <NoteRow key={n.id} note={n} onShowCode={jumpToCode} />
+                      <NoteRow key={n.id} note={n}
+                               onShowCode={jumpToCode}
+                               isFresh={n.id === freshNoteId} />
                     ))}
                   </div>
                 )}
