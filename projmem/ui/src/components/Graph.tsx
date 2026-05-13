@@ -162,8 +162,11 @@ export function GraphView() {
   const showSymbols         = useStore((s) => s.showSymbols);
   const setShowSymbols      = useStore((s) => s.setShowSymbols);
   const setSelectedLifeline = useStore((s) => s.setSelectedLifeline);
+  const setSelectedDirectory = useStore((s) => s.setSelectedDirectory);
   const liveLeasedPaths     = useStore((s) => s.liveLeasedPaths);
   const selectedLifeline    = useStore((s) => s.selectedLifeline);
+  const nodeLevel           = useStore((s) => s.nodeLevel);
+  const setNodeLevel        = useStore((s) => s.setNodeLevel);
 
   const [nodes, setNodes]   = useState<GraphNode[]>([]);
   const [edges, setEdges]   = useState<GraphEdge[]>([]);
@@ -190,8 +193,63 @@ export function GraphView() {
     api.graph(showGhosts, showSymbols)
       .then((g) => {
         if (cancelled) return;
-        setNodes(g.nodes);
-        setEdges(g.edges);
+        // `dirs` mode collapses every file node into one node per
+        // top-level directory. Aggregated import edges. Result: a
+        // module map of the project — at-a-glance view of which
+        // sections depend on which.
+        if (nodeLevel === "dirs") {
+          const byDir = new Map<string, {
+            files: GraphNode[]; critical: boolean; leased: boolean;
+          }>();
+          for (const n of g.nodes) {
+            if (n.symbol || n.ghost) continue;
+            const dir = (n.path || "").split("/")[0] || "(root)";
+            const e = byDir.get(dir) ?? { files: [], critical: false, leased: false };
+            e.files.push(n);
+            if (n.critical) e.critical = true;
+            if (n.leased)   e.leased = true;
+            byDir.set(dir, e);
+          }
+          const dirNodes: GraphNode[] = [];
+          const dirIdByName = new Map<string, string>();
+          for (const [dir, e] of byDir) {
+            const id = `dir:${dir}`;
+            dirIdByName.set(dir, id);
+            dirNodes.push({
+              id,
+              path: dir,
+              label: dir,
+              staleness: "fresh",
+              critical: e.critical,
+              rev_deps: e.files.length,
+              leased:   e.leased,
+              ghost:    false,
+            });
+          }
+          // Aggregate edges across sections.
+          const seenEdge = new Map<string, GraphEdge>();
+          for (const ed of g.edges) {
+            if (ed.kind !== "imports") continue;
+            const src = g.nodes.find((n) => n.id === ed.source);
+            const dst = g.nodes.find((n) => n.id === ed.target);
+            if (!src || !dst) continue;
+            const sDir = (src.path || "").split("/")[0] || "(root)";
+            const dDir = (dst.path || "").split("/")[0] || "(root)";
+            if (sDir === dDir) continue;
+            const sId = dirIdByName.get(sDir);
+            const dId = dirIdByName.get(dDir);
+            if (!sId || !dId) continue;
+            const k = `${sId}→${dId}`;
+            if (!seenEdge.has(k)) {
+              seenEdge.set(k, { source: sId, target: dId, kind: "imports" });
+            }
+          }
+          setNodes(dirNodes);
+          setEdges([...seenEdge.values()]);
+        } else {
+          setNodes(g.nodes);
+          setEdges(g.edges);
+        }
         setWarning(
           g.node_count > 5000
             ? `large graph (${g.node_count} nodes) — interaction may be slow`
@@ -201,7 +259,7 @@ export function GraphView() {
       .catch((e) => !cancelled && setWarning(String(e)))
       .finally(() => !cancelled && setLoading(false));
     return () => { cancelled = true; };
-  }, [showGhosts, showSymbols, refetchTick]);
+  }, [showGhosts, showSymbols, refetchTick, nodeLevel]);
 
   // Auto-refetch the graph when structural events arrive (new file
   // lifelines or tombstones). The halo + focus-mode pieces below
@@ -288,14 +346,19 @@ export function GraphView() {
       .on("mouseenter", (_e, d) => setHoveredId(d.id))
       .on("mouseleave", () => setHoveredId(null))
       .on("click", (_event, d) => {
+        // In `dirs` mode, clicking a node selects the DIRECTORY (not
+        // a lifeline) so the inspector opens in dir-mode. Otherwise
+        // selects the lifeline.
+        if (d.id.startsWith("dir:")) {
+          const dirName = d.id.slice(4);
+          setSelectedDirectory(dirName === "(root)" ? "@project" : dirName + "/");
+          return;
+        }
         let targetId = d.id;
         if (d.symbol && d.path) {
           const parent = simNodes.find((m) => !m.symbol && m.path === d.path);
           if (parent) targetId = parent.id;
         }
-        // Auto-pin the clicked node so it stays where the click
-        // landed — the user shouldn't have to drag-and-hold to keep
-        // their "show me this one" stable.
         const target = simNodes.find((m) => m.id === targetId);
         if (target && target.x != null && target.y != null) {
           target.fx = target.x;
@@ -390,10 +453,30 @@ export function GraphView() {
         });
     zoomBehaviorRef.current = zoomBehavior;
     select(svgRef.current).call(zoomBehavior);
-    select(svgRef.current).call(zoomBehavior.transform, zoomIdentity);
+
+    // If a selection was made on a different view (tree/schema) and
+    // the operator just switched to graph, pan + pin immediately —
+    // before the simulation has a chance to move nodes from their
+    // seed positions and before the user's eye can wonder where the
+    // selected file went. We're INSIDE the sim-build effect here, so
+    // simNodes is guaranteed populated and node.x/y are guaranteed
+    // set (the cluster-anchor seed loop above ran).
+    if (selectedLifeline) {
+      const t = simNodes.find((n) => n.id === selectedLifeline);
+      if (t && t.x != null && t.y != null) {
+        const xform = zoomIdentity.scale(2).translate(-t.x, -t.y);
+        select(svgRef.current).call(zoomBehavior.transform, xform);
+        t.fx = t.x; t.fy = t.y;
+        setPinnedCount(simNodes.filter((n) => n.fx != null).length);
+      } else {
+        select(svgRef.current).call(zoomBehavior.transform, zoomIdentity);
+      }
+    } else {
+      select(svgRef.current).call(zoomBehavior.transform, zoomIdentity);
+    }
 
     return () => { sim.stop(); };
-  }, [nodes, edges, setSelectedLifeline, palette]);
+  }, [nodes, edges, setSelectedLifeline, palette, selectedLifeline]);
 
   // Focus mode + label visibility + halo. Computed in a DOM-pass effect
   // so the simulation tick handler stays cheap. When ANY lease is live:
@@ -490,20 +573,27 @@ export function GraphView() {
       }
       const pinRing = g.querySelector<SVGCircleElement>("circle.pin-ring");
       if (pinRing && d) {
-        // Reuse the pin ring as a selection ring when the node is
-        // selected (focal but not live). Pin-state takes priority.
+        // Selection ring is much more dramatic than the pin ring —
+        // the user reported "graph doesn't show the selection." Two
+        // rings now: outer (radius+14) at the accent color for
+        // unmissable selection halo, inner pin ring kept for pinned
+        // nodes. Selection takes visual priority over plain pinned.
         const dn = d as SimNode;
         const isPinned = dn.fx != null || dn.fy != null;
-        if (isPinned) {
-          pinRing.style.display = "";
-          pinRing.setAttribute("stroke", palette.ink);
-          pinRing.setAttribute("stroke-dasharray", "1 2");
-          pinRing.setAttribute("r", String(nodeRadius(d) + 3));
-        } else if (isSelected) {
+        if (isSelected) {
           pinRing.style.display = "";
           pinRing.setAttribute("stroke", palette.accent);
+          pinRing.setAttribute("stroke-opacity", "0.9");
+          pinRing.setAttribute("stroke-width", "3");
           pinRing.setAttribute("stroke-dasharray", "0");
-          pinRing.setAttribute("r", String(nodeRadius(d) + 5));
+          pinRing.setAttribute("r", String(nodeRadius(d) + 10));
+        } else if (isPinned) {
+          pinRing.style.display = "";
+          pinRing.setAttribute("stroke", palette.ink);
+          pinRing.setAttribute("stroke-opacity", "0.7");
+          pinRing.setAttribute("stroke-width", "1");
+          pinRing.setAttribute("stroke-dasharray", "1 2");
+          pinRing.setAttribute("r", String(nodeRadius(d) + 3));
         } else {
           pinRing.style.display = "none";
         }
@@ -606,9 +696,31 @@ export function GraphView() {
       </svg>
 
       <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+        <div className="flex items-center gap-2 rounded-md bg-elev/95 border border-line px-2 py-1 text-xs shadow-soft">
+          <span className="text-muted text-[10px]">show:</span>
+          <div className="inline-flex rounded border border-line overflow-hidden">
+            {(["all", "dirs", "files"] as const).map((v) => (
+              <button
+                key={v}
+                onClick={() => setNodeLevel(v)}
+                title={
+                  v === "all"   ? "files + (optionally) symbols" :
+                  v === "dirs"  ? "one node per top-level directory — module map view" :
+                                  "files only (skip symbol-level nodes)"
+                }
+                className={`px-1.5 py-0.5 text-[10px] ${
+                  nodeLevel === v
+                    ? "bg-accent text-accent-fg"
+                    : "text-muted hover:bg-sunken"
+                }`}
+              >{v}</button>
+            ))}
+          </div>
+        </div>
         <div className="flex items-center gap-3 rounded-md bg-elev/95 border border-line px-2 py-1 text-xs shadow-soft text-ink">
-          <label className="flex items-center gap-1 cursor-pointer">
+          <label className={`flex items-center gap-1 cursor-pointer ${nodeLevel === "dirs" ? "opacity-40" : ""}`}>
             <input type="checkbox" checked={showSymbols}
+                   disabled={nodeLevel === "dirs"}
                    onChange={(e) => setShowSymbols(e.target.checked)} />
             <span>symbols</span>
           </label>
