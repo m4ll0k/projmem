@@ -1003,12 +1003,195 @@ function langFromPath(p: string): string | undefined {
   }
 }
 
-function CodeTab({ target, scrollToLine }: {
-  target: string; scrollToLine?: number;
+// Per-line inline form opened from a gutter-line click. Compact
+// variant of AddNoteForm + AddCriticalForm: hard-codes self-cosign
+// for critical to keep the inline experience snappy. The note body
+// is prefixed with `target:line — body` so the existing staleness
+// verifier and the "code:N" jump button keep working out of the box.
+
+const CRITICAL_CATEGORIES_INLINE = [
+  "security", "compliance", "performance",
+  "business_logic", "data_integrity", "other",
+] as const;
+
+function LineAnnotationForm({
+  target, line, kind, onSaved, onCancel,
+}: {
+  target: string;
+  line: number;
+  kind: "note" | "guidance" | "critical";
+  onSaved: () => void;
+  onCancel: () => void;
+}) {
+  const [body, setBody]         = useState("");
+  const [severity, setSeverity] = useState<"info" | "warn" | "critical">("info");
+  const [category, setCategory] = useState<typeof CRITICAL_CATEGORIES_INLINE[number]>("security");
+  const [saving, setSaving]     = useState(false);
+  const [err, setErr]           = useState<string | null>(null);
+  const bumpDataVersion = useStore((s) => s.bumpDataVersion);
+
+  const minReason = kind === "critical" ? 40 : 1;
+  const tooShort = body.trim().length < minReason;
+
+  const save = async () => {
+    if (tooShort) return;
+    setSaving(true); setErr(null);
+    try {
+      const cited = `${target}:${line} — ${body.trim()}`;
+      if (kind === "critical") {
+        await api.addCritical({
+          target,
+          reason: cited,
+          category,
+          self_cosign: true,
+          blast_radius_hops: 1,
+          blocks_edits: true,
+        });
+      } else {
+        await api.addNote({
+          target, body: cited,
+          kind,
+          ...(kind === "guidance" ? { severity } : {}),
+        });
+      }
+      bumpDataVersion();
+      onSaved();
+    } catch (e: any) {
+      setErr(String(e?.message ?? e));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const borderTone = kind === "critical" ? "border-bad/40 bg-bad/5"
+                   : kind === "guidance" ? "border-accent/40 bg-accent/5"
+                                         : "border-warn/40 bg-warn/5";
+
+  return (
+    <div className={`rounded-md border ${borderTone} p-2 mt-1 mb-1 space-y-1.5`}>
+      <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-wider">
+        <span className={kind === "critical" ? "text-bad" :
+                          kind === "guidance" ? "text-accent" : "text-warn"}>
+          + {kind} @ line {line}
+        </span>
+        <span className="ml-auto text-muted normal-case font-sans">
+          target: <span className="text-ink">{target}:{line}</span>
+        </span>
+      </div>
+      <textarea
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        rows={kind === "critical" ? 4 : 3}
+        autoFocus
+        placeholder={
+          kind === "critical"
+            ? "Long-form reason ≥40 chars: the constraint, the incident, the consequence."
+            : kind === "guidance"
+              ? "Guidance for the agent about this line — convention, contract, gotcha."
+              : "Free-text note about this line."
+        }
+        className="w-full text-xs font-mono bg-bg border border-line rounded p-1.5 text-ink"
+      />
+      {kind === "guidance" && (
+        <div className="flex items-center gap-1 text-[11px]">
+          <span className="text-muted">severity:</span>
+          {(["info", "warn", "critical"] as const).map((s) => (
+            <button
+              key={s}
+              onClick={() => setSeverity(s)}
+              className={`px-1.5 py-0.5 rounded border ${
+                severity === s
+                  ? "border-accent text-accent bg-accent/10"
+                  : "border-line text-muted hover:bg-sunken"
+              }`}
+            >{s}</button>
+          ))}
+        </div>
+      )}
+      {kind === "critical" && (
+        <div className="flex items-center gap-1 text-[11px] flex-wrap">
+          <span className="text-muted">category:</span>
+          {CRITICAL_CATEGORIES_INLINE.map((c) => (
+            <button
+              key={c}
+              onClick={() => setCategory(c)}
+              className={`px-1.5 py-0.5 rounded border ${
+                category === c
+                  ? "border-bad text-bad bg-bad/10"
+                  : "border-line text-muted hover:bg-sunken"
+              }`}
+            >{c}</button>
+          ))}
+        </div>
+      )}
+      {tooShort && body.length > 0 && (
+        <div className="text-[10px] text-warn">
+          {minReason - body.trim().length} more characters needed
+        </div>
+      )}
+      {err && (
+        <div className="text-[11px] text-bad bg-bad/5 border border-bad/20 rounded px-1.5 py-1">
+          {err}
+        </div>
+      )}
+      <div className="flex justify-end gap-1.5">
+        <Button
+          variant={kind === "critical" ? "danger" : "primary"}
+          size="sm" loading={saving}
+          onClick={save} disabled={tooShort}
+        >save</Button>
+        <Button variant="secondary" size="sm" onClick={onCancel}>cancel</Button>
+      </div>
+    </div>
+  );
+}
+
+// Tiny dropdown over a gutter line number — the choose-kind step.
+function LineKindMenu({ onPick, onClose }: {
+  onPick: (k: "note" | "guidance" | "critical") => void;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="absolute left-10 z-10 bg-elev border border-line rounded-md
+                 shadow-soft text-[11px] min-w-[140px]"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <button
+        onClick={() => onPick("note")}
+        className="block w-full text-left px-2.5 py-1.5 hover:bg-sunken border-b border-line-soft"
+      >📝 add note</button>
+      <button
+        onClick={() => onPick("guidance")}
+        className="block w-full text-left px-2.5 py-1.5 hover:bg-sunken border-b border-line-soft text-accent"
+      >🧭 add guidance</button>
+      <button
+        onClick={() => onPick("critical")}
+        className="block w-full text-left px-2.5 py-1.5 hover:bg-sunken text-bad"
+      >⚠ add critical</button>
+      <button
+        onClick={onClose}
+        className="block w-full text-left px-2.5 py-1 hover:bg-sunken text-muted border-t border-line-soft"
+      >cancel</button>
+    </div>
+  );
+}
+
+function CodeTab({ target, scrollToLine, notes, critical }: {
+  target: string;
+  scrollToLine?: number;
+  notes: Annotation[];           // every annotation attached to this lifeline
+  critical: Annotation[];        // critical rows live on a separate column in the daemon response
 }) {
   const [content, setContent] = useState<{text?: string; binary?: boolean; truncated?: boolean; size?: number} | null>(null);
   const [err, setErr]         = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Per-line menu / form coordination. Only one row's UI is "open"
+  // at a time; cancelling collapses everything back to the plain code.
+  const [openMenuLine, setOpenMenuLine] = useState<number | null>(null);
+  const [activeForm, setActiveForm]     = useState<{
+    line: number; kind: "note" | "guidance" | "critical";
+  } | null>(null);
   useEffect(() => {
     let cancelled = false;
     setLoading(true); setErr(null);
@@ -1024,6 +1207,29 @@ function CodeTab({ target, scrollToLine }: {
     const el = document.getElementById(`code-line-${scrollToLine}`);
     el?.scrollIntoView({ block: "center", behavior: "smooth" });
   }, [scrollToLine, content]);
+
+  // Build a line → annotations map by parsing the canonical citation
+  // pattern (`target:line` or `:line`). Used to render gutter dots so
+  // the operator can see at a glance which lines already have notes.
+  const lineAnnotations = (() => {
+    const m = new Map<number, Annotation[]>();
+    const all = [...notes, ...critical];
+    for (const n of all) {
+      // First try the precise citation (target:line) — that's what
+      // the inline form writes. Fall back to any `:N` in the body.
+      const re = new RegExp(
+        `(?:${target.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}|):(\\d+)\\b`,
+      );
+      const match = (n.body || "").match(re);
+      if (!match) continue;
+      const ln = parseInt(match[1], 10);
+      if (!ln) continue;
+      const arr = m.get(ln) ?? [];
+      arr.push(n);
+      m.set(ln, arr);
+    }
+    return m;
+  })();
 
   if (loading) return <div className="text-xs text-muted">loading…</div>;
   if (err)     return <div className="text-xs text-bad">{err}</div>;
@@ -1044,9 +1250,16 @@ function CodeTab({ target, scrollToLine }: {
     highlighted = text.replace(/[&<>]/g,
       (c) => c === "&" ? "&amp;" : c === "<" ? "&lt;" : "&gt;");
   }
-  // Split into lines after highlighting; render each with its own
-  // gutter row so we can scroll-to-line on demand.
   const lines = highlighted.split("\n");
+  // Worst-case annotation-tone derivation for a line's gutter dot:
+  // critical > guidance > plain note.
+  const dotTone = (lineNo: number): string | null => {
+    const ann = lineAnnotations.get(lineNo);
+    if (!ann || ann.length === 0) return null;
+    if (ann.some((a) => a.kind === "critical")) return "bg-bad";
+    if (ann.some((a) => ["guidance", "constraint", "preference"].includes(a.kind))) return "bg-accent";
+    return "bg-warn";
+  };
   return (
     <div className="rounded-md border border-line bg-code-bg overflow-hidden">
       {content.truncated && (
@@ -1054,17 +1267,64 @@ function CodeTab({ target, scrollToLine }: {
           truncated to 200 KB ({content.size} bytes total)
         </div>
       )}
-      <div className="flex max-h-[60vh] overflow-auto text-[11px] font-mono leading-[1.45]">
-        <div className="select-none text-right text-muted px-2 py-2 tabular-nums border-r border-line-soft">
-          {lines.map((_, i) => (
-            <div key={i + 1} id={`code-line-${i + 1}`}>{i + 1}</div>
-          ))}
+      <div className="flex max-h-[60vh] overflow-auto text-[11px] font-mono leading-[1.45] relative">
+        <div className="select-none text-right text-muted py-2 tabular-nums border-r border-line-soft bg-code-bg">
+          {lines.map((_, i) => {
+            const lineNo = i + 1;
+            const tone = dotTone(lineNo);
+            const annCount = lineAnnotations.get(lineNo)?.length ?? 0;
+            const isOpen = openMenuLine === lineNo;
+            return (
+              <div key={lineNo} id={`code-line-${lineNo}`} className="relative pr-2 pl-2 group">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpenMenuLine(isOpen ? null : lineNo);
+                    setActiveForm(null);
+                  }}
+                  className={`inline-flex items-center justify-end gap-1
+                              hover:text-accent cursor-pointer
+                              ${isOpen ? "text-accent font-semibold" : ""}`}
+                  title={annCount > 0
+                    ? `${annCount} annotation${annCount > 1 ? "s" : ""} on this line — click to add another`
+                    : "click to add note/guidance/critical at this line"}
+                >
+                  {tone && (
+                    <span className={`inline-block w-1.5 h-1.5 rounded-full ${tone}`} />
+                  )}
+                  <span>{lineNo}</span>
+                </button>
+                {isOpen && (
+                  <LineKindMenu
+                    onPick={(k) => {
+                      setActiveForm({ line: lineNo, kind: k });
+                      setOpenMenuLine(null);
+                    }}
+                    onClose={() => setOpenMenuLine(null)}
+                  />
+                )}
+              </div>
+            );
+          })}
         </div>
-        <pre className="px-3 py-2 flex-1 whitespace-pre overflow-x-auto">
+        <pre className="px-3 py-2 flex-1 whitespace-pre overflow-x-auto"
+             onClick={() => { setOpenMenuLine(null); }}>
           <code className="hljs"
                 dangerouslySetInnerHTML={{ __html: highlighted }} />
         </pre>
       </div>
+      {activeForm && (
+        <div className="border-t border-line bg-bg p-2">
+          <LineAnnotationForm
+            target={target}
+            line={activeForm.line}
+            kind={activeForm.kind}
+            onSaved={() => setActiveForm(null)}
+            onCancel={() => setActiveForm(null)}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -1351,7 +1611,12 @@ export function Inspector() {
                   <HistoryTimeline events={detail.events} />
                 )}
                 {tab === "code" && selectedPath && (
-                  <CodeTab target={selectedPath} scrollToLine={codeLine} />
+                  <CodeTab
+                    target={selectedPath}
+                    scrollToLine={codeLine}
+                    notes={detail.notes}
+                    critical={detail.critical}
+                  />
                 )}
                 {tab === "code" && !selectedPath && (
                   <div className="text-xs text-muted">(tombstoned — no current file)</div>
