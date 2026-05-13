@@ -61,20 +61,49 @@ import sys
 # File-touching tools — file_path / path arg is the target.
 FILE_TOUCH_TOOLS = {"Edit", "Write", "NotebookEdit"}
 
-# Read-only tools — projmem context is helpful, but never blocks.
+# Read tools — exclusion still blocks (the user said don't read it),
+# but a critical note alone does not (critical guards edits, not reads).
 FILE_READ_TOOLS = {"Read"}
 
-# Bash subcommands that mutate the filesystem. Path args are positional
+# Bash subcommands that MUTATE the filesystem. Path args are positional
 # after the flags. shlex parses the command string safely (no shell
 # evaluation), so a malicious path like `$(rm -rf /)` cannot escape.
 RISKY_BASH_CMDS = {"rm", "rmdir", "unlink", "mv", "shred", "dd"}
+
+# Bash subcommands that READ file content. Treated like Read — only
+# exclusions block them. The user's case: `cat src/excluded/file.py`,
+# `head -n 50 src/excluded/file.py`, `grep foo src/excluded/`.
+READER_BASH_CMDS = {
+    "cat", "less", "more", "head", "tail", "bat", "view",
+    "grep", "rg", "ag", "ack",
+}
+
+# projmem subcommands that are PART of the exclusion-checking loop —
+# blocking them would prevent the agent from learning about the
+# exclusion in the first place. Everything NOT in this set that takes
+# a path argument is treated as a read of that path.
+PROJMEM_INTROSPECTION_SUBCMDS = {
+    "context", "editing", "creating", "deleting", "moving",
+    "notes", "graph", "info", "stats", "status", "doctor",
+    "hook", "init", "exclusions",
+}
+
+# File-extension hints used by the path-token sniffer for projmem
+# subcommands that take a positional path (e.g. `projmem pack foo.py`).
+SOURCE_EXTS = (
+    ".py", ".ts", ".tsx", ".js", ".jsx", ".rs", ".go", ".java",
+    ".kt", ".swift", ".rb", ".php", ".cpp", ".cc", ".c", ".h",
+    ".hpp", ".cs", ".scala", ".lua", ".sh", ".sql", ".md", ".yaml",
+    ".yml", ".toml", ".json",
+)
 
 PROJMEM_REASON = "claude-code PreToolUse"
 
 
 def _projmem_editing(cwd, path, tool, intent_note):
     """Call `projmem editing <path>` and return the parsed JSON, or None
-    if anything went wrong (no PATH / no .projmem/ / projmem errored)."""
+    if anything went wrong (no PATH / no .projmem/ / projmem errored).
+    Opens a lease — use only for actual mutating intents."""
     if not shutil.which("projmem"):
         return None
     if not os.path.isdir(os.path.join(cwd, ".projmem")):
@@ -96,34 +125,154 @@ def _projmem_editing(cwd, path, tool, intent_note):
         return None
 
 
-def _extract_bash_paths(cmd_str):
-    """Pull file path operands out of a known-risky bash command.
+def _projmem_context(cwd, path):
+    """Lightweight read-only lookup. Does NOT open a lease. Returns
+    parsed JSON or None. Used for read intents (Read, cat, head, grep,
+    projmem symbol --file …) so we don't pollute the audit log with
+    spurious leases just to check whether a path is excluded."""
+    if not shutil.which("projmem"):
+        return None
+    if not os.path.isdir(os.path.join(cwd, ".projmem")):
+        return None
+    try:
+        result = subprocess.run(
+            ["projmem", "--path", cwd, "context", path, "--json"],
+            capture_output=True, text=True, timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if result.returncode != 0:
+        return None
+    try:
+        return json.loads(result.stdout or "{}")
+    except (json.JSONDecodeError, ValueError):
+        return None
 
-    Returns a list of (path, intent) tuples. Intent is a short string
-    used in the projmem reason — helps the audit trail say *why* a
-    lease was opened (e.g., "rm" vs "mv source").
+
+def _first_exclusion(info):
+    """Return the first kind=exclude annotation in a context/editing
+    response, or None. The body is the user's free-text reason and goes
+    verbatim into the deny message."""
+    if not info:
+        return None
+    for note in info.get("guidance") or []:
+        if note.get("kind") == "exclude":
+            return note
+    return None
+
+
+def _extract_bash_paths(cmd_str):
+    """Pull file path operands out of a bash command. Returns a list of
+    (path, intent, access) tuples.
+
+    ``intent`` is a short string for the audit trail. ``access`` is
+    either ``"write"`` (rm / mv / shred / dd) or ``"read"`` (cat / head
+    / grep / projmem-subcommand) — drives whether we use
+    ``projmem editing`` (which opens a lease) or ``projmem context``
+    (read-only) for the check, and whether critical notes alone count
+    as deny-worthy or only exclusions do.
+
+    shlex parses with posix word-splitting, no shell evaluation — a
+    payload like ``rm $(touch /tmp/canary)`` survives intact as tokens.
     """
     if not cmd_str:
         return []
     try:
-        # `posix=True` matches a real shell's word-splitting; comments
-        # and redirections stay as tokens but we filter them below.
         tokens = shlex.split(cmd_str, posix=True)
     except ValueError:
         return []
     if not tokens:
         return []
     cmd = os.path.basename(tokens[0])
-    if cmd not in RISKY_BASH_CMDS:
-        return []
-    paths = []
+
+    if cmd in RISKY_BASH_CMDS:
+        return [(p, cmd, "write") for p in _paths_after(tokens)]
+
+    if cmd in READER_BASH_CMDS:
+        # `grep PATTERN path` — first non-flag arg after the command is
+        # the pattern, not a path. We still scan every remaining token
+        # so multi-file invocations (`grep foo a.py b.py`) are caught.
+        skip_first_non_flag = cmd in ("grep", "rg", "ag", "ack")
+        return [(p, f"read:{cmd}", "read")
+                for p in _paths_after(tokens, skip_first_non_flag=skip_first_non_flag)]
+
+    if cmd == "projmem":
+        return _extract_projmem_subcmd_paths(tokens)
+
+    return []
+
+
+def _paths_after(tokens, *, skip_first_non_flag=False):
+    """Scan tokens after the command for path-shaped operands. Stops
+    at shell separators. Optionally skips the first non-flag token
+    (used for grep-family pattern args)."""
+    out = []
+    skipped = False
     for tok in tokens[1:]:
-        if not tok or tok.startswith("-"):
+        if not tok:
             continue
         if tok in (";", "&&", "||", "|", ">", ">>", "<"):
             break
-        paths.append((tok, cmd))
-    return paths
+        if tok.startswith("-"):
+            continue
+        if skip_first_non_flag and not skipped:
+            skipped = True
+            continue
+        out.append(tok)
+    return out
+
+
+def _extract_projmem_subcmd_paths(tokens):
+    """Pull paths out of a `projmem <subcmd> [args]` invocation.
+
+    Whitelisted introspection subcommands return [] — projmem's own
+    output IS the exclusion check, so blocking those would create a
+    catch-22. For everything else, we look at ``--file VALUE``,
+    ``--path VALUE`` (the global flag), and positional path-shaped
+    tokens. Path-shape heuristic: contains ``/`` or ends in a known
+    source extension.
+    """
+    out = []
+    i = 1
+    subcmd = None
+    saw_global_path = False
+    while i < len(tokens):
+        tok = tokens[i]
+        # Skip the `--path <root>` global flag — that's the project
+        # root, not a target. Trip the flag and consume the value.
+        if tok == "--path" and i + 1 < len(tokens):
+            saw_global_path = True
+            i += 2
+            continue
+        if subcmd is None and not tok.startswith("-"):
+            subcmd = tok
+            if subcmd in PROJMEM_INTROSPECTION_SUBCMDS:
+                return []
+            i += 1
+            continue
+        if tok in ("--file", "-f") and i + 1 < len(tokens):
+            out.append(tokens[i + 1])
+            i += 2
+            continue
+        if tok.startswith("-"):
+            # Generic flag — skip the value if the next token looks
+            # non-positional. We err on the side of also peeking; if
+            # the next token is a path we don't want to skip it.
+            i += 1
+            continue
+        # Positional arg. Treat as path if it looks like one.
+        if "/" in tok or tok.endswith(SOURCE_EXTS):
+            # Strip a trailing `:line` citation if present.
+            base = tok.split(":")[0] if ":" in tok and tok.split(":")[0] else tok
+            out.append(base)
+        i += 1
+    intent = f"projmem-{subcmd or 'unknown'}"
+    return [(p, intent, "read") for p in out]
+
+
+# Older callsites may still expect the 2-tuple shape.
+def _extract_bash_paths_legacy_2tuple(cmd_str):
+    return [(p, i) for (p, i, _a) in _extract_bash_paths(cmd_str)]
 
 
 def _summarize_warnings(warnings):
@@ -192,12 +341,19 @@ def main() -> int:
     tool_input = payload.get("tool_input") or payload.get("tool_args") or {}
     cwd = payload.get("cwd") or os.getcwd()
 
-    # Collect (path, intent) pairs that should be projmem-checked.
+    # Collect (path, intent, access) triples that should be checked.
+    # access ∈ {"read", "write"} — drives whether we use the read-only
+    # projmem context lookup or open a real editing lease, and whether
+    # critical notes alone count as deny-worthy (writes only).
     targets = []
-    if tool in FILE_TOUCH_TOOLS or tool in FILE_READ_TOOLS:
+    if tool in FILE_TOUCH_TOOLS:
         p = tool_input.get("file_path") or tool_input.get("path")
         if isinstance(p, str) and p:
-            targets.append((p, tool.lower()))
+            targets.append((p, tool.lower(), "write"))
+    elif tool in FILE_READ_TOOLS:
+        p = tool_input.get("file_path") or tool_input.get("path")
+        if isinstance(p, str) and p:
+            targets.append((p, tool.lower(), "read"))
     elif tool == "Bash":
         cmd_str = tool_input.get("command")
         if isinstance(cmd_str, str):
@@ -206,25 +362,41 @@ def main() -> int:
     if not targets:
         return 0
 
-    # Walk every target. First exclusion or blocking-critical denies
-    # the whole tool call; otherwise we aggregate context.
     blocks = []
     contexts = []
-    for path, intent in targets:
-        info = _projmem_editing(cwd, path, tool, intent)
-        if info is None:
-            continue
-        kind, reason = _summarize_warnings(info.get("warnings"))
-        if kind:
-            blocks.append(f"[{path}] {reason}")
+    for path, intent, access in targets:
+        if access == "write":
+            info = _projmem_editing(cwd, path, tool, intent)
+            if info is None:
+                continue
+            # Exclusion OR critical both deny writes.
+            kind, reason = _summarize_warnings(info.get("warnings"))
+            if kind:
+                blocks.append(f"[{path}] {reason}")
+            else:
+                ctx = _format_guidance(info)
+                if ctx:
+                    contexts.append(f"--- {path} ---\n{ctx}")
         else:
-            ctx = _format_guidance(info)
-            if ctx:
-                contexts.append(f"--- {path} ---\n{ctx}")
+            # Read intent — only the exclusion denies. Critical guards
+            # mutations, not reads. We use the read-only `context`
+            # lookup so we don't pollute file_event with phantom leases.
+            info = _projmem_context(cwd, path)
+            if info is None:
+                continue
+            excl = _first_exclusion(info)
+            if excl:
+                blocks.append(
+                    f"[{path}] 🚫 OUT OF SCOPE — exclusion at "
+                    f"{excl.get('target')!r}: "
+                    f"{(excl.get('body') or '').strip()}"
+                )
+            else:
+                ctx = _format_guidance(info)
+                if ctx:
+                    contexts.append(f"--- {path} ---\n{ctx}")
 
     if blocks:
-        # Surface ALL blocked paths so the agent can address them at
-        # once — single-shot deny avoids back-and-forth.
         body = "\n\n".join(blocks)
         prefix = (
             "projmem refuses this tool call. "

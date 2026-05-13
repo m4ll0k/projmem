@@ -388,6 +388,191 @@ class TestPreToolUseEnforcement:
         assert result.returncode == 0
         assert result.stdout.strip() == ""
 
+    def test_projmem_symbol_on_excluded_file_is_denied(self, tmp_path):
+        # The user's reported case: they put an exclusion on the dir,
+        # then the agent ran `projmem symbol app --file src/excluded/app.java`
+        # — bypassed the hook entirely because that wasn't in the
+        # original watch list. Now the hook recognises projmem
+        # subcommands and extracts the --file argument.
+        repo = self._setup_repo(tmp_path)
+        (repo / "src").mkdir()
+        (repo / "src" / "excluded").mkdir()
+        (repo / "src" / "excluded" / "app.java").write_text(
+            "public class App {}\n")
+        rc = _run_cli(["index"], cwd=repo)
+        assert rc.returncode == 0, rc.stderr
+        _run_cli([
+            "note", "add", "src/excluded/", "--kind", "exclude",
+            "deprecated — do not read",
+        ], cwd=repo)
+
+        result = self._invoke_hook(repo, {
+            "tool_name": "Bash",
+            "tool_input": {
+                "command": (
+                    "projmem symbol app --file src/excluded/app.java "
+                    "--context 20"
+                ),
+            },
+            "cwd": str(repo),
+        })
+        assert result.returncode == 0
+        blob = json.loads(result.stdout)
+        out = blob["hookSpecificOutput"]
+        assert out["permissionDecision"] == "deny", out
+        assert "OUT OF SCOPE" in out["permissionDecisionReason"]
+        assert "src/excluded/app.java" in out["permissionDecisionReason"]
+
+    def test_projmem_introspection_subcommands_are_NOT_blocked(self, tmp_path):
+        # `projmem context` IS how the hook discovers the exclusion —
+        # blocking it would create a catch-22 where the agent can't
+        # learn about the exclusion. Same for editing / creating /
+        # deleting (those return the warning in their own response).
+        repo = self._setup_repo(tmp_path)
+        (repo / "src").mkdir()
+        (repo / "src" / "excluded").mkdir()
+        (repo / "src" / "excluded" / "x.py").write_text("x = 1\n")
+        _run_cli(["index"], cwd=repo)
+        _run_cli([
+            "note", "add", "src/excluded/", "--kind", "exclude",
+            "out of scope",
+        ], cwd=repo)
+
+        for subcmd in ("context", "editing", "notes"):
+            result = self._invoke_hook(repo, {
+                "tool_name": "Bash",
+                "tool_input": {
+                    "command": f"projmem {subcmd} src/excluded/x.py",
+                },
+                "cwd": str(repo),
+            })
+            assert result.returncode == 0
+            # Either empty output (no targets extracted) or context-only.
+            if result.stdout.strip():
+                blob = json.loads(result.stdout)
+                out = blob.get("hookSpecificOutput") or {}
+                assert out.get("permissionDecision") != "deny", (
+                    f"projmem {subcmd} was wrongly blocked"
+                )
+
+    def test_cat_on_excluded_path_is_denied(self, tmp_path):
+        # Same root cause covers every plain reader command — agents
+        # love to `cat foo.py` to inspect content.
+        repo = self._setup_repo(tmp_path)
+        (repo / "secret.py").write_text("API_KEY = 'xxx'\n")
+        _run_cli(["index"], cwd=repo)
+        _run_cli([
+            "note", "add", "secret.py", "--kind", "exclude",
+            "credentials — never read",
+        ], cwd=repo)
+
+        for cmd in ("cat secret.py",
+                     "head -n 5 secret.py",
+                     "tail secret.py",
+                     "less secret.py"):
+            result = self._invoke_hook(repo, {
+                "tool_name": "Bash",
+                "tool_input": {"command": cmd},
+                "cwd": str(repo),
+            })
+            assert result.returncode == 0, (cmd, result.stderr)
+            blob = json.loads(result.stdout)
+            assert blob["hookSpecificOutput"]["permissionDecision"] == "deny", (
+                f"`{cmd}` was not denied"
+            )
+
+    def test_grep_pattern_arg_is_not_treated_as_path(self, tmp_path):
+        # `grep PATTERN excluded.py` — PATTERN must NOT trigger a
+        # spurious lookup as if it were a path. Otherwise the agent
+        # gets a false "PATTERN not found in index" error.
+        repo = self._setup_repo(tmp_path)
+        (repo / "secret.py").write_text("API_KEY = 'xxx'\n")
+        _run_cli(["index"], cwd=repo)
+        _run_cli([
+            "note", "add", "secret.py", "--kind", "exclude",
+            "credentials",
+        ], cwd=repo)
+
+        # Pattern that doesn't match a file — must not trigger deny by
+        # itself. The excluded file does.
+        result = self._invoke_hook(repo, {
+            "tool_name": "Bash",
+            "tool_input": {"command": "grep MAGIC secret.py"},
+            "cwd": str(repo),
+        })
+        assert result.returncode == 0
+        blob = json.loads(result.stdout)
+        assert blob["hookSpecificOutput"]["permissionDecision"] == "deny"
+        # The pattern "MAGIC" must NOT appear in the deny reason as a
+        # path — only secret.py should.
+        assert "secret.py" in blob["hookSpecificOutput"]["permissionDecisionReason"]
+
+    def test_projmem_at_with_line_citation_is_checked(self, tmp_path):
+        # `projmem at src/excluded/app.java:5` carries a `:line`
+        # suffix — the path extractor must strip the citation before
+        # looking up the exclusion.
+        repo = self._setup_repo(tmp_path)
+        (repo / "src").mkdir()
+        (repo / "src" / "excluded").mkdir()
+        (repo / "src" / "excluded" / "app.java").write_text(
+            "public class App {}\n")
+        _run_cli(["index"], cwd=repo)
+        _run_cli([
+            "note", "add", "src/excluded/", "--kind", "exclude",
+            "out of scope",
+        ], cwd=repo)
+
+        result = self._invoke_hook(repo, {
+            "tool_name": "Bash",
+            "tool_input": {
+                "command": "projmem at src/excluded/app.java:5",
+            },
+            "cwd": str(repo),
+        })
+        assert result.returncode == 0
+        blob = json.loads(result.stdout)
+        assert blob["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+    def test_cli_symbol_surfaces_exclusion_in_json_output(self, tmp_path):
+        # Defense in depth: agents that DON'T run the Claude Code
+        # PreToolUse hook (Codex, Gemini, plain API) still see the
+        # OUT OF SCOPE message in the JSON output of read-style
+        # commands. The hook BLOCKS; this WARNS.
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        (repo / "secret.py").write_text("def hello(): return 1\n")
+        rc = _run_cli(["index"], cwd=repo)
+        assert rc.returncode == 0, rc.stderr
+        rc = _run_cli([
+            "note", "add", "secret.py", "--kind", "exclude",
+            "credentials — never read",
+        ], cwd=repo)
+        assert rc.returncode == 0, rc.stderr
+
+        rc = _run_cli([
+            "symbol", "hello", "--file", "secret.py", "--json",
+        ], cwd=repo)
+        assert rc.returncode == 0, rc.stderr
+        out = json.loads(rc.stdout)
+        warnings = out.get("exclusion_warnings") or []
+        assert any("OUT OF SCOPE" in w for w in warnings), warnings
+        assert any("secret.py" in w for w in warnings)
+
+    def test_cli_at_surfaces_exclusion_in_json_output(self, tmp_path):
+        repo = tmp_path / "repo"
+        repo.mkdir()
+        (repo / "secret.py").write_text("def hello(): return 1\n")
+        _run_cli(["index"], cwd=repo)
+        _run_cli([
+            "note", "add", "secret.py", "--kind", "exclude",
+            "credentials",
+        ], cwd=repo)
+
+        rc = _run_cli(["at", "secret.py:1", "--json"], cwd=repo)
+        assert rc.returncode == 0, rc.stderr
+        out = json.loads(rc.stdout)
+        assert out.get("exclusion_warnings")
+
     def test_shell_injection_in_bash_command_is_inert(self, tmp_path):
         # Defense check — even if a malicious user crafts a bash
         # command with substitutions, shlex parses it as literal tokens.

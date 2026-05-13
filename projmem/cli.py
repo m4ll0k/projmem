@@ -241,6 +241,41 @@ def _require_indexed(cfg, store, *, as_json: bool = False) -> None:
     sys.exit(2)
 
 
+def _exclusion_warnings(store, file_paths) -> List[str]:
+    """Return one human-readable warning per excluded path. Used by the
+    read-style commands (symbol, at, pack, flow, trace, callgraph,
+    callees-of, reach) so an agent that calls them on an out-of-scope
+    file sees the user's reason in the JSON output even if the
+    PreToolUse hook isn't installed (Codex, Gemini, plain API).
+
+    The hook is the BLOCKING enforcement; this is the advisory
+    surface — it makes the bypass route loud, not silent."""
+    try:
+        from .mutation_verbs import _exclusion_ancestors
+    except ImportError:
+        return []
+    seen = set()
+    out: List[str] = []
+    for p in file_paths:
+        if not p or not isinstance(p, str) or p in seen:
+            continue
+        seen.add(p)
+        try:
+            hits = _exclusion_ancestors(store.conn, p)
+        except Exception:
+            continue
+        for h in hits:
+            tgt = h.get("target")
+            body = (h.get("body") or "").strip()
+            out.append(
+                f"🚫 OUT OF SCOPE — {p!r} is under an exclusion at "
+                f"{tgt!r}: {body}. Do not read or modify unless the "
+                f"human explicitly asks; the user already marked this "
+                f"subtree as wasted-tokens territory."
+            )
+    return out
+
+
 def _require_fresh_index(cfg, store, writer=sys.stderr,
                           as_json: bool = False) -> Optional[dict]:
     """Refuse to serve from a foreign index unless the env override is set.
@@ -834,6 +869,17 @@ def cmd_symbol(args):
     warn = _fresh.freshness_warning(stale)
     if warn:
         out["freshness_warning"] = warn
+    # Same root cause as the hook fix: an agent calling `projmem symbol
+    # foo --file excluded/foo.py` could read source from a user-marked
+    # out-of-scope path silently. Surface the exclusion in the JSON so
+    # even agents NOT running the PreToolUse hook (Codex / Gemini /
+    # plain API) can self-correct.
+    excl_paths = list(touched_files)
+    if file_filter:
+        excl_paths.append(file_filter)
+    excl_warnings = _exclusion_warnings(store, excl_paths)
+    if excl_warnings:
+        out["exclusion_warnings"] = excl_warnings
     _emit_with_memory(out, args.json, store)
     store.close()
 
@@ -892,6 +938,9 @@ def cmd_reverse(args):
         out["auto_refreshed"] = auto_refresh_out["refreshed"]
     if foreign:
         out["foreign_index_warning"] = foreign
+    excl_warnings = _exclusion_warnings(store, [args.target])
+    if excl_warnings:
+        out["exclusion_warnings"] = excl_warnings
     _emit_with_memory(out, args.json, store)
     store.close()
 
@@ -993,6 +1042,15 @@ def cmd_pack(args):
         pack["freshness_warning"] = warn
     if auto_refresh_out and auto_refresh_out.get("refreshed"):
         pack["auto_refreshed"] = auto_refresh_out["refreshed"]
+    # Same OUT OF SCOPE surface as cmd_symbol/cmd_at — when the pack
+    # target is under an exclusion the agent has to see it before
+    # reading symbol bodies.
+    pack_paths = [args.target]
+    if isinstance(args.target, str) and "#" in args.target:
+        pack_paths.append(args.target.split("#", 1)[0])
+    excl_warnings = _exclusion_warnings(store, pack_paths)
+    if excl_warnings:
+        pack["exclusion_warnings"] = excl_warnings
     # Attach repo_memory header so the agent sees the memory signal
     # on every pack call — not just when they happen to call `notes`.
     from . import memory_header as _mh
@@ -3630,6 +3688,9 @@ def cmd_at(args):
         },
         "pack":      pack,
     }
+    excl_warnings = _exclusion_warnings(store, [file_part])
+    if excl_warnings:
+        out["exclusion_warnings"] = excl_warnings
     _emit_with_memory(out, args.json, store)
     store.close()
 
