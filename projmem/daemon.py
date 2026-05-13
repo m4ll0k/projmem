@@ -431,6 +431,32 @@ def build_app(state: DaemonState, *, serve_ui: bool = True):
         return {"path": path, "size": size, "truncated": truncated,
                 "text": text}
 
+    @app.get("/notes-by-target")
+    async def notes_by_target(target: str):
+        """All annotations pinned to a free-form target string.
+
+        Used by the Inspector's "directory mode": clicking a directory
+        in the schema/tree view loads its dir-scoped annotations
+        (target ends in `/` per the v1 convention) without going
+        through the lifeline machinery, which is file-only.
+        """
+        store = state.store()
+        try:
+            rows = store.conn.execute(
+                "SELECT * FROM annotations WHERE target=? "
+                "ORDER BY created_at DESC",
+                (target,),
+            ).fetchall()
+            notes = [dict(r) for r in rows]
+            critical = [n for n in notes if n.get("kind") == "critical"]
+            return {
+                "target":   target,
+                "notes":    notes,
+                "critical": critical,
+            }
+        finally:
+            store.close()
+
     @app.get("/lifeline/{lifeline_id}")
     async def get_lifeline(lifeline_id: str):
         """Per-node detail for the inspector tabs.

@@ -21,9 +21,11 @@ interface UIState {
   events:           DaemonEvent[];
   openLeases:       OpenLease[];
   selectedEvent:    DaemonEvent | null;
-  selectedLifeline: string | null;
+  selectedLifeline:  string | null;
+  selectedDirectory: string | null;        // dir-scoped target (trailing slash)
   showGhosts:       boolean;
   showSymbols:      boolean;
+  nodeLevel:        "all" | "dirs" | "files";
   liveLeasedPaths:  string[];        // paths with an open lease right now
   theme:            "light" | "dark";
   centerView:       "tree" | "graph" | "schema";
@@ -35,9 +37,11 @@ interface UIState {
   resetEvents:         (evs: DaemonEvent[]) => void;
   setOpenLeases:       (l: OpenLease[]) => void;
   setSelectedEvent:    (ev: DaemonEvent | null) => void;
-  setSelectedLifeline: (id: string | null) => void;
+  setSelectedLifeline:  (id: string | null) => void;
+  setSelectedDirectory: (target: string | null) => void;
   setShowGhosts:       (b: boolean) => void;
   setShowSymbols:      (b: boolean) => void;
+  setNodeLevel:        (v: "all" | "dirs" | "files") => void;
   setProjectRoot:      (r: string) => void;
   markLeased:          (path: string) => void;
   markReleased:        (path: string) => void;
@@ -68,9 +72,17 @@ export const useStore = create<UIState>((set) => ({
   events:           [],
   openLeases:       [],
   selectedEvent:    null,
-  selectedLifeline: null,
+  selectedLifeline:  null,
+  selectedDirectory: null,
   showGhosts:       false,
   showSymbols:      false,
+  nodeLevel:        ((): "all" | "dirs" | "files" => {
+    try {
+      const v = localStorage.getItem("projmem.nodeLevel");
+      if (v === "all" || v === "dirs" || v === "files") return v;
+    } catch { /* ignore */ }
+    return "all";
+  })(),
   liveLeasedPaths:  [],
   theme:            initialTheme(),
   centerView:       ((): "tree" | "graph" | "schema" => {
@@ -93,9 +105,22 @@ export const useStore = create<UIState>((set) => ({
   resetEvents:         (evs) => set({ events: evs }),
   setOpenLeases:       (l) => set({ openLeases: l }),
   setSelectedEvent:    (ev) => set({ selectedEvent: ev }),
-  setSelectedLifeline: (id) => set({ selectedLifeline: id }),
+  // Clearing one selection clears the other — operator can only have
+  // one focus target at a time, file OR dir, never both.
+  setSelectedLifeline:  (id) => set({
+    selectedLifeline:  id,
+    selectedDirectory: id ? null : (undefined as any),
+  } as any),
+  setSelectedDirectory: (t) => set({
+    selectedDirectory: t,
+    selectedLifeline:  t ? null : (undefined as any),
+  } as any),
   setShowGhosts:       (b) => set({ showGhosts: b }),
   setShowSymbols:      (b) => set({ showSymbols: b }),
+  setNodeLevel:        (v) => set(() => {
+    try { localStorage.setItem("projmem.nodeLevel", v); } catch { /* ignore */ }
+    return { nodeLevel: v };
+  }),
   setProjectRoot:      (r) => set({ projectRoot: r }),
   markLeased:          (path) => set((st) => (
     st.liveLeasedPaths.includes(path)

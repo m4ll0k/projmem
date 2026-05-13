@@ -15,10 +15,10 @@ export function App() {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
-  // Global Esc — clear selection. Skips when focus is inside an
-  // input / textarea / contentEditable so it doesn't fight typing.
-  const setSelectedLifeline = useStore((s) => s.setSelectedLifeline);
-  const setSelectedEvent    = useStore((s) => s.setSelectedEvent);
+  // Global Esc — clear every selection. Skips while typing.
+  const setSelectedLifeline  = useStore((s) => s.setSelectedLifeline);
+  const setSelectedDirectory = useStore((s) => s.setSelectedDirectory);
+  const setSelectedEvent     = useStore((s) => s.setSelectedEvent);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
@@ -30,11 +30,12 @@ export function App() {
         }
       }
       setSelectedLifeline(null);
+      setSelectedDirectory(null);
       setSelectedEvent(null);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [setSelectedLifeline, setSelectedEvent]);
+  }, [setSelectedLifeline, setSelectedDirectory, setSelectedEvent]);
 
   const setStatus       = useStore((s) => s.setStatus);
   const pushEvent       = useStore((s) => s.pushEvent);

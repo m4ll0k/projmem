@@ -92,13 +92,18 @@ export function GraphSchema() {
   const svgRef    = useRef<SVGSVGElement | null>(null);
   const innerGRef = useRef<SVGGElement | null>(null);
 
-  const showGhosts          = useStore((s) => s.showGhosts);
-  const setShowGhosts       = useStore((s) => s.setShowGhosts);
-  const setSelectedLifeline = useStore((s) => s.setSelectedLifeline);
-  const selectedLifeline    = useStore((s) => s.selectedLifeline);
-  const liveLeasedPaths     = useStore((s) => s.liveLeasedPaths);
-  const theme               = useStore((s) => s.theme);
-  const events              = useStore((s) => s.events);
+  const showGhosts            = useStore((s) => s.showGhosts);
+  const setShowGhosts         = useStore((s) => s.setShowGhosts);
+  const nodeLevel             = useStore((s) => s.nodeLevel);
+  const setNodeLevel          = useStore((s) => s.setNodeLevel);
+  const setSelectedLifeline   = useStore((s) => s.setSelectedLifeline);
+  const setSelectedDirectory  = useStore((s) => s.setSelectedDirectory);
+  const selectedLifeline      = useStore((s) => s.selectedLifeline);
+  const selectedDirectory     = useStore((s) => s.selectedDirectory);
+  const liveLeasedPaths       = useStore((s) => s.liveLeasedPaths);
+  const theme                 = useStore((s) => s.theme);
+  const events                = useStore((s) => s.events);
+  const [hoveredPath, setHoveredPath] = useState<string | null>(null);
 
   const [rawNodes, setRawNodes] = useState<GraphNode[]>([]);
   const [refetchTick, setRefetchTick] = useState(0);
@@ -123,7 +128,30 @@ export function GraphSchema() {
     return () => { cancelled = true; };
   }, [showGhosts, refetchTick]);
 
-  const root = useMemo(() => buildHierarchy(rawNodes), [rawNodes]);
+  const root = useMemo(() => {
+    const full = buildHierarchy(rawNodes);
+    if (nodeLevel === "all") return full;
+    // Filter the hierarchy in-place: dirs-only drops every leaf file
+    // (keeping the directory structure visible); files-only keeps only
+    // leaves, flattening directories into a single root.
+    if (nodeLevel === "dirs") {
+      const prune = (d: TreeDatum): TreeDatum => ({
+        ...d,
+        children: (d.children ?? [])
+          .filter((c) => c.kind !== "file")
+          .map(prune),
+      });
+      return prune(full);
+    }
+    // files-only: collect every file leaf and put them all under root.
+    const leaves: TreeDatum[] = [];
+    const collect = (d: TreeDatum) => {
+      if (d.kind === "file") leaves.push(d);
+      for (const c of d.children ?? []) collect(c);
+    };
+    collect(full);
+    return { ...full, children: leaves };
+  }, [rawNodes, nodeLevel]);
 
   // Layout. We tune `size` based on node count so big repos get room
   // to breathe without stretching small ones into noodles.
@@ -200,11 +228,22 @@ export function GraphSchema() {
       .join("g")
       .attr("class", "node")
       .attr("data-path", (d) => d.data.path || "")
+      .attr("data-kind", (d) => d.data.kind)
       .attr("transform", (d) => `translate(${d.x}, ${d.y})`)
       .style("cursor", "pointer")
+      .on("mouseenter", (_e, d) => setHoveredPath(d.data.path || ""))
+      .on("mouseleave", () => setHoveredPath(null))
       .on("click", (_e, d) => {
-        const id = d.data.node?.id;
-        if (id) setSelectedLifeline(id);
+        // File leaf → lifeline selection. Directory → dir-scoped
+        // selection (target is the path + trailing slash, matching
+        // the v1 convention `projmem note add 'src/auth/' …`).
+        if (d.data.kind === "file" && d.data.node?.id) {
+          setSelectedLifeline(d.data.node.id);
+        } else if (d.data.kind === "dir") {
+          setSelectedDirectory(d.data.path + "/");
+        } else if (d.data.kind === "root") {
+          setSelectedDirectory("@project");
+        }
       });
 
     nodeSel.append("circle")
@@ -226,15 +265,23 @@ export function GraphSchema() {
         return (n?.critical || n?.leased) ? 2 : 1;
       });
 
+    // Truncate aggressively; the full path is in the <title> tooltip
+    // and the inspector header. Long names were the main "wall of
+    // text" complaint on big projects.
+    const truncName = (s: string, max: number): string =>
+      s.length <= max ? s : s.slice(0, max - 1) + "…";
+
     nodeSel.append("text")
-      .attr("dy", (d) => d.children ? -8 : 4)
+      .attr("class", "node-label")
+      .attr("dy", (d) => d.children ? -10 : 4)
       .attr("x", (d) => d.children ? 0 : 8)
       .attr("text-anchor", (d) => d.children ? "middle" : "start")
-      .attr("font-size", (d) => d.data.kind === "dir" ? 11 : 10)
+      .attr("font-size", (d) => d.data.kind === "dir" ? 10 : 9.5)
+      .attr("font-weight", (d) => d.data.kind === "dir" ? "600" : "400")
       .attr("font-family", "ui-monospace, SFMono-Regular, monospace")
       .attr("fill", "currentColor")
       .attr("pointer-events", "none")
-      .text((d) => d.data.name);
+      .text((d) => truncName(d.data.name, d.data.kind === "dir" ? 16 : 22));
 
     nodeSel.append("title").text((d) => d.data.path || "/");
 
@@ -293,11 +340,16 @@ export function GraphSchema() {
 
     root_.querySelectorAll<SVGGElement>("g.node").forEach((g) => {
       const p = g.getAttribute("data-path") || "";
+      const kind = g.getAttribute("data-kind") || "";
       const datum = (g as any).__data__?.data?.node;
       const isLive = liveSet.has(p);
-      const isSelected = selectionFocus && datum?.id === selectedLifeline;
+      const isSelectedLifeline = !!datum?.id && datum?.id === selectedLifeline;
+      const isSelectedDir = kind === "dir" && selectedDirectory === p + "/";
+      const isSelected = isSelectedLifeline || isSelectedDir ||
+                          (kind === "root" && selectedDirectory === "@project");
       const isFocal = isLive || isSelected;
       const isLit   = litPathSet.has(p);
+      const isHovered = hoveredPath === p && p !== "";
 
       if (anyFocus) {
         g.style.opacity = isFocal ? "1" : (isLit ? "0.95" : "0.06");
@@ -307,21 +359,27 @@ export function GraphSchema() {
 
       const circle = g.querySelector<SVGCircleElement>("circle");
       if (!circle) return;
-      if (isLive) {
+      if (isLive || isSelected) {
         circle.setAttribute("r", "7");
         circle.setAttribute("stroke", "#2563eb");
         circle.setAttribute("stroke-width", "3");
-      } else if (isSelected) {
-        circle.setAttribute("r", "7");
+      } else if (isHovered) {
+        circle.setAttribute("r", kind === "file" ? "4.5" : "5");
         circle.setAttribute("stroke", "#2563eb");
-        circle.setAttribute("stroke-width", "3");
+        circle.setAttribute("stroke-width", "1.5");
       } else {
-        // Default radius based on whether the node has children
-        // (root/dir) vs is a leaf (file).
-        const isLeaf = g.querySelector("text")?.getAttribute("x") !== "0";
-        circle.setAttribute("r", p === "" ? "5" : (isLeaf ? "3.5" : "4"));
+        circle.setAttribute(
+          "r", kind === "root" ? "5" : kind === "dir" ? "4" : "3.5");
         circle.setAttribute("stroke", "#e5e5e5");
         circle.setAttribute("stroke-width", "1");
+      }
+
+      // Label visibility: hide unless zoomed in, hovered, focal, or lit.
+      const label = g.querySelector<SVGTextElement>("text.node-label");
+      if (label) {
+        const showAll = zoomLevel >= 1.5;
+        const show = showAll || isFocal || isLit || isHovered;
+        label.style.display = show ? "" : "none";
       }
     });
 
@@ -332,23 +390,42 @@ export function GraphSchema() {
       l.style.opacity = anyFocus ? (onLit ? "0.9" : "0.04") : "0.4";
       l.setAttribute("stroke-width", onLit ? "2.5" : "1");
     });
-  }, [liveLeasedPaths, selectedLifeline, root]);
+  }, [liveLeasedPaths, selectedLifeline, selectedDirectory, hoveredPath, zoomLevel, root]);
 
   return (
     <div className="relative h-full w-full bg-bg overflow-hidden">
       <svg ref={svgRef} className="absolute inset-0 w-full h-full text-ink">
         <g ref={innerGRef} />
       </svg>
-      <div className="absolute top-2 right-2 flex items-center gap-2 rounded-md bg-elev/95 border border-line px-2 py-1 text-xs shadow-soft">
-        <label className="flex items-center gap-1 cursor-pointer">
-          <input type="checkbox" checked={showGhosts}
-                 onChange={(e) => setShowGhosts(e.target.checked)} />
-          <span>ghosts</span>
-        </label>
-        <span className="text-muted">·</span>
-        <span className="font-mono text-muted tabular-nums">
-          {zoomLevel.toFixed(1)}×
-        </span>
+      <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
+        <div className="flex items-center gap-2 rounded-md bg-elev/95 border border-line px-2 py-1 text-xs shadow-soft">
+          <span className="text-muted text-[10px]">show:</span>
+          <div className="inline-flex rounded border border-line overflow-hidden">
+            {(["all", "dirs", "files"] as const).map((v) => (
+              <button
+                key={v}
+                onClick={() => setNodeLevel(v)}
+                className={`px-1.5 py-0.5 text-[10px] ${
+                  nodeLevel === v
+                    ? "bg-accent text-accent-fg"
+                    : "text-muted hover:bg-sunken"
+                }`}
+              >{v}</button>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center gap-2 rounded-md bg-elev/95 border border-line px-2 py-1 text-xs shadow-soft">
+          <label className="flex items-center gap-1 cursor-pointer"
+                 title="tombstoned lifelines — files deleted via `projmem deleting`, kept queryable forever">
+            <input type="checkbox" checked={showGhosts}
+                   onChange={(e) => setShowGhosts(e.target.checked)} />
+            <span>ghosts ⓘ</span>
+          </label>
+          <span className="text-muted">·</span>
+          <span className="font-mono text-muted tabular-nums">
+            {zoomLevel.toFixed(1)}×
+          </span>
+        </div>
       </div>
       {rawNodes.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center text-xs text-muted">
@@ -356,8 +433,8 @@ export function GraphSchema() {
         </div>
       )}
       <div className="absolute bottom-2 left-2 rounded-md bg-elev/95 border border-line px-2 py-1 text-[10px] text-muted shadow-soft">
-        directory hierarchy · scroll to zoom · click a leaf to select<br />
-        edges colored by top-level section · live edits light their full path
+        scroll to zoom · click leaf → file · click dir → "why does this exist?"<br />
+        labels hidden below 1.5× — hover or zoom to reveal · Esc to deselect
       </div>
     </div>
   );

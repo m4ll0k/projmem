@@ -606,7 +606,7 @@ export function GraphView() {
             <span>symbols</span>
           </label>
           <label className="flex items-center gap-1 cursor-pointer"
-                 title="Tombstoned lifelines — files that were deleted via `projmem deleting`. The lifeline + all its history survives forever; with this toggle on, they appear as faded ghost nodes connected to their replacement files via dashed edges. Use this to spot recreations of files you deliberately killed.">
+                 title="Tombstoned lifelines — files that were deleted via `projmem deleting`. The lifeline + all its history survives forever; with this toggle on, they appear as faded ghost nodes connected to their replacement files via dashed edges.">
             <input type="checkbox" checked={showGhosts}
                    onChange={(e) => setShowGhosts(e.target.checked)} />
             <span>ghosts ⓘ</span>

@@ -123,13 +123,17 @@ function FileRow({ n, live, selected, onClick }: {
   );
 }
 
-function DirSection({ dir, depth, liveSet, selectedLifeline, onSelect,
+function DirSection({ dir, depth, liveSet, selectedLifeline,
+                      selectedDirectory,
+                      onSelect, onSelectDir,
                       collapsed, toggle }: {
   dir: DirNode;
   depth: number;
   liveSet: Set<string>;
   selectedLifeline: string | null;
+  selectedDirectory: string | null;
   onSelect: (lifelineId: string) => void;
+  onSelectDir: (target: string) => void;
   collapsed: Set<string>;
   toggle: (path: string) => void;
 }) {
@@ -157,19 +161,35 @@ function DirSection({ dir, depth, liveSet, selectedLifeline, onSelect,
     return n;
   }, [dir]);
 
+  const isSelectedDir = selectedDirectory === dir.fullPath + "/";
   return (
     <div className="select-none">
       {dir.fullPath !== "" && (
         <div
-          onClick={() => toggle(dir.fullPath)}
           style={{ paddingLeft: `${depth * 12 + 6}px` }}
-          className="flex items-center cursor-pointer px-2 py-1 text-[11px]
-                     text-ink hover:bg-sunken rounded-sm"
+          className={`flex items-center px-2 py-1 text-[11px] rounded-sm
+                     ${isSelectedDir
+                        ? "bg-accent/10 text-accent"
+                        : "text-ink hover:bg-sunken"}`}
         >
-          <span className="font-mono text-muted text-[10px] w-3 mr-1">
+          {/* Triangle = collapse/expand; separate click target from
+              the directory name so the operator can "select the dir
+              as a target" without also collapsing/expanding it. */}
+          <span
+            onClick={(e) => { e.stopPropagation(); toggle(dir.fullPath); }}
+            className="font-mono text-muted text-[10px] w-3 mr-1 cursor-pointer hover:text-ink"
+            title={isCollapsed ? "expand" : "collapse"}
+          >
             {isCollapsed ? "▶" : "▼"}
           </span>
-          <span className="font-mono text-muted">{dir.name}</span>
+          {/* Name = "select this dir as the inspector target". */}
+          <span
+            onClick={() => onSelectDir(dir.fullPath + "/")}
+            className="font-mono cursor-pointer flex-1 hover:underline"
+            title={`open ${dir.fullPath}/ in the inspector — add notes / guidance about why this directory exists`}
+          >
+            📁 {dir.name}
+          </span>
           <span className="ml-auto flex items-center gap-1">
             {liveInTree > 0 && (
               <span className="px-1 text-[9px] rounded bg-accent/15
@@ -206,7 +226,9 @@ function DirSection({ dir, depth, liveSet, selectedLifeline, onSelect,
               depth={depth + 1}
               liveSet={liveSet}
               selectedLifeline={selectedLifeline}
+              selectedDirectory={selectedDirectory}
               onSelect={onSelect}
+              onSelectDir={onSelectDir}
               collapsed={collapsed}
               toggle={toggle}
             />
@@ -220,12 +242,16 @@ function DirSection({ dir, depth, liveSet, selectedLifeline, onSelect,
 // ── Component ─────────────────────────────────────────────────────────────
 
 export function TreeView() {
-  const showGhosts          = useStore((s) => s.showGhosts);
-  const setShowGhosts       = useStore((s) => s.setShowGhosts);
-  const liveLeasedPaths     = useStore((s) => s.liveLeasedPaths);
-  const selectedLifeline    = useStore((s) => s.selectedLifeline);
-  const setSelectedLifeline = useStore((s) => s.setSelectedLifeline);
-  const events              = useStore((s) => s.events);
+  const showGhosts           = useStore((s) => s.showGhosts);
+  const setShowGhosts        = useStore((s) => s.setShowGhosts);
+  const nodeLevel            = useStore((s) => s.nodeLevel);
+  const setNodeLevel         = useStore((s) => s.setNodeLevel);
+  const liveLeasedPaths      = useStore((s) => s.liveLeasedPaths);
+  const selectedLifeline     = useStore((s) => s.selectedLifeline);
+  const selectedDirectory    = useStore((s) => s.selectedDirectory);
+  const setSelectedLifeline  = useStore((s) => s.setSelectedLifeline);
+  const setSelectedDirectory = useStore((s) => s.setSelectedDirectory);
+  const events               = useStore((s) => s.events);
 
   const [payload, setPayload] = useState<GraphPayload | null>(null);
   const [loading, setLoading] = useState(false);
@@ -259,8 +285,22 @@ export function TreeView() {
     const filtered = q
       ? nodes.filter((n) => (n.path || "").toLowerCase().includes(q))
       : nodes;
-    return buildTree(filtered);
-  }, [payload, filter]);
+    const full = buildTree(filtered);
+    if (nodeLevel === "files") return full;
+    if (nodeLevel === "dirs") {
+      // Show directory structure only — drop file rows but keep the
+      // dir headers so the operator can click them.
+      const stripFiles = (d: DirNode): DirNode => ({
+        ...d,
+        files: [],
+        dirs:  new Map([...d.dirs.entries()].map(
+          ([k, v]) => [k, stripFiles(v)],
+        )),
+      });
+      return stripFiles(full);
+    }
+    return full;
+  }, [payload, filter, nodeLevel]);
 
   const liveSet = useMemo(() => new Set(liveLeasedPaths), [liveLeasedPaths]);
 
@@ -276,22 +316,40 @@ export function TreeView() {
 
   return (
     <div className="h-full w-full flex flex-col bg-bg">
-      <div className="border-b border-line px-3 py-2 flex items-center gap-2">
+      <div className="border-b border-line px-3 py-2 flex items-center gap-2 flex-wrap">
         <input
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           placeholder="filter paths…"
-          className="flex-1 text-xs bg-bg border border-line rounded px-2 py-1
-                     text-ink focus:outline-none focus:border-accent"
+          className="flex-1 min-w-[100px] text-xs bg-bg border border-line rounded px-2 py-1
+                     text-ink focus:outline-none focus:border-accent h-7"
         />
+        <div className="inline-flex rounded border border-line overflow-hidden">
+          {(["all", "dirs", "files"] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => setNodeLevel(v)}
+              title={
+                v === "all"   ? "show directories + files"   :
+                v === "dirs"  ? "show only the directory structure (skip individual files)" :
+                                "show only files (skip directory headers)"
+              }
+              className={`px-1.5 py-0.5 text-[10px] ${
+                nodeLevel === v
+                  ? "bg-accent text-accent-fg"
+                  : "text-muted hover:bg-sunken"
+              }`}
+            >{v}</button>
+          ))}
+        </div>
         <label className="flex items-center gap-1 text-xs text-muted cursor-pointer"
-               title="Tombstoned lifelines — files deleted via `projmem deleting`. Their identity + every saved note + every history event is kept forever; toggling this on surfaces them as faded entries with a `replaced_by` link to their successor. Lets you see recreations of files you deliberately killed.">
+               title="Tombstoned lifelines — files deleted via `projmem deleting`. Their identity + every saved note + every history event is kept forever; toggling this on surfaces them as faded entries with a `replaced_by` link to their successor.">
           <input type="checkbox" checked={showGhosts}
                  onChange={(e) => setShowGhosts(e.target.checked)} />
           ghosts ⓘ
         </label>
         <span className="text-[10px] font-mono text-muted tabular-nums">
-          {totalFiles} files{liveCount > 0 && (
+          {totalFiles}{liveCount > 0 && (
             <> · <span className="text-accent">{liveCount} live</span></>
           )}
         </span>
@@ -309,7 +367,9 @@ export function TreeView() {
           dir={tree} depth={0}
           liveSet={liveSet}
           selectedLifeline={selectedLifeline}
+          selectedDirectory={selectedDirectory}
           onSelect={setSelectedLifeline}
+          onSelectDir={setSelectedDirectory}
           collapsed={collapsed}
           toggle={toggle}
         />

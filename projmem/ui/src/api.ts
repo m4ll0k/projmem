@@ -36,6 +36,10 @@ export const api = {
       `&include_symbols=${includeSymbols ? 1 : 0}`,
     ),
   lifeline: (id: string) => getJSON<LifelineDetail>(`/lifeline/${id}`),
+  notesByTarget: (target: string) =>
+    getJSON<{target: string; notes: any[]; critical: any[]}>(
+      `/notes-by-target?target=${encodeURIComponent(target)}`,
+    ),
   file:     (path: string) =>
     getJSON<{path: string; text?: string; binary?: boolean; size?: number; truncated?: boolean}>(
       `/file?path=${encodeURIComponent(path)}`,

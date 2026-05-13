@@ -650,20 +650,23 @@ function CodeTab({ target, scrollToLine }: {
 type Tab = "notes" | "guidance" | "critical" | "history" | "code";
 
 export function Inspector() {
-  const selectedEvent    = useStore((s) => s.selectedEvent);
-  const openLeases       = useStore((s) => s.openLeases);
-  const selectedLifeline = useStore((s) => s.selectedLifeline);
-  const liveLeasedPaths  = useStore((s) => s.liveLeasedPaths);
+  const selectedEvent      = useStore((s) => s.selectedEvent);
+  const openLeases         = useStore((s) => s.openLeases);
+  const selectedLifeline   = useStore((s) => s.selectedLifeline);
+  const selectedDirectory  = useStore((s) => s.selectedDirectory);
+  const liveLeasedPaths    = useStore((s) => s.liveLeasedPaths);
 
   const [tab, setTab]               = useState<Tab>("notes");
   const [detail, setDetail]         = useState<LifelineDetail | null>(null);
+  const [dirDetail, setDirDetail]   = useState<{notes: Annotation[]; critical: Annotation[]} | null>(null);
   const [loading, setLoading]       = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
   const [codeLine, setCodeLine]     = useState<number | undefined>(undefined);
   const [freshNoteId, setFreshNoteId] = useState<number | null>(null);
 
-  const setCenterView      = useStore((s) => s.setCenterView);
-  const setSelectedLifeline = useStore((s) => s.setSelectedLifeline);
+  const setCenterView        = useStore((s) => s.setCenterView);
+  const setSelectedLifeline  = useStore((s) => s.setSelectedLifeline);
+  const setSelectedDirectory = useStore((s) => s.setSelectedDirectory);
 
   useEffect(() => {
     if (!selectedLifeline) { setDetail(null); return; }
@@ -675,6 +678,23 @@ export function Inspector() {
       .finally(()=> !cancelled && setLoading(false));
     return () => { cancelled = true; };
   }, [selectedLifeline, refreshTick]);
+
+  // Directory mode — pulls annotations for the dir-scoped target
+  // (trailing-slash convention) or `@project`. No lifeline lookup
+  // because directories aren't files; they're just shared scopes.
+  useEffect(() => {
+    if (!selectedDirectory) { setDirDetail(null); return; }
+    let cancelled = false;
+    setLoading(true);
+    api.notesByTarget(selectedDirectory)
+      .then((d) => !cancelled && setDirDetail({
+        notes: d.notes as Annotation[],
+        critical: d.critical as Annotation[],
+      }))
+      .catch(()  => !cancelled && setDirDetail(null))
+      .finally(()=> !cancelled && setLoading(false));
+    return () => { cancelled = true; };
+  }, [selectedDirectory, refreshTick]);
 
   const guidance = (detail?.notes ?? []).filter((n) =>
     ["guidance", "constraint", "preference"].includes(n.kind));
@@ -852,7 +872,112 @@ export function Inspector() {
           </section>
         )}
 
-        {selectedEvent && !selectedLifeline && (
+        {selectedDirectory && !selectedLifeline && (
+          <section>
+            <div className="flex items-center justify-between mb-1">
+              <div className="text-[11px] uppercase tracking-wider text-muted">
+                Selected directory
+              </div>
+              <Button
+                size="xs" variant="ghost"
+                onClick={() => setSelectedDirectory(null)}
+                title="clear (Esc)"
+                aria-label="clear directory selection"
+              >✕</Button>
+            </div>
+            <div className="rounded-md border border-line bg-elev px-2.5 py-2 mb-2">
+              <div className="text-xs font-mono break-all leading-snug text-ink mb-1">
+                📁 {selectedDirectory}
+              </div>
+              <div className="text-[10px] text-muted">
+                directory-scoped annotations. Use this to record WHY
+                this subtree exists, what convention rules apply, what
+                resources / papers justify its design.
+              </div>
+            </div>
+            {loading && <div className="text-xs text-muted">loading…</div>}
+            {dirDetail && (
+              <>
+                <div className="flex gap-1 text-[11px] mb-2 flex-wrap">
+                  {(["notes", "guidance", "critical"] as Tab[]).map((t) => (
+                    <Button
+                      key={t}
+                      size="xs"
+                      variant={tab === t ? "primary" : "secondary"}
+                      onClick={() => setTab(t)}
+                    >{t}</Button>
+                  ))}
+                </div>
+                {tab === "notes" && (
+                  <div className="space-y-1.5">
+                    <AddNoteForm
+                      target={selectedDirectory} kind="note"
+                      onSaved={(id) => {
+                        setFreshNoteId(id);
+                        setRefreshTick((n) => n + 1);
+                        setTimeout(() => setFreshNoteId(null), 2000);
+                      }}
+                    />
+                    {dirDetail.notes.filter((n) =>
+                      !["guidance","constraint","preference","critical"].includes(n.kind)
+                    ).length === 0 && (
+                      <div className="text-xs text-muted">
+                        (no notes — explain why this directory exists)
+                      </div>
+                    )}
+                    {dirDetail.notes
+                      .filter((n) =>
+                        !["guidance","constraint","preference","critical"].includes(n.kind))
+                      .map((n) => (
+                        <NoteRow key={n.id} note={n}
+                                 isFresh={n.id === freshNoteId} />
+                      ))}
+                  </div>
+                )}
+                {tab === "guidance" && (
+                  <div className="space-y-1.5">
+                    <AddNoteForm
+                      target={selectedDirectory} kind="guidance"
+                      onSaved={(id) => {
+                        setFreshNoteId(id);
+                        setRefreshTick((n) => n + 1);
+                        setTimeout(() => setFreshNoteId(null), 2000);
+                      }}
+                    />
+                    {dirDetail.notes.filter((n) =>
+                      ["guidance","constraint","preference"].includes(n.kind)
+                    ).length === 0 && (
+                      <div className="text-xs text-muted">
+                        (no guidance — convention rules, style preferences, …)
+                      </div>
+                    )}
+                    {dirDetail.notes
+                      .filter((n) => ["guidance","constraint","preference"].includes(n.kind))
+                      .map((n) => (
+                        <NoteRow key={n.id} note={n}
+                                 isFresh={n.id === freshNoteId} />
+                      ))}
+                  </div>
+                )}
+                {tab === "critical" && (
+                  <div className="space-y-1.5">
+                    {dirDetail.critical.length === 0 && (
+                      <div className="text-xs text-muted">
+                        (no critical notes — author via `projmem critical add '{selectedDirectory}' …`)
+                      </div>
+                    )}
+                    {dirDetail.critical.map((n) => (
+                      <NoteRow key={n.id} note={n}
+                               isFresh={n.id === freshNoteId} />
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </section>
+        )}
+
+        {selectedEvent && !selectedLifeline && !selectedDirectory && (
           <section>
             <div className="text-[11px] uppercase tracking-wider text-muted mb-1">
               Selected event
