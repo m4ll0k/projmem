@@ -6862,7 +6862,207 @@ def build_parser() -> argparse.ArgumentParser:
                         "target so they pollute drift output (191/460 "
                         "rows on a real Node audit).")
     s.set_defaults(func=cmd_drift)
+
+    # ── v2 mutation verbs (Step 1) ─────────────────────────────────────────
+    # Announce-before-action: each verb opens or closes an edit_lease and
+    # appends a row to file_event. `projmem/mutation_verbs.py` is the
+    # state machine; these handlers are thin CLI wrappers. The brief in
+    # docs/v2-design.md Pillar 2 is authoritative.
+
+    s = sub.add_parser("editing",
+                       help="Announce intent to edit a file; returns lease + "
+                            "guidance + history + warnings in one call.")
+    s.add_argument("target", help="Path of the file you're about to edit.")
+    s.add_argument("--symbol", default=None,
+                   help="Optional: name of the symbol you'll touch.")
+    s.add_argument("--reason", required=True,
+                   help="WHY (≥20 chars, verb+object). The lease is "
+                        "rejected if the reason is too short or vague.")
+    s.set_defaults(func=cmd_editing)
+
+    s = sub.add_parser("creating",
+                       help="Announce intent to create a NEW file; warns "
+                            "if the path was previously tombstoned.")
+    s.add_argument("target", help="Path of the file you're creating.")
+    s.add_argument("--reason", required=True,
+                   help="WHY (≥20 chars, verb+object).")
+    s.set_defaults(func=cmd_creating)
+
+    s = sub.add_parser("moving",
+                       help="Rename / move a file while preserving its "
+                            "lifeline + every attached note.")
+    s.add_argument("old_path", help="Existing path.")
+    s.add_argument("new_path", help="New path.")
+    s.add_argument("--reason", required=True,
+                   help="WHY (≥20 chars, verb+object).")
+    s.set_defaults(func=cmd_moving)
+
+    s = sub.add_parser("deleting",
+                       help="Tombstone a file. The lifeline + history "
+                            "stay queryable forever; use `projmem forget` "
+                            "to genuinely purge (rare).")
+    s.add_argument("target", help="Path of the file you're deleting.")
+    s.add_argument("--reason", required=True,
+                   help="WHY (≥20 chars, verb+object).")
+    s.add_argument("--replaced-by", action="append", default=None,
+                   help="Optional: path(s) that replace this file. "
+                        "Future `creating` calls on the same path will "
+                        "surface this as a recreation warning.")
+    s.set_defaults(func=cmd_deleting)
+
+    s = sub.add_parser("done",
+                       help="Close an open edit_lease as successful. "
+                            "Idempotent: closing a closed lease returns OK.")
+    s.add_argument("lease_id", help="UUID returned by editing/creating/moving.")
+    s.set_defaults(func=cmd_done)
+
+    s = sub.add_parser("abandoned",
+                       help="Close an open edit_lease as abandoned "
+                            "(work not completed).")
+    s.add_argument("lease_id", help="UUID returned by editing/creating/moving.")
+    s.add_argument("--reason", default=None,
+                   help="Optional: WHY you abandoned (recorded on the file_event).")
+    s.set_defaults(func=cmd_abandoned)
+
+    s = sub.add_parser("sweep-leases",
+                       help="One-shot: mark every open lease past its 5-min "
+                            "TTL as closed_kind='expired'. Runs implicitly "
+                            "before any `done`/`abandoned`; exposed here for "
+                            "ops + tests.")
+    s.set_defaults(func=cmd_sweep_leases)
+
+    s = sub.add_parser("forget",
+                       help="Permanently delete a lifeline + all its events + "
+                            "leases + notes. Requires --yes-really-purge. "
+                            "Use only for genuine garbage (CI noise, test "
+                            "fixtures); normal deletion is `deleting`.")
+    s.add_argument("lifeline_id", help="UUID of the lifeline to purge.")
+    s.add_argument("--yes-really-purge", action="store_true",
+                   help="REQUIRED. Without this flag, `forget` refuses.")
+    s.set_defaults(func=cmd_forget)
+
     return p
+
+
+# ── v2 mutation-verb handlers ─────────────────────────────────────────────
+
+def _emit_mutation_error(args, store, exc) -> None:
+    """Map a mutation_verbs.MutationError to the structured error envelope."""
+    payload = exc.envelope()
+    payload.setdefault("hint", "see `docs/v2-design.md` Pillar 2.")
+    _emit_error(payload, getattr(args, "json", False), store=store)
+
+
+def cmd_editing(args):
+    from projmem import mutation_verbs as _mv
+    cfg, store = _open_store(args.path, allow_unindexed=True)
+    try:
+        result = _mv.open_editing_lease(
+            store, args.target, symbol=args.symbol, reason=args.reason,
+            agent_id=os.environ.get("PROJMEM_AGENT_ID"),
+        )
+    except _mv.MutationError as e:
+        _emit_mutation_error(args, store, e)
+        return 2
+    _emit(result, args.json)
+    return 0
+
+
+def cmd_creating(args):
+    from projmem import mutation_verbs as _mv
+    cfg, store = _open_store(args.path, allow_unindexed=True)
+    try:
+        result = _mv.open_creating_lease(
+            store, args.target, reason=args.reason,
+            agent_id=os.environ.get("PROJMEM_AGENT_ID"),
+        )
+    except _mv.MutationError as e:
+        _emit_mutation_error(args, store, e)
+        return 2
+    _emit(result, args.json)
+    return 0
+
+
+def cmd_moving(args):
+    from projmem import mutation_verbs as _mv
+    cfg, store = _open_store(args.path, allow_unindexed=True)
+    try:
+        result = _mv.move_path(
+            store, args.old_path, args.new_path, reason=args.reason,
+            agent_id=os.environ.get("PROJMEM_AGENT_ID"),
+        )
+    except _mv.MutationError as e:
+        _emit_mutation_error(args, store, e)
+        return 2
+    _emit(result, args.json)
+    return 0
+
+
+def cmd_deleting(args):
+    from projmem import mutation_verbs as _mv
+    cfg, store = _open_store(args.path, allow_unindexed=True)
+    try:
+        result = _mv.delete_path(
+            store, args.target, reason=args.reason,
+            agent_id=os.environ.get("PROJMEM_AGENT_ID"),
+            replaced_by=args.replaced_by,
+        )
+    except _mv.MutationError as e:
+        _emit_mutation_error(args, store, e)
+        return 2
+    _emit(result, args.json)
+    return 0
+
+
+def cmd_done(args):
+    from projmem import mutation_verbs as _mv
+    cfg, store = _open_store(args.path, allow_unindexed=True)
+    _mv.sweep_expired_leases(store)
+    try:
+        result = _mv.close_lease(store, args.lease_id, kind="done")
+    except _mv.MutationError as e:
+        _emit_mutation_error(args, store, e)
+        return 2
+    _emit(result, args.json)
+    return 0
+
+
+def cmd_abandoned(args):
+    from projmem import mutation_verbs as _mv
+    cfg, store = _open_store(args.path, allow_unindexed=True)
+    _mv.sweep_expired_leases(store)
+    try:
+        result = _mv.close_lease(
+            store, args.lease_id, kind="abandoned", reason=args.reason,
+        )
+    except _mv.MutationError as e:
+        _emit_mutation_error(args, store, e)
+        return 2
+    _emit(result, args.json)
+    return 0
+
+
+def cmd_sweep_leases(args):
+    from projmem import mutation_verbs as _mv
+    cfg, store = _open_store(args.path, allow_unindexed=True)
+    result = _mv.sweep_expired_leases(store)
+    _emit(result, args.json)
+    return 0
+
+
+def cmd_forget(args):
+    from projmem import mutation_verbs as _mv
+    cfg, store = _open_store(args.path, allow_unindexed=True)
+    try:
+        result = _mv.forget_lifeline(
+            store, args.lifeline_id,
+            yes_really_purge=getattr(args, "yes_really_purge", False),
+        )
+    except _mv.MutationError as e:
+        _emit_mutation_error(args, store, e)
+        return 2
+    _emit(result, args.json)
+    return 0
 
 
 def _autolog_command(args) -> None:

@@ -177,6 +177,116 @@ def tool_note_add(path: str = ".", target: str = "", body: str = "",
         store.close()
 
 
+# ── v2 mutation-verb tools (Step 1) ───────────────────────────────────────
+# Each wraps projmem.mutation_verbs and catches MutationError so the MCP
+# transport sees a structured envelope, not just a stringified Exception.
+
+def _mv_safe(call, **kwargs):
+    """Run a mutation_verbs callable and translate MutationError → envelope."""
+    from . import mutation_verbs as _mv
+    try:
+        return call(**kwargs)
+    except _mv.MutationError as exc:
+        return exc.envelope()
+
+
+def tool_editing(path: str = ".", target: str = "",
+                 reason: str = "", symbol: Optional[str] = None,
+                 agent_id: Optional[str] = None) -> Dict[str, Any]:
+    from . import mutation_verbs as _mv
+    cfg, store = _open(path)
+    try:
+        return _mv_safe(
+            _mv.open_editing_lease,
+            store=store, path=target, symbol=symbol,
+            reason=reason, agent_id=agent_id,
+        )
+    finally:
+        store.close()
+
+
+def tool_creating(path: str = ".", target: str = "",
+                  reason: str = "",
+                  agent_id: Optional[str] = None) -> Dict[str, Any]:
+    from . import mutation_verbs as _mv
+    cfg, store = _open(path)
+    try:
+        return _mv_safe(
+            _mv.open_creating_lease,
+            store=store, path=target, reason=reason, agent_id=agent_id,
+        )
+    finally:
+        store.close()
+
+
+def tool_moving(path: str = ".", old_path: str = "", new_path: str = "",
+                reason: str = "",
+                agent_id: Optional[str] = None) -> Dict[str, Any]:
+    from . import mutation_verbs as _mv
+    cfg, store = _open(path)
+    try:
+        return _mv_safe(
+            _mv.move_path,
+            store=store, old_path=old_path, new_path=new_path,
+            reason=reason, agent_id=agent_id,
+        )
+    finally:
+        store.close()
+
+
+def tool_deleting(path: str = ".", target: str = "",
+                  reason: str = "",
+                  replaced_by: Optional[List[str]] = None,
+                  agent_id: Optional[str] = None) -> Dict[str, Any]:
+    from . import mutation_verbs as _mv
+    cfg, store = _open(path)
+    try:
+        return _mv_safe(
+            _mv.delete_path,
+            store=store, path=target, reason=reason,
+            replaced_by=replaced_by, agent_id=agent_id,
+        )
+    finally:
+        store.close()
+
+
+def tool_done(path: str = ".", lease_id: str = "") -> Dict[str, Any]:
+    from . import mutation_verbs as _mv
+    cfg, store = _open(path)
+    try:
+        _mv.sweep_expired_leases(store)
+        return _mv_safe(_mv.close_lease, store=store,
+                         lease_id=lease_id, kind="done")
+    finally:
+        store.close()
+
+
+def tool_abandoned(path: str = ".", lease_id: str = "",
+                   reason: Optional[str] = None) -> Dict[str, Any]:
+    from . import mutation_verbs as _mv
+    cfg, store = _open(path)
+    try:
+        _mv.sweep_expired_leases(store)
+        return _mv_safe(_mv.close_lease, store=store,
+                         lease_id=lease_id, kind="abandoned", reason=reason)
+    finally:
+        store.close()
+
+
+def tool_forget(path: str = ".", lifeline_id: str = "",
+                yes_really_purge: bool = False) -> Dict[str, Any]:
+    from . import mutation_verbs as _mv
+    cfg, store = _open(path)
+    try:
+        return _mv_safe(
+            _mv.forget_lifeline,
+            store=store, lifeline_id=lifeline_id,
+            yes_really_purge=bool(yes_really_purge),
+        )
+    finally:
+        store.close()
+
+
 # ---- MCP server wiring ----------------------------------------------------
 
 TOOL_TABLE = [
@@ -275,6 +385,101 @@ TOOL_TABLE = [
             "confidence":   {"type": "number", "default": 0.5},
             "claims":       {"type": "array"},
             "author":       {"type": "string"},
+        },
+     }),
+    ("projmem_editing", tool_editing,
+     "Announce intent to EDIT a file. Returns {lease_id, expires_at, "
+     "guidance[], history{}, warnings[]} in one call. `reason` is gated: "
+     "must be ≥20 chars and have a verb + object — vague reasons reject. "
+     "Close with `projmem_done` when finished.",
+     {
+        "type": "object",
+        "required": ["target", "reason"],
+        "properties": {
+            "path":     {"type": "string", "default": "."},
+            "target":   {"type": "string", "description": "File path"},
+            "reason":   {"type": "string"},
+            "symbol":   {"type": "string"},
+            "agent_id": {"type": "string"},
+        },
+     }),
+    ("projmem_creating", tool_creating,
+     "Announce intent to CREATE a new file. If the path was previously "
+     "tombstoned, the response includes a warning naming the prior "
+     "deletion reason — heed it before recreating.",
+     {
+        "type": "object",
+        "required": ["target", "reason"],
+        "properties": {
+            "path":     {"type": "string", "default": "."},
+            "target":   {"type": "string", "description": "New file path"},
+            "reason":   {"type": "string"},
+            "agent_id": {"type": "string"},
+        },
+     }),
+    ("projmem_moving", tool_moving,
+     "Rename / move a file while preserving its lifeline + every "
+     "attached note. The destination must not already have an active "
+     "lifeline.",
+     {
+        "type": "object",
+        "required": ["old_path", "new_path", "reason"],
+        "properties": {
+            "path":     {"type": "string", "default": "."},
+            "old_path": {"type": "string"},
+            "new_path": {"type": "string"},
+            "reason":   {"type": "string"},
+            "agent_id": {"type": "string"},
+        },
+     }),
+    ("projmem_deleting", tool_deleting,
+     "Tombstone a file. The lifeline + history stay queryable forever. "
+     "Use `replaced_by` to point future `creating` calls at the right "
+     "successor.",
+     {
+        "type": "object",
+        "required": ["target", "reason"],
+        "properties": {
+            "path":         {"type": "string", "default": "."},
+            "target":       {"type": "string"},
+            "reason":       {"type": "string"},
+            "replaced_by":  {"type": "array", "items": {"type": "string"}},
+            "agent_id":     {"type": "string"},
+        },
+     }),
+    ("projmem_done", tool_done,
+     "Close an open lease as successful. Idempotent: closing an "
+     "already-closed lease returns the prior outcome, not an error.",
+     {
+        "type": "object",
+        "required": ["lease_id"],
+        "properties": {
+            "path":     {"type": "string", "default": "."},
+            "lease_id": {"type": "string"},
+        },
+     }),
+    ("projmem_abandoned", tool_abandoned,
+     "Close an open lease as abandoned (work not completed).",
+     {
+        "type": "object",
+        "required": ["lease_id"],
+        "properties": {
+            "path":     {"type": "string", "default": "."},
+            "lease_id": {"type": "string"},
+            "reason":   {"type": "string"},
+        },
+     }),
+    ("projmem_forget", tool_forget,
+     "Permanently delete a lifeline + every attached event + lease + "
+     "note. Requires `yes_really_purge: true`; lifelines are designed "
+     "to survive forever, so this is for genuine garbage only.",
+     {
+        "type": "object",
+        "required": ["lifeline_id", "yes_really_purge"],
+        "properties": {
+            "path":             {"type": "string", "default": "."},
+            "lifeline_id":      {"type": "string"},
+            "yes_really_purge": {"type": "boolean"},
         },
      }),
 ]
