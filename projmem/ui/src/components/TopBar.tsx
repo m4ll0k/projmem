@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useStore } from "../store";
 import { api } from "../api";
 import { Button } from "./Button";
+import { HelpModal } from "./HelpModal";
+
+const HELP_SEEN_KEY = "projmem.helpSeen";
 
 export function TopBar() {
   const paused       = useStore((s) => s.paused);
@@ -11,6 +14,20 @@ export function TopBar() {
   const theme        = useStore((s) => s.theme);
   const toggleTheme  = useStore((s) => s.toggleTheme);
   const liveLeases   = useStore((s) => s.liveLeasedPaths);
+
+  // Auto-open on first load so a new operator (or a new install run
+  // by claude/codex/gemini) sees the orientation popup once, and a
+  // localStorage flag suppresses it on every subsequent visit. They
+  // can always re-open from the "?" button.
+  const [helpOpen, setHelpOpen] = useState(false);
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem(HELP_SEEN_KEY)) {
+        setHelpOpen(true);
+        localStorage.setItem(HELP_SEEN_KEY, "1");
+      }
+    } catch { /* private mode — never auto-show */ }
+  }, []);
 
   const [pauseBusy, setPauseBusy] = useState(false);
   const togglePause = async () => {
@@ -53,6 +70,14 @@ export function TopBar() {
       </div>
       <Button
         variant="ghost" size="sm"
+        onClick={() => setHelpOpen(true)}
+        title="how projmem works"
+        aria-label="open help"
+      >
+        ?<span className="hidden sm:inline ml-0.5">help</span>
+      </Button>
+      <Button
+        variant="ghost" size="sm"
         onClick={toggleTheme}
         title={`switch to ${theme === "dark" ? "light" : "dark"} mode`}
         aria-label="toggle theme"
@@ -68,6 +93,7 @@ export function TopBar() {
       >
         {paused ? "▶ Resume agent" : "⏸ Pause agent"}
       </Button>
+      <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
     </header>
   );
 }
