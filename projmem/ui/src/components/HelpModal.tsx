@@ -130,6 +130,45 @@ projmem done <lease-id>`}
             </p>
           </Section>
 
+          <Section title="Ghosts, lifelines & the history trail">
+            <p>
+              projmem doesn't forget. Every file has a <b>lifeline</b> — one
+              stable id that survives renames, moves, and deletes. So a note
+              you pinned on <span className="font-mono">src/auth.py</span>
+              still applies after a rename to
+              <span className="font-mono"> src/authn.py</span>.
+            </p>
+            <ul className="list-disc list-inside space-y-1 mt-1.5">
+              <li>
+                <b>Ghost file</b> — a lifeline whose file was deleted. Its
+                history, notes, and links stay in the index so you (or the
+                agent) can still answer "what was in that module?" or
+                "what depended on it before we removed it?".
+              </li>
+              <li>
+                <b>Tombstone</b> — the deletion event itself, recorded on the
+                lifeline with a timestamp and the reason from
+                <span className="font-mono"> projmem deleting</span>.
+              </li>
+              <li>
+                <b>Show ghosts</b> — toggle on the graph to surface deleted
+                files as dimmed nodes. Useful for archaeology
+                ("why was this module removed?") and for following blast
+                radius across renames.
+              </li>
+              <li>
+                <b>History tab</b> in the inspector — chronological event
+                stream for any file: created · leased · edited · moved ·
+                deleted. Implicit edits (agent edited without announcing) get
+                a dashed warn border in the activity feed.
+              </li>
+              <li>
+                <b>Moves</b> — recorded as a single <span className="font-mono">moved</span> event on the lifeline rather than
+                a delete + create pair, so the agent doesn't lose context.
+              </li>
+            </ul>
+          </Section>
+
           <Section title="Live controls">
             <ul className="list-disc list-inside space-y-1">
               <li><b>⏸ Pause agent</b> in the top bar — blocks new edit leases
