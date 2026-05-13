@@ -2,3 +2,8 @@ node_modules/
 *.log
 .DS_Store
 # `dist/` IS committed — pip-installed users need it; Node is not a runtime dep.
+# tsc build cache + compiled-on-the-fly artifacts: never useful in the repo.
+*.tsbuildinfo
+src/**/*.d.ts
+vite.config.js
+vite.config.d.ts
