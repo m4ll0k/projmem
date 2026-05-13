@@ -138,6 +138,7 @@ export function GraphView() {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [warning, setWarning] = useState<string | null>(null);
+  const [refetchTick, setRefetchTick] = useState(0);
   const simRef             = useRef<Simulation<SimNode, SimLink> | null>(null);
   const simNodesRef        = useRef<SimNode[]>([]);
   const zoomBehaviorRef    = useRef<ZoomBehavior<SVGSVGElement, unknown> | null>(null);
@@ -166,7 +167,26 @@ export function GraphView() {
       .catch((e) => !cancelled && setWarning(String(e)))
       .finally(() => !cancelled && setLoading(false));
     return () => { cancelled = true; };
-  }, [showGhosts, showSymbols]);
+  }, [showGhosts, showSymbols, refetchTick]);
+
+  // Auto-refetch the graph when structural events arrive (new file
+  // lifelines or tombstones). The halo + focus-mode pieces below
+  // react to events in real time without a refetch; but
+  // node-count-changing events have to refetch /graph because the
+  // simulation was built off the original payload. We throttle to
+  // 1 refetch per 600ms so a stress-test burst doesn't hammer.
+  const events = useStore((s) => s.events);
+  const lastFetchedKindCount = useRef(0);
+  useEffect(() => {
+    const lastFew = events.slice(-10);
+    const structural = lastFew.some((e) =>
+      e.kind === "created" || e.kind === "deleted" || e.kind === "moved"
+    );
+    if (!structural) return;
+    const t = setTimeout(() => setRefetchTick((n) => n + 1), 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [events.length]);
 
   useEffect(() => {
     if (!svgRef.current || !innerGRef.current) return;
