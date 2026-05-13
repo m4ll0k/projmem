@@ -318,7 +318,7 @@ Prompts don't enforce, so projmem doesn't rely on them.
 projmem hook install --claude-code
 ```
 
-The hook intercepts every Edit / Write / Read / Bash tool call. On `rm`/`mv` against a critical or excluded path, or `cat`/`grep`/`projmem symbol --file …` against an excluded path, it returns `permissionDecision: "deny"` with the user's reason surfaced verbatim. The agent can't bypass it.
+The hook intercepts every Edit / Write / Read / Bash tool call. Any mutation or read against a path the user has marked critical or out-of-scope is refused with `permissionDecision: "deny"`, surfacing the user's reason verbatim. The agent can't bypass it.
 
 **Layer 3 — CLI advisory** (for agents without hooks — Codex / Gemini / plain API): `projmem symbol`, `projmem at`, `projmem pack`, `projmem reverse` all emit `exclusion_warnings[]` in their JSON output when the target is under an exclusion.
 
