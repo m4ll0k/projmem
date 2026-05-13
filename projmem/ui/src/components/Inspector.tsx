@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import hljs from "highlight.js/lib/common";
 import { useStore } from "../store";
 import { api } from "../api";
+import { Button } from "./Button";
 import type {
   OpenLease, LifelineDetail, Annotation, FileEvent,
 } from "../types";
@@ -130,15 +131,15 @@ function LeaseCard({ lease, dimmed }: { lease: OpenLease; dimmed: boolean }) {
       </div>
 
       {isPending && (
-        <div className="mt-2 flex gap-1">
-          <button
+        <div className="mt-2 flex gap-1.5">
+          <Button
+            variant="success" size="sm"
             onClick={(e) => { e.stopPropagation(); api.approve(lease.id); }}
-            className="rounded bg-good text-white text-[11px] px-2 py-0.5 hover:opacity-90"
-          >Approve</button>
-          <button
+          >Approve</Button>
+          <Button
+            variant="danger" size="sm"
             onClick={(e) => { e.stopPropagation(); api.deny(lease.id); }}
-            className="rounded bg-bad text-white text-[11px] px-2 py-0.5 hover:opacity-90"
-          >Deny</button>
+          >Deny</Button>
         </div>
       )}
     </div>
@@ -341,10 +342,13 @@ function AddNoteForm({ target, kind, onSaved, onPickLine }: {
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)}
-              className="text-[11px] text-accent hover:underline">
+      <Button
+        variant="subtle" size="xs"
+        onClick={() => setOpen(true)}
+        aria-label={`add ${kind}`}
+      >
         + add {kind}
-      </button>
+      </Button>
     );
   }
   return (
@@ -384,16 +388,26 @@ function AddNoteForm({ target, kind, onSaved, onPickLine }: {
           </>
         )}
       </div>
-      {err && <div className="text-[11px] text-bad">{err}</div>}
-      <div className="flex gap-1">
-        <button onClick={save} disabled={saving}
-                className="rounded bg-accent text-accent-fg text-[11px] px-2 py-0.5 disabled:opacity-50">
-          {saving ? "saving…" : "save"}
-        </button>
-        <button onClick={() => { setOpen(false); setBody(""); setLine(""); setErr(null); }}
-                className="rounded border border-line text-[11px] px-2 py-0.5 text-muted hover:bg-sunken">
+      {err && (
+        <div className="text-[11px] text-bad bg-bad/5 border border-bad/20 rounded px-1.5 py-1">
+          {err}
+        </div>
+      )}
+      <div className="flex gap-1.5">
+        <Button
+          variant="primary" size="sm"
+          loading={saving}
+          onClick={save}
+          disabled={!body.trim()}
+        >
+          save
+        </Button>
+        <Button
+          variant="secondary" size="sm"
+          onClick={() => { setOpen(false); setBody(""); setLine(""); setErr(null); }}
+        >
           cancel
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -429,25 +443,36 @@ function AttachRefButton({ onPick }: { onPick: (md: string) => void }) {
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)}
-              className="text-[10px] px-1.5 py-0.5 rounded border border-line text-muted hover:bg-sunken">
+      <Button
+        variant="secondary" size="xs"
+        onClick={() => setOpen(true)}
+        aria-label="attach a reference"
+      >
         📎 attach
-      </button>
+      </Button>
     );
   }
   return (
-    <div className="w-full mt-1 rounded-md border border-accent/30 bg-accent/5 p-1.5 space-y-1 text-[11px]">
-      <div className="flex items-center gap-1">
+    <div className="w-full mt-1 rounded-md border border-accent/30 bg-accent/5 p-1.5 space-y-1.5 text-[11px]">
+      <div className="flex items-stretch gap-1 flex-wrap sm:flex-nowrap">
         <input value={title}
                onChange={(e) => setTitle(e.target.value)}
                placeholder="title (e.g. SEC-204 advisory)"
-               className="flex-1 bg-bg border border-line rounded px-1 py-0.5 text-ink"/>
+               className="flex-1 min-w-0 bg-bg border border-line rounded px-1.5 py-1 text-ink h-7"/>
         <input value={url}
                onChange={(e) => setUrl(e.target.value)}
                placeholder="https://… or refs/papers/foo.pdf"
-               className="flex-[2] bg-bg border border-line rounded px-1 py-0.5 text-ink font-mono"/>
-        <button onClick={insert} className="px-2 py-0.5 rounded bg-accent text-accent-fg">add</button>
-        <button onClick={() => setOpen(false)} className="px-2 py-0.5 rounded border border-line text-muted">x</button>
+               className="flex-[2] min-w-0 bg-bg border border-line rounded px-1.5 py-1 text-ink font-mono h-7"/>
+        <Button
+          variant="primary" size="sm"
+          onClick={insert}
+          disabled={!title.trim() || !url.trim()}
+        >add</Button>
+        <Button
+          variant="ghost" size="sm"
+          onClick={() => setOpen(false)}
+          aria-label="cancel attach"
+        >✕</Button>
       </div>
       {refsErr && <div className="text-bad">{refsErr}</div>}
       {refs.length > 0 ? (
@@ -455,17 +480,20 @@ function AttachRefButton({ onPick }: { onPick: (md: string) => void }) {
           <div className="text-muted mb-0.5">
             from <span className="font-mono">.projmem/refs/</span>:
           </div>
-          <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
+          <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
             {refs.slice(0, 25).map((r) => (
-              <button key={r.path}
-                      onClick={() => {
-                        setUrl(`refs/${r.path}`);
-                        if (!title) setTitle(r.path.split("/").pop() || r.path);
-                      }}
-                      className="px-1.5 py-0.5 rounded bg-bg border border-line text-ink font-mono text-[10px] hover:border-accent"
-                      title={r.path}>
+              <Button
+                key={r.path}
+                variant="secondary" size="xs"
+                onClick={() => {
+                  setUrl(`refs/${r.path}`);
+                  if (!title) setTitle(r.path.split("/").pop() || r.path);
+                }}
+                title={r.path}
+                className="font-mono"
+              >
                 {r.path}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -622,7 +650,7 @@ export function Inspector() {
   };
 
   return (
-    <aside className="h-full w-80 border-l border-line bg-bg flex flex-col">
+    <aside className="lg:h-full w-full lg:w-auto border-t lg:border-t-0 lg:border-l border-line bg-bg flex flex-col min-h-0 max-h-[40vh] lg:max-h-none">
       <div className="border-b border-line px-3 py-2 text-xs font-semibold tracking-tight">
         Inspector
       </div>
@@ -666,15 +694,12 @@ export function Inspector() {
                 </div>
                 <div className="flex gap-1 text-[11px] mb-2 flex-wrap">
                   {(["notes", "guidance", "critical", "history", "code"] as Tab[]).map((t) => (
-                    <button
+                    <Button
                       key={t}
+                      size="xs"
+                      variant={tab === t ? "primary" : "secondary"}
                       onClick={() => setTab(t)}
-                      className={`px-2 py-0.5 rounded border transition-colors ${
-                        tab === t
-                          ? "border-accent text-accent bg-accent/10"
-                          : "border-line text-muted hover:bg-sunken"
-                      }`}
-                    >{t}</button>
+                    >{t}</Button>
                   ))}
                 </div>
 

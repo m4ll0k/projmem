@@ -74,14 +74,19 @@ export function App() {
       markLeased, markReleased, resetLiveLeases]);
 
   return (
-    <div className="h-full flex flex-col bg-bg text-ink">
+    <div className="h-full flex flex-col bg-bg text-ink overflow-hidden">
       <TopBar />
-      <main className="flex-1 grid grid-cols-[260px_1fr_320px] min-h-0">
-        <section className="border-r border-line bg-bg min-h-0">
+      <main className="flex-1 min-h-0 flex flex-col lg:grid lg:grid-cols-[240px_1fr_320px] xl:grid-cols-[280px_1fr_360px]">
+        {/* Activity feed — collapses to a horizontal strip on narrow
+            viewports so the center pane gets the screen. */}
+        <section className="border-r border-line bg-bg min-h-0
+                            max-h-[34vh] lg:max-h-none flex flex-col">
           <div className="border-b border-line px-3 py-2 text-xs font-semibold tracking-tight">
             Activity
           </div>
-          <ActivityFeed />
+          <div className="flex-1 min-h-0">
+            <ActivityFeed />
+          </div>
         </section>
         <CenterPane />
         <Inspector />
