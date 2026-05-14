@@ -9,7 +9,7 @@ version. Older tags are archived and not patched.
 
 Please **do not** open a public GitHub issue for security-relevant findings.
 
-Email the maintainers at <security@projmem.dev> (replace with actual
+Email the maintainers at <m4ll0k@protonmail.com> (replace with actual
 address before publishing) or use GitHub's private vulnerability reporting:
 
     Repository → Security → Report a vulnerability
